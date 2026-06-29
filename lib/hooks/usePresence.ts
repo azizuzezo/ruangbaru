@@ -71,7 +71,7 @@ export function usePresence(currentPage: string) {
         }
         setMembers(online.filter((m) => m.userId !== currentUser.id));
       })
-      .subscribe(async (status) => {
+      .subscribe(async (status: string) => {
         if (status === 'SUBSCRIBED') {
           await channel.track({
             fullName: currentUser.full_name,
