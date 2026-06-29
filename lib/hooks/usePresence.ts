@@ -48,13 +48,13 @@ export function usePresence(currentPage: string) {
 
     channel
       .on('presence', { event: 'sync' }, () => {
-        const state = channel.presenceState<{
+        const state = channel.presenceState() as Record<string, Array<{
           fullName: string | null;
           avatarUrl: string | null;
           status: PresenceStatus;
           page: string;
           lastSeen: string;
-        }>();
+        }>>;
         const online: PresenceMember[] = [];
         for (const [userId, presences] of Object.entries(state)) {
           const latest = presences[0];
