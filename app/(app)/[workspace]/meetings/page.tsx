@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn, getInitials } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import type { Meeting } from '@/types';
 
@@ -310,12 +311,29 @@ function ScheduleDialog({ open, onOpenChange, members, currentUserId, onCreate }
 function MeetingsSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2"><div className="h-7 w-32 rounded-lg bg-muted/60 animate-pulse" /><div className="h-3 w-64 rounded bg-muted/40 animate-pulse" /></div>
-        <div className="hidden gap-2 sm:flex"><div className="h-8 w-28 rounded-lg bg-muted/40 animate-pulse" /><div className="h-8 w-36 rounded-lg bg-muted/40 animate-pulse" /></div>
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-3 w-72" />
+        </div>
+        <div className="hidden gap-2 sm:flex">
+          <Skeleton className="h-8 w-28 rounded-lg" />
+          <Skeleton className="h-8 w-36 rounded-lg" />
+        </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {[...Array(3)].map((_, i) => <div key={i} className="h-40 rounded-2xl border border-border bg-card animate-pulse" />)}
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-2xl border border-border bg-card p-5 space-y-3">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-full rounded-lg" />
+          </div>
+        ))}
       </div>
     </div>
   );

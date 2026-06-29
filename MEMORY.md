@@ -5,7 +5,7 @@
 > without losing history. **Read this first.** Update it whenever you make a
 > meaningful change.
 
-Last updated: 2026-06-29 (session 3 — full brand redesign)
+Last updated: 2026-06-29 (session 4 — dashboard interaction redesign + presence system)
 
 ---
 
@@ -112,6 +112,13 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 - **Landing page** ([app/page.tsx](app/page.tsx)) — full brand redesign (session 3): Plus Jakarta Sans, white-first, scroll-snap 5 sections (Hero + live InteractiveDashboard, Features, How it Works, Pricing, CTA+Footer). Honest copy, no fake stats.
 - Resend invitation emails (wizard + team page).
 
+### Done in session 4 (2026-06-29) — Dashboard interaction redesign
+
+- **Dashboard full redesign** (`app/(app)/[workspace]/dashboard/page.tsx`): workspace-assistant feel. Sections: Attention Zone (live meeting CTA banner + overdue task alert), Workspace Pulse (4 stats), Upcoming Meetings strip, My Focus (personal tasks with hover quick-actions, animated completion), Team Timeline (collapsible, grouped by urgency), Presence strip (who's online + their page), Activity feed, Project Momentum (hover expands in-progress/overdue counts). All sections are collapsible (chevron toggle). Priority labels now Bahasa Indonesia.
+- **Presence system** (`lib/hooks/usePresence.ts`): NEW Supabase Realtime presence hook. Tracks current user's page + status; broadcasts to workspace channel; handles tab visibility change (→ away). Returns list of online teammates with their current location.
+- **Improved skeleton loading**: Dashboard, Calendar, Meetings, Team pages all use the shared `<Skeleton>` component with proper layout-matching placeholders. No blank screens or spinners on page load.
+- **Notification panel skeleton** (`components/layout/Header.tsx`): notification panel now shows skeleton rows while fetching.
+
 ### Done in session 3 (2026-06-29) — Brand redesign
 - **Typography**: switched to **Plus Jakarta Sans** (Gojek-style geometric humanist, Indonesian-designed). Weights 400–800. Applied globally via `--font-sans` / `--font-display` in globals.css. Google Fonts import at line 1.
 - **Color system (white-first)**: white dominant, `#106CD8` blue for CTAs only, `#10B29F` teal for success states, `#FDB31A` yellow for highlights only. No dark backgrounds, no heavy gradients.
@@ -134,7 +141,7 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 - **Auth emails** (signup confirm / password reset) still use Supabase's mailer. To use Resend, set Resend as custom SMTP in Supabase Dashboard → Auth → SMTP (config, not code).
 - **Payments** intentionally stubbed (honest "coming soon" toast on Billing).
 - **Realtime collaboration** enabled at DB level, but only Header notifications subscribe; boards/notes don't live-sync between users yet.
-- Per-page responsive polish beyond Projects/Tasks could be extended (Skeleton/EmptyState not yet applied to every page).
+- Notes, Tasks (Kanban), and Settings pages still lack skeleton loading states.
 - Product tour is a summary step, not an interactive dashboard overlay.
 - **`three` package**: added to dependencies in session 2.
 

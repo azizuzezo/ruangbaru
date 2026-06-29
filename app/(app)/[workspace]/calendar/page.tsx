@@ -18,6 +18,7 @@ import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useUIStore } from '@/lib/stores/ui-store';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { EventDialog, type DialogMember } from '@/components/calendar/EventDialog';
@@ -387,13 +388,44 @@ function AgendaView({ events, wsSlug, onEdit }: { events: CalendarEvent[]; wsSlu
 function CalendarSkeleton() {
   return (
     <div className="space-y-5">
-      <div className="flex items-center justify-between">
-        <div className="h-8 w-48 rounded-lg bg-muted/60 animate-pulse" />
-        <div className="flex gap-2"><div className="h-8 w-28 rounded-lg bg-muted/40 animate-pulse" /><div className="h-8 w-24 rounded-lg bg-muted/40 animate-pulse" /></div>
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-3 w-64" />
+        </div>
+        <div className="flex gap-2">
+          <Skeleton className="h-8 w-28 rounded-lg" />
+          <Skeleton className="h-8 w-24 rounded-lg" />
+        </div>
       </div>
+      {/* Month/Agenda toggle */}
+      <div className="flex items-center justify-between">
+        <div className="flex gap-1">
+          <Skeleton className="h-8 w-20 rounded-lg" />
+          <Skeleton className="h-8 w-20 rounded-lg" />
+        </div>
+        <div className="flex items-center gap-2">
+          <Skeleton className="h-8 w-8 rounded-lg" />
+          <Skeleton className="h-5 w-32" />
+          <Skeleton className="h-8 w-8 rounded-lg" />
+        </div>
+      </div>
+      {/* Calendar grid */}
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
-        <div className="grid grid-cols-7 border-b border-border bg-muted/40 py-2.5">{DOW.map((d) => <div key={d} className="text-center text-[11px] font-semibold uppercase text-muted-foreground">{d}</div>)}</div>
-        <div className="grid grid-cols-7">{[...Array(42)].map((_, i) => <div key={i} className="min-h-[104px] border-b border-r border-border p-2"><div className="ml-auto h-4 w-4 rounded-full bg-muted/40 animate-pulse" /></div>)}</div>
+        <div className="grid grid-cols-7 border-b border-border bg-muted/20 py-2.5">
+          {DOW.map((d) => (
+            <div key={d} className="text-center text-[11px] font-semibold uppercase text-muted-foreground">{d}</div>
+          ))}
+        </div>
+        <div className="grid grid-cols-7">
+          {[...Array(35)].map((_, i) => (
+            <div key={i} className="min-h-[96px] border-b border-r border-border p-2 last:border-r-0">
+              <Skeleton className="ml-auto h-5 w-5 rounded-full mb-1.5" />
+              {i % 5 === 0 && <Skeleton className="h-5 w-full rounded mb-1" />}
+              {i % 7 === 2 && <Skeleton className="h-5 w-3/4 rounded" />}
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
