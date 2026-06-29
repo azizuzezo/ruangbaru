@@ -47,7 +47,7 @@ export default function AdminPage() {
 
   // Auth check
   useEffect(() => {
-    supabase.auth.getUser().then(({ data: { user } }) => {
+    supabase.auth.getUser().then(({ data: { user } }: { data: { user: { email?: string } | null } }) => {
       setAuthorized(!!user && ADMIN_EMAILS.includes(user.email ?? ''));
     });
   }, []);
