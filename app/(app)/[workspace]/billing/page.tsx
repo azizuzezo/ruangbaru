@@ -3,7 +3,7 @@
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useState, useEffect } from 'react';
 import {
-  CreditCard, CheckCircle2, ArrowUpRight, Loader2,
+  CreditCard, CheckCircle2, ArrowUpRight, Loader2, Video, Crown,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -145,6 +145,48 @@ export default function BillingPage() {
                   ))}
                 </ul>
               </div>
+            </div>
+
+            {/* Enterprise highlight */}
+            <div className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-5 space-y-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-100 text-amber-600">
+                  <Crown className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-sm text-amber-900">Paket Enterprise</h3>
+                  <p className="text-[11px] text-amber-700">Harga custom · Hubungi sales kami</p>
+                </div>
+              </div>
+              <p className="text-xs text-amber-800 leading-relaxed">
+                Dirancang untuk tim besar dengan kebutuhan kolaborasi penuh. Semua fitur Business ditambah:
+              </p>
+              <ul className="space-y-2 pt-1 border-t border-amber-200">
+                {[
+                  { icon: Video, text: 'Rapat video langsung — tanpa Zoom atau Meet, langsung di dalam RuangBaru' },
+                  { icon: CheckCircle2, text: 'Jadwalkan & rekam rapat, undang anggota tim langsung dari workspace' },
+                  { icon: CheckCircle2, text: 'Akses tugas & catatan selama rapat berlangsung (real-time)' },
+                  { icon: CheckCircle2, text: 'Anggota tak terbatas + penyimpanan tak terbatas' },
+                  { icon: CheckCircle2, text: 'Onboarding khusus & dukungan 24/7' },
+                ].map(({ icon: Icon, text }) => (
+                  <li key={text} className="flex items-start gap-2 text-xs text-amber-800">
+                    <Icon className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                    <span>{text}</span>
+                  </li>
+                ))}
+              </ul>
+              <Button
+                size="sm"
+                className="w-full sm:w-auto gap-1.5 bg-amber-600 hover:bg-amber-700 text-white mt-1"
+                onClick={() =>
+                  toast.info('Hubungi kami untuk Enterprise', {
+                    description: 'Kirim email ke sales@ruangbaru.id untuk mendapatkan penawaran khusus.',
+                    duration: 6000,
+                  })
+                }
+              >
+                <Crown className="h-3.5 w-3.5" /> Tanya Harga Enterprise
+              </Button>
             </div>
           </CardContent>
         </Card>
