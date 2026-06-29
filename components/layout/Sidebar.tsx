@@ -55,9 +55,8 @@ export function Sidebar() {
   const handleLogout = async () => {
     try {
       await signOut();
-      toast.success('Berhasil keluar!');
-    } catch (err) {
-      toast.error('Gagal keluar.');
+    } catch (err: any) {
+      if (!err?.digest?.startsWith('NEXT_REDIRECT')) toast.error('Gagal keluar.');
     }
   };
 

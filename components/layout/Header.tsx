@@ -254,7 +254,7 @@ export function Header() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={async () => { try { await signOut(); toast.success('Berhasil keluar!'); } catch { toast.error('Gagal keluar.'); } }}
+              onClick={async () => { try { await signOut(); } catch (err: any) { if (!err?.digest?.startsWith('NEXT_REDIRECT')) toast.error('Gagal keluar.'); } }}
               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
             >
               <LogOut className="h-4 w-4 mr-2" /> Keluar

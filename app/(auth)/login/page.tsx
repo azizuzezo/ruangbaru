@@ -64,7 +64,8 @@ function LoginForm() {
       const result = await signIn(fd);
       if (result?.error) { toast.error(result.error); setLoading(false); }
       else toast.success('Berhasil masuk! Mengarahkan...');
-    } catch {
+    } catch (err: any) {
+      if (err?.digest?.startsWith('NEXT_REDIRECT')) return;
       toast.error('Terjadi kesalahan saat masuk. Coba lagi.');
       setLoading(false);
     }
@@ -75,7 +76,8 @@ function LoginForm() {
     try {
       const result = await signInWithGoogle(redirectTo);
       if (result?.error) { toast.error(result.error); setGoogleLoading(false); }
-    } catch {
+    } catch (err: any) {
+      if (err?.digest?.startsWith('NEXT_REDIRECT')) return;
       toast.error('Tidak dapat masuk dengan Google.');
       setGoogleLoading(false);
     }
