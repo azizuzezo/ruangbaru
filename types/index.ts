@@ -209,6 +209,40 @@ export interface MeetingParticipant {
   profile?: Profile;
 }
 
+export type EventRecurrence = 'none' | 'daily' | 'weekly' | 'monthly';
+
+export interface CalendarEvent {
+  id: string;
+  workspace_id: string;
+  title: string;
+  description: string | null;
+  location: string | null;
+  color: string;
+  start_at: string;
+  end_at: string;
+  all_day: boolean;
+  recurrence: EventRecurrence;
+  recurrence_until: string | null;
+  reminder_minutes: number | null;
+  meeting_id: string | null;
+  google_event_id: string | null;
+  synced_at: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined
+  attendees?: EventAttendee[];
+  meeting?: Meeting;
+}
+
+export interface EventAttendee {
+  id: string;
+  event_id: string;
+  user_id: string;
+  status: 'invited' | 'accepted' | 'declined';
+  profile?: Profile;
+}
+
 // =============================================================================
 // UI / App types
 // =============================================================================
