@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { cn, getInitials } from '@/lib/utils';
 import {
-  Bell, Search, Sun, Moon, Sparkles, Layers,
+  Bell, Search, Sparkles, Layers,
   ChevronRight, Calendar, Settings, FolderKanban, Users, LogOut, CreditCard
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -14,7 +14,6 @@ import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { signOut } from '@/lib/supabase/actions';
 import { toast } from 'sonner';
-import { useTheme } from 'next-themes';
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import {
@@ -32,16 +31,10 @@ export function Header() {
   const pathname = usePathname();
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setCommandPaletteOpen, notificationPanelOpen, setNotificationPanelOpen } = useUIStore();
-  const { theme, setTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   const supabase = createClient();
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   // Fetch real-time user notifications
   useEffect(() => {
@@ -160,18 +153,6 @@ export function Header() {
         <Button variant="ghost" size="icon" className="sm:hidden" onClick={() => setCommandPaletteOpen(true)}>
           <Search className="h-4 w-4" />
         </Button>
-
-        {/* Theme Toggle Button */}
-        {mounted && (
-          <Button 
-            variant="ghost" 
-            size="icon" 
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="rounded-lg h-9 w-9 text-muted-foreground hover:text-foreground active:scale-95 transition-transform"
-          >
-            {theme === 'dark' ? <Sun className="h-4 w-4 text-amber-500" /> : <Moon className="h-4 w-4" />}
-          </Button>
-        )}
 
         {/* Notifications Popover Dropdown */}
         <DropdownMenu open={notificationPanelOpen} onOpenChange={setNotificationPanelOpen}>

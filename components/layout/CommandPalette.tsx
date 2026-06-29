@@ -4,19 +4,17 @@ import { useEffect, useState } from 'react';
 import { useUIStore } from '@/lib/stores/ui-store';
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useRouter } from 'next/navigation';
-import { 
-  Search, LayoutDashboard, FolderKanban, CheckSquare, 
-  CalendarDays, StickyNote, Users, Settings, Moon, Sun
+import {
+  Search, LayoutDashboard, FolderKanban, CheckSquare,
+  CalendarDays, StickyNote, Users, Settings
 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { useTheme } from 'next-themes';
 
 export function CommandPalette() {
   const router = useRouter();
   const { commandPaletteOpen, setCommandPaletteOpen } = useUIStore();
   const { currentWorkspace } = useWorkspaceStore();
-  const { setTheme } = useTheme();
-  
+
   const [search, setSearch] = useState('');
 
   const activeWorkspaceSlug = currentWorkspace?.slug || 'dashboard';
@@ -29,8 +27,6 @@ export function CommandPalette() {
     { label: 'Buka Catatan', icon: StickyNote, action: () => router.push(`/${activeWorkspaceSlug}/notes`) },
     { label: 'Manajemen Tim', icon: Users, action: () => router.push(`/${activeWorkspaceSlug}/team`) },
     { label: 'Pengaturan Workspace', icon: Settings, action: () => router.push(`/${activeWorkspaceSlug}/settings`) },
-    { label: 'Ubah ke Mode Gelap', icon: Moon, action: () => setTheme('dark') },
-    { label: 'Ubah ke Mode Terang', icon: Sun, action: () => setTheme('light') },
   ];
 
   const filteredCommands = commands.filter((c) =>
