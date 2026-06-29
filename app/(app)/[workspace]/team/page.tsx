@@ -99,8 +99,13 @@ export default function TeamPage() {
       })
         .then((r) => r.json())
         .then((res) => {
-          if (res?.sent) toast.success(`Undangan email terkirim ke ${email}`);
-          else copyInviteLink(created.token, email);
+          if (res?.sent) {
+            toast.success(`Undangan email terkirim ke ${email}`);
+          } else {
+            const reason = res?.errors?.[0];
+            if (reason) toast.warning(`Email gagal: ${reason}`, { duration: 8000 });
+            copyInviteLink(created.token, email);
+          }
         })
         .catch(() => copyInviteLink(created.token, email));
 

@@ -49,6 +49,11 @@ export async function POST(request: Request) {
   );
 
   const sent = results.filter((r) => r.status === 'fulfilled').length;
-  const failed = results.length - sent;
-  return NextResponse.json({ sent, failed });
+  const errors = results
+    .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+    .map((r) => r.reason?.message || String(r.reason));
+
+  if (errors.length > 0) console.error('[invitations/send] Resend errors:', errors);
+
+  return NextResponse.json({ sent, failed: errors.length, errors });
 }
