@@ -26,6 +26,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import type { Notification } from '@/types';
 import { formatRelativeTime } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 
 export function Header() {
   const pathname = usePathname();
@@ -33,6 +34,7 @@ export function Header() {
   const { setCommandPaletteOpen, notificationPanelOpen, setNotificationPanelOpen } = useUIStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [notifLoading, setNotifLoading] = useState(true);
 
   const supabase = createClient();
 
@@ -42,18 +44,20 @@ export function Header() {
     const currentUserId = currentUser.id;
 
     async function fetchNotifications() {
+      setNotifLoading(true);
       const { data } = await supabase
         .from('notifications')
         .select('*')
         .eq('user_id', currentUserId)
         .order('created_at', { ascending: false })
         .limit(10);
-      
+
       if (data) {
         const notificationsList = data as Notification[];
         setNotifications(notificationsList);
         setUnreadCount(notificationsList.filter((n) => !n.read).length);
       }
+      setNotifLoading(false);
     }
 
     fetchNotifications();
@@ -179,7 +183,17 @@ export function Header() {
               )}
             </div>
             <div className="max-h-80 overflow-y-auto divide-y divide-border">
-              {notifications.length === 0 ? (
+              {notifLoading ? (
+                <div className="space-y-px divide-y divide-border">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="p-3.5 flex flex-col gap-2">
+                      <Skeleton className="h-3 w-3/4" />
+                      <Skeleton className="h-2.5 w-full" />
+                      <Skeleton className="h-2 w-16" />
+                    </div>
+                  ))}
+                </div>
+              ) : notifications.length === 0 ? (
                 <div className="p-8 text-center text-xs text-muted-foreground">
                   Tidak ada notifikasi baru
                 </div>

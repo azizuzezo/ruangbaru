@@ -5,7 +5,7 @@
 > without losing history. **Read this first.** Update it whenever you make a
 > meaningful change.
 
-Last updated: 2026-06-29 (session 3 — full brand redesign)
+Last updated: 2026-06-29 (session 5 — meetings enterprise gating + settings RLS fix + admin panel)
 
 ---
 
@@ -112,6 +112,13 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 - **Landing page** ([app/page.tsx](app/page.tsx)) — full brand redesign (session 3): Plus Jakarta Sans, white-first, scroll-snap 5 sections (Hero + live InteractiveDashboard, Features, How it Works, Pricing, CTA+Footer). Honest copy, no fake stats.
 - Resend invitation emails (wizard + team page).
 
+### Done in session 4 (2026-06-29) — Dashboard interaction redesign
+
+- **Dashboard full redesign** (`app/(app)/[workspace]/dashboard/page.tsx`): workspace-assistant feel. Sections: Attention Zone (live meeting CTA banner + overdue task alert), Workspace Pulse (4 stats), Upcoming Meetings strip, My Focus (personal tasks with hover quick-actions, animated completion), Team Timeline (collapsible, grouped by urgency), Presence strip (who's online + their page), Activity feed, Project Momentum (hover expands in-progress/overdue counts). All sections are collapsible (chevron toggle). Priority labels now Bahasa Indonesia.
+- **Presence system** (`lib/hooks/usePresence.ts`): NEW Supabase Realtime presence hook. Tracks current user's page + status; broadcasts to workspace channel; handles tab visibility change (→ away). Returns list of online teammates with their current location.
+- **Improved skeleton loading**: Dashboard, Calendar, Meetings, Team pages all use the shared `<Skeleton>` component with proper layout-matching placeholders. No blank screens or spinners on page load.
+- **Notification panel skeleton** (`components/layout/Header.tsx`): notification panel now shows skeleton rows while fetching.
+
 ### Done in session 3 (2026-06-29) — Brand redesign
 - **Typography**: switched to **Plus Jakarta Sans** (Gojek-style geometric humanist, Indonesian-designed). Weights 400–800. Applied globally via `--font-sans` / `--font-display` in globals.css. Google Fonts import at line 1.
 - **Color system (white-first)**: white dominant, `#106CD8` blue for CTAs only, `#10B29F` teal for success states, `#FDB31A` yellow for highlights only. No dark backgrounds, no heavy gradients.
@@ -129,14 +136,25 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 - White/gray neutrals dominate. No dark hero sections. Subtle borders (1px, #E5E7EB). Minimal shadows.
 - Website: ruangbaru.my.id (used in metadata, footer, emails)
 
+### Done in session 5 (2026-06-29) — Enterprise gating, RLS fix, Admin panel
+
+- **Meetings Enterprise gate** (`app/(app)/[workspace]/meetings/page.tsx`): Free/Pro/Business users see `MeetingsUpgradeWall` — blurred preview behind a lock icon, plan label, upgrade CTA linking to billing, and list of Enterprise features. Only `plan === 'enterprise'` workspaces access the full meetings UI.
+- **RLS fix** (`supabase/migrations/007_fix_settings_rls.sql`): Adds `owner_id = auth.uid()` UPDATE policy on workspaces so workspace creators can update their own workspace settings/name even without a `workspace_members` row with role `owner`/`admin`. Also re-asserts profile UPDATE/SELECT policies and refreshes `is_workspace_admin`/`is_workspace_member` search paths.
+- **Admin panel** (`app/admin/page.tsx`): Standalone page for `aziz@duacincin.id` and `aziz@skor.co`. Lists all workspaces (name, slug, owner, member count, plan). Each row has a plan dropdown — selecting a new plan calls the API and updates live.
+- **Admin API** (`app/api/admin/workspaces/route.ts`, `app/api/admin/update-plan/route.ts`): Service-role Supabase client (bypasses RLS) gated by admin email check via session cookie. GET lists all workspaces with owner info; POST updates workspace plan.
+- **Service-role client** (`lib/supabase/admin.ts`): `createAdminClient()` using `SUPABASE_SERVICE_ROLE_KEY` env var. Server-only.
+
 ### Known remaining gaps / TODO
 - **Resend domain** `ruangbaru.com` must be verified in Resend or emails fail (falls back to copy-link).
 - **Auth emails** (signup confirm / password reset) still use Supabase's mailer. To use Resend, set Resend as custom SMTP in Supabase Dashboard → Auth → SMTP (config, not code).
 - **Payments** intentionally stubbed (honest "coming soon" toast on Billing).
 - **Realtime collaboration** enabled at DB level, but only Header notifications subscribe; boards/notes don't live-sync between users yet.
-- Per-page responsive polish beyond Projects/Tasks could be extended (Skeleton/EmptyState not yet applied to every page).
+- Notes, Tasks (Kanban), and Settings pages still lack skeleton loading states.
 - Product tour is a summary step, not an interactive dashboard overlay.
 - **`three` package**: added to dependencies in session 2.
+- **Admin panel** requires `SUPABASE_SERVICE_ROLE_KEY` env var to be set; without it the API routes throw a 500.
+- **Meetings gating**: currently plan is read from `currentWorkspace?.plan` (Zustand, persisted). After a plan upgrade, user must reload or re-login to see meetings.
+- Run `007_fix_settings_rls.sql` in Supabase SQL Editor to fix workspace/profile update permissions.
 
 ---
 

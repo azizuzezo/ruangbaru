@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { Video, Plus, Clock, Users, Radio, Loader2, CalendarClock, ArrowRight, Link2 } from 'lucide-react';
+import { Video, Plus, Clock, Users, Radio, Loader2, CalendarClock, ArrowRight, Link2, Lock, Sparkles } from 'lucide-react';
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { cn, getInitials } from '@/lib/utils';
+import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import type { Meeting } from '@/types';
 
@@ -113,6 +114,10 @@ export default function MeetingsPage() {
   }, [meetings]);
 
   if (loading) return <MeetingsSkeleton />;
+
+  if (currentWorkspace && currentWorkspace.plan !== 'enterprise') {
+    return <MeetingsUpgradeWall plan={currentWorkspace.plan} wsSlug={wsSlug} />;
+  }
 
   return (
     <div className="space-y-6">
@@ -307,15 +312,101 @@ function ScheduleDialog({ open, onOpenChange, members, currentUserId, onCreate }
   );
 }
 
+function MeetingsUpgradeWall({ plan, wsSlug }: { plan: string; wsSlug: string }) {
+  const PLAN_LABEL: Record<string, string> = { free: 'Gratis', pro: 'Pro', business: 'Business' };
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
+      {/* Blurred preview card behind the lock */}
+      <div className="relative w-full max-w-2xl">
+        <div className="pointer-events-none select-none rounded-2xl border border-border bg-card p-6 blur-sm opacity-40 space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="h-8 w-32 bg-muted/60 rounded-lg" />
+            <div className="flex gap-2">
+              <div className="h-8 w-28 bg-muted/60 rounded-lg" />
+              <div className="h-8 w-36 bg-primary/20 rounded-lg" />
+            </div>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="rounded-2xl border border-border bg-card/50 p-4 space-y-3">
+                <div className="flex items-start justify-between">
+                  <div className="h-9 w-9 rounded-xl bg-primary/10" />
+                  <div className="h-5 w-20 rounded-full bg-primary/10" />
+                </div>
+                <div className="h-3.5 w-3/4 bg-muted/60 rounded" />
+                <div className="h-3 w-1/2 bg-muted/40 rounded" />
+                <div className="h-8 w-full bg-primary/20 rounded-xl" />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Lock overlay */}
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-5">
+          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-card border border-border shadow-lg">
+            <Lock className="h-7 w-7 text-primary" />
+          </div>
+          <div className="space-y-1.5">
+            <h2 className="font-display text-xl font-extrabold tracking-tight text-foreground">
+              Fitur Rapat — Enterprise Only
+            </h2>
+            <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+              Paket Anda saat ini adalah <span className="font-semibold text-foreground">{PLAN_LABEL[plan] ?? plan}</span>. Rapat video terintegrasi tersedia di paket Enterprise.
+            </p>
+          </div>
+          <div className="flex flex-col sm:flex-row items-center gap-3">
+            <a href={`/${wsSlug}/billing`}>
+              <Button variant="gradient" className="gap-2">
+                <Sparkles className="h-4 w-4" /> Upgrade ke Enterprise
+              </Button>
+            </a>
+            <a href={`/${wsSlug}/dashboard`}>
+              <Button variant="outline" className="gap-1.5">
+                Kembali ke Dashboard
+              </Button>
+            </a>
+          </div>
+          <div className="mt-1 rounded-xl bg-primary/5 border border-primary/10 px-5 py-3 text-left max-w-sm">
+            <p className="text-xs font-bold text-primary mb-1.5 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> Keunggulan Enterprise</p>
+            <ul className="text-[11px] text-muted-foreground space-y-1">
+              <li>• Rapat video langsung tanpa link eksternal</li>
+              <li>• Jadwalkan rapat & undang anggota tim</li>
+              <li>• Akses catatan & tugas selama rapat berlangsung</li>
+              <li>• Rekaman & ringkasan otomatis (segera hadir)</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function MeetingsSkeleton() {
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="space-y-2"><div className="h-7 w-32 rounded-lg bg-muted/60 animate-pulse" /><div className="h-3 w-64 rounded bg-muted/40 animate-pulse" /></div>
-        <div className="hidden gap-2 sm:flex"><div className="h-8 w-28 rounded-lg bg-muted/40 animate-pulse" /><div className="h-8 w-36 rounded-lg bg-muted/40 animate-pulse" /></div>
+      <div className="flex items-start justify-between">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-32" />
+          <Skeleton className="h-3 w-72" />
+        </div>
+        <div className="hidden gap-2 sm:flex">
+          <Skeleton className="h-8 w-28 rounded-lg" />
+          <Skeleton className="h-8 w-36 rounded-lg" />
+        </div>
       </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {[...Array(3)].map((_, i) => <div key={i} className="h-40 rounded-2xl border border-border bg-card animate-pulse" />)}
+        {[...Array(3)].map((_, i) => (
+          <div key={i} className="rounded-2xl border border-border bg-card p-5 space-y-3">
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-xl" />
+              <div className="flex-1 space-y-1.5">
+                <Skeleton className="h-3.5 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
+            <Skeleton className="h-8 w-full rounded-lg" />
+          </div>
+        ))}
       </div>
     </div>
   );
