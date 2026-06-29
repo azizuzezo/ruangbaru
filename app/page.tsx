@@ -10,7 +10,7 @@ import {
 import {
   ArrowRight, X, Check,
   FolderKanban, CheckSquare, CalendarDays, StickyNote, Users,
-  Sparkles, ChevronDown,
+  ChevronDown,
 } from 'lucide-react';
 import { HeroPreview } from '@/components/landing/HeroPreview';
 import { SiteFooter } from '@/components/landing/SiteFooter';
@@ -84,16 +84,6 @@ function Hero() {
       <div className="mx-auto grid max-w-6xl items-center gap-12 px-4 pb-20 pt-14 sm:px-6 lg:grid-cols-[1.05fr_1.1fr] lg:gap-8 lg:pt-20">
         {/* LEFT */}
         <div>
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: E }}
-            className="inline-flex items-center gap-2 rounded-full border border-neutral-200 bg-white/80 px-3.5 py-1.5 text-xs font-semibold text-neutral-600 shadow-sm backdrop-blur"
-          >
-            <Sparkles className="h-3.5 w-3.5" style={{ color: TEAL }} />
-            Workspace kolaborasi untuk tim Indonesia
-          </motion.div>
-
           <motion.h1
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}

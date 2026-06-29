@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Check, Bell, Plus, FolderKanban, Users, Zap } from 'lucide-react';
+import { Check, Bell, Plus, FolderKanban, Users } from 'lucide-react';
 
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 const BLUE = '#106CD8';
@@ -78,10 +78,6 @@ export function WorkspacePreview() {
           {/* Headline */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: E }}>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-bold text-white/80 mb-4">
-              <Zap className="h-3 w-3" style={{ color: YELLOW }} />
-              Workspace kolaborasi untuk tim Indonesia
-            </span>
             <h2 className="text-3xl font-extrabold tracking-tight leading-[1.18] text-white">
               Kelola proyek dan tim<br />
               <span style={{ color: 'rgba(255,255,255,0.7)' }}>dalam satu tempat.</span>
