@@ -78,7 +78,7 @@ export function SiteFooter() {
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1.6fr]">
           {/* Brand + social */}
           <div>
-            <Logo variant="wordmark" height={26} />
+            <Logo variant="wordmark" tone="light" height={26} />
             <p className="mt-4 max-w-[240px] text-sm leading-6 text-neutral-500">
               Satu workspace untuk proyek, tugas, dan tim — dibuat untuk cara kerja tim Indonesia.
             </p>

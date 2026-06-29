@@ -19,7 +19,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
           {/* Top nav */}
           <div className="flex items-center justify-between px-6 py-5 sm:px-10">
             <Link href="/" className="flex items-center transition-transform hover:scale-[1.03]" aria-label="RuangBaru — beranda">
-              <Logo variant="wordmark" height={30} priority />
+              <Logo variant="wordmark" tone="light" height={30} priority />
             </Link>
             <Link href="/" className="text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-800">
               ← Kembali ke beranda

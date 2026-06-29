@@ -36,7 +36,7 @@ export function MarketingHeader() {
       >
         <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center transition-transform hover:scale-[1.03]" aria-label="RuangBaru — beranda">
-            <Logo variant="wordmark" height={36} priority />
+            <Logo variant="wordmark" tone="light" height={36} priority />
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex">
