@@ -28,6 +28,22 @@ function shell(title: string, bodyHtml: string, cta?: { label: string; href: str
   </div></body></html>`;
 }
 
+export async function sendPasswordReset(opts: { to: string; resetLink: string }) {
+  if (!resend) throw new Error('RESEND_API_KEY not configured');
+  return resend.emails.send({
+    from: EMAIL_FROM,
+    to: opts.to,
+    subject: 'Reset kata sandi RuangBaru Anda',
+    html: shell(
+      'Reset Kata Sandi',
+      `<p>Kami menerima permintaan untuk mereset kata sandi akun RuangBaru Anda.</p>
+       <p>Klik tombol di bawah untuk membuat kata sandi baru. Tautan ini berlaku selama <strong>1 jam</strong>.</p>
+       <p style="margin-top:12px;font-size:12px;color:#8a8f9c;">Jika Anda tidak meminta reset kata sandi, abaikan email ini — akun Anda tetap aman.</p>`,
+      { label: 'Reset Kata Sandi', href: opts.resetLink }
+    ),
+  });
+}
+
 export async function sendWorkspaceInvitation(opts: {
   to: string;
   workspaceName: string;

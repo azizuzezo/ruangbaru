@@ -8,7 +8,6 @@ import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { resetPassword } from '@/lib/supabase/actions';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
 
@@ -35,21 +34,18 @@ export default function ForgotPasswordPage() {
 
   const onSubmit = async (data: ForgotPasswordFormValues) => {
     setLoading(true);
-    const formData = new FormData();
-    formData.append('email', data.email);
-
     try {
-      const result = await resetPassword(formData);
-      if (result?.error) {
-        toast.error(result.error);
-        setLoading(false);
-      } else if (result?.success) {
-        setSuccessMsg(result.success);
-        toast.success('Tautan pemulihan kata sandi telah dikirim!');
-        setLoading(false);
-      }
-    } catch (err: any) {
-      toast.error('Terjadi kesalahan saat memproses permintaan Anda.');
+      await fetch('/api/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: data.email }),
+      });
+      // Always show success to avoid email enumeration
+      setSuccessMsg('Jika email Anda terdaftar, tautan reset kata sandi sudah dikirim. Periksa inbox Anda.');
+      toast.success('Tautan pemulihan dikirim!');
+    } catch {
+      toast.error('Terjadi kesalahan. Coba lagi.');
+    } finally {
       setLoading(false);
     }
   };
