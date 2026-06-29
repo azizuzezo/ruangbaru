@@ -1,7 +1,7 @@
 import { Resend } from 'resend';
 
 // Support either env naming so we don't fight the .env file.
-const FROM = process.env.RESEND_EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'RuangBaru <no-reply@ruangbaru.com>';
+const FROM = process.env.RESEND_EMAIL_FROM || process.env.RESEND_FROM_EMAIL || 'RuangBaru <no-reply@ruangbaru.my.id>';
 const apiKey = process.env.RESEND_API_KEY;
 
 export const resend = apiKey ? new Resend(apiKey) : null;
