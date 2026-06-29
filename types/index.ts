@@ -210,6 +210,93 @@ export interface MeetingParticipant {
 }
 
 // =============================================================================
+// Calendar / Events
+// =============================================================================
+
+export type EventVisibility = 'workspace' | 'private';
+export type AttendeeStatus = 'invited' | 'accepted' | 'declined' | 'tentative';
+export type ReminderMethod = 'app' | 'email';
+
+export interface CalendarEvent {
+  id: string;
+  workspace_id: string;
+  project_id: string | null;
+  meeting_id: string | null;
+  title: string;
+  description: string | null;
+  location: string | null;
+  start_at: string; // ISO UTC instant
+  end_at: string; // ISO UTC instant
+  all_day: boolean;
+  timezone: string; // IANA, e.g. 'Asia/Jakarta'
+  color: string;
+  visibility: EventVisibility;
+  recurrence_rule: string | null; // RRULE without "RRULE:" prefix
+  recurrence_parent_id: string | null;
+  original_start_at: string | null;
+  recurrence_exdates: string[];
+  created_by: string | null;
+  google_event_id: string | null;
+  google_calendar_id: string | null;
+  google_etag: string | null;
+  created_at: string;
+  updated_at: string;
+  // joined fields
+  creator?: Profile;
+  project?: Pick<Project, 'id' | 'name' | 'icon' | 'color'>;
+  attendees?: EventAttendee[];
+  reminders?: EventReminder[];
+  meeting?: Meeting;
+}
+
+export interface EventAttendee {
+  id: string;
+  event_id: string;
+  user_id: string;
+  status: AttendeeStatus;
+  is_organizer: boolean;
+  created_at: string;
+  profile?: Profile;
+}
+
+export interface EventReminder {
+  id: string;
+  event_id: string;
+  user_id: string | null;
+  minutes_before: number;
+  method: ReminderMethod;
+  last_fired_for: string | null;
+  created_at: string;
+}
+
+export interface GoogleCalendarAccount {
+  id: string;
+  user_id: string;
+  google_email: string | null;
+  calendar_id: string;
+  sync_enabled: boolean;
+  channel_expiry: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * A concrete, expanded occurrence of an event (recurring series flattened to a
+ * single dated instance for rendering). `event` is the source row; start/end
+ * are the occurrence's absolute instants.
+ */
+export interface EventOccurrence {
+  /** Stable per-occurrence key: `${event.id}:${startISO}`. */
+  key: string;
+  event: CalendarEvent;
+  start: Date;
+  end: Date;
+  isRecurring: boolean;
+}
+
+export type CalendarViewMode = 'month' | 'week' | 'day' | 'agenda';
+
+// =============================================================================
 // UI / App types
 // =============================================================================
 

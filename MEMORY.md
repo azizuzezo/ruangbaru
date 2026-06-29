@@ -71,6 +71,8 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 | `004_fix_handle_new_user.sql` | Fixes "Database error creating new user" (search_path + grants on trigger fn). |
 | `005_fix_onboarding_rls.sql` | Fixes workspace creation: workspaces SELECT policy (so `INSERT…RETURNING` works) + member self-join. |
 | `006_grant_privileges.sql` | Fixes "permission denied for table" — GRANTs to anon/authenticated/service_role + default privileges. |
+| `20260629_meetings.sql` | Meetings (LiveKit): `meetings`, `meeting_participants`, `meeting_chat_messages` + RLS + realtime. |
+| `007_calendar.sql` | Calendar: `calendar_events` (tz-aware, RRULE recurrence, optional `meeting_id` link, Google sync fields), `event_attendees`, `event_reminders`, `google_calendar_accounts` + RLS + grants + realtime. Run after 006 and the meetings migration. |
 
 ---
 
@@ -95,6 +97,9 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 - **Email:** [lib/email/resend.ts](lib/email/resend.ts) + [app/api/invitations/send/route.ts](app/api/invitations/send/route.ts).
 - **Stores:** [lib/stores/](lib/stores/) — workspace-store (persisted), ui-store.
 - **Types:** [types/index.ts](types/index.ts).
+- **Calendar:** [components/calendar/CalendarView.tsx](components/calendar/CalendarView.tsx) (month/week/day/agenda, native drag-to-reschedule, realtime), [components/calendar/EventDialog.tsx](components/calendar/EventDialog.tsx) (create/edit). Logic: [lib/calendar/events.ts](lib/calendar/events.ts) (data layer), [lib/calendar/recurrence.ts](lib/calendar/recurrence.ts) (RRULE parse/build/expand/humanize — no external dep), [lib/calendar/tz.ts](lib/calendar/tz.ts) (Intl-based IANA wall-clock ↔ UTC). Page: `app/(app)/[workspace]/calendar/page.tsx`.
+- **Google Calendar sync (guarded):** [lib/google/](lib/google/) + `app/api/google/*` (status/connect/callback/sync/disconnect/webhook). Inert until `GOOGLE_CLIENT_ID`/`GOOGLE_CLIENT_SECRET` set; `isGoogleConfigured()` gates everything. Per-user tokens in `google_calendar_accounts`. Two-way sync = incremental pull (syncToken) + push of local-only events.
+- **Meetings (LiveKit):** `app/(app)/[workspace]/meetings/` + `app/api/meetings/{token,end}`. Calendar events can spawn a linked meeting (`calendar_events.meeting_id`).
 
 ---
 
@@ -128,6 +133,21 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 - Highlight: `#FDB31A` (yellow) — important badges only
 - White/gray neutrals dominate. No dark hero sections. Subtle borders (1px, #E5E7EB). Minimal shadows.
 - Website: ruangbaru.my.id (used in metadata, footer, emails)
+
+### Done in session 4 (in progress) — Calendar/Meetings/Workspace overhaul
+Multi-phase build. **Phase 1 (Calendar foundation) — DONE:**
+- Real event model (migration 007): tz-aware events, RRULE recurrence, attendees
+  (shared team calendars), per-user reminders, optional linked LiveKit meeting,
+  Google sync bookkeeping. RLS + grants + realtime.
+- Google-Calendar-like UI: month/week/day/agenda views, create/edit dialog,
+  native drag-to-reschedule (month + time grid), invite members, reminders,
+  timezone picker (Intl-based), "all team / mine only" filter, now-line.
+- Recurrence engine (`lib/calendar/recurrence.ts`) — no external dep.
+- Google two-way sync written but **guarded** behind env (no OAuth app yet):
+  connect/callback/status/sync/disconnect/webhook routes; pull (syncToken) + push.
+- Typecheck + lint green.
+- Remaining phases (tracked): 2 = native LiveKit meeting room UI end-to-end,
+  3 = dashboard repositioning, 4 = interactivity + loading states, 5 = presence + notifications.
 
 ### Known remaining gaps / TODO
 - **Resend domain** `ruangbaru.com` must be verified in Resend or emails fail (falls back to copy-link).
