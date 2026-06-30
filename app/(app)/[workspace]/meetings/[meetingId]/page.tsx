@@ -10,7 +10,7 @@ import {
   useTracks, 
   useLocalParticipant, 
   VideoTrack,
-  Chat
+  useChat
 } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import { 
@@ -300,20 +300,6 @@ function CustomVideoConference() {
         {/* Responsive Chat Sidebar */}
         {showChat && (
           <div className="absolute md:relative inset-y-0 right-0 z-20 w-full md:w-80 h-full border-l border-neutral-850 bg-neutral-900 flex flex-col shrink-0 overflow-hidden rounded-2xl md:ml-3 shadow-2xl md:shadow-none">
-            <style>{`
-              .lk-chat-header {
-                display: none !important;
-              }
-              .lk-chat {
-                height: 100% !important;
-                background: transparent !important;
-                border: none !important;
-              }
-              .lk-chat-form {
-                border-top: 1px solid var(--lk-border-color, #222) !important;
-                padding: 0.75rem !important;
-              }
-            `}</style>
             <div className="p-3.5 border-b border-neutral-850 flex justify-between items-center bg-neutral-900 shrink-0">
               <span className="text-xs font-bold text-white">Chat Rapat</span>
               <button 
@@ -323,8 +309,8 @@ function CustomVideoConference() {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="flex-1 min-h-0 overflow-hidden bg-neutral-950/50">
-              <Chat />
+            <div className="flex-1 min-h-0 overflow-hidden">
+              <CustomChat />
             </div>
           </div>
         )}
@@ -381,6 +367,81 @@ function CustomVideoConference() {
   );
 }
 
+function CustomChat() {
+  const { send, chatMessages } = useChat();
+  const [messageText, setMessageText] = useState('');
+  const chatEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMessages]);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (messageText.trim() && send) {
+      try {
+        await send(messageText.trim());
+        setMessageText('');
+      } catch (err) {
+        console.error('Failed to send message:', err);
+        toast.error('Gagal mengirim pesan.');
+      }
+    }
+  };
+
+  return (
+    <div className="flex flex-col h-full bg-neutral-950/40 text-white">
+      {/* Message List */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3.5 min-h-0">
+        {chatMessages.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-xs text-neutral-500">
+            Belum ada pesan. Mulai obrolan!
+          </div>
+        ) : (
+          chatMessages.map((msg) => {
+            const senderName = msg.from?.name || msg.from?.identity || 'Anggota';
+            const isSelf = msg.from?.isLocal;
+            return (
+              <div key={msg.id || msg.timestamp} className={cn("flex flex-col", isSelf ? "items-end" : "items-start")}>
+                <span className="text-[10px] text-neutral-400 mb-0.5 px-1 font-medium">
+                  {senderName}
+                </span>
+                <div className={cn(
+                  "max-w-[85%] rounded-2xl px-3 py-2 text-xs leading-relaxed break-words shadow-sm",
+                  isSelf 
+                    ? "bg-primary text-white rounded-tr-none" 
+                    : "bg-neutral-800 text-neutral-100 rounded-tl-none"
+                )}>
+                  {msg.message}
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={chatEndRef} />
+      </div>
+
+      {/* Input Form */}
+      <form onSubmit={onSubmit} className="p-3 border-t border-neutral-850 bg-neutral-900 flex gap-2 shrink-0">
+        <input
+          type="text"
+          value={messageText}
+          onChange={(e) => setMessageText(e.target.value)}
+          placeholder="Tulis pesan..."
+          className="flex-1 min-w-0 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 outline-none focus:border-primary transition-colors"
+        />
+        <button
+          type="submit"
+          disabled={!messageText.trim()}
+          className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 shrink-0"
+        >
+          Kirim
+        </button>
+      </form>
+    </div>
+  );
+}
+
 function VideoTile({ track, isPinned, onPinToggle }: { track: any; isPinned: boolean; onPinToggle: () => void }) {
   const isVideoEnabled = track.participant.isCameraEnabled || track.source === Track.Source.ScreenShare;
   const isAudioMuted = !track.participant.isMicrophoneEnabled;
@@ -432,7 +493,7 @@ function VideoTile({ track, isPinned, onPinToggle }: { track: any; isPinned: boo
 
 function RoomShell({ title, backHref, onLeave, onCopy, onEnd, children }: { title?: string; backHref: string; onLeave?: () => void; onCopy?: () => void; onEnd?: () => void; children: React.ReactNode }) {
   return (
-    <div className="absolute -left-4 -right-4 -top-6 -bottom-24 sm:-left-6 sm:-right-6 lg:-left-8 lg:-right-8 lg:-bottom-6 z-30 flex flex-col bg-neutral-950">
+    <div className="absolute inset-0 z-30 flex flex-col bg-neutral-950">
       {/* Top bar */}
       <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-4 py-2.5 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
