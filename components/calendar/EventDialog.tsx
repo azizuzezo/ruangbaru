@@ -315,7 +315,7 @@ export function EventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="relative max-h-[85vh] overflow-hidden p-0 sm:max-w-lg" style={{ fontFamily: FONT }}>
+      <DialogContent className="max-h-[85vh] overflow-hidden p-0 sm:max-w-lg" style={{ fontFamily: FONT }}>
         {/* Glassmorphic Loading Overlay */}
         <AnimatePresence>
           {(saving || deleting) && (

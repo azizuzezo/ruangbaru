@@ -49,6 +49,32 @@ function occurrencesInRange(ev: CalendarEvent, rangeStart: Date, rangeEnd: Date)
   return out;
 }
 
+// Daftar Hari Libur Nasional Indonesia 2026
+const INDONESIAN_HOLIDAYS_2026: Record<string, string> = {
+  '2026-01-01': 'Tahun Baru 2026',
+  '2026-02-17': 'Isra Mikraj',
+  '2026-02-18': 'Tahun Baru Imlek',
+  '2026-03-29': 'Hari Suci Nyepi',
+  '2026-04-03': 'Wafat Isa Almasih',
+  '2026-04-05': 'Hari Paskah',
+  '2026-04-20': 'Idul Fitri 1447 H',
+  '2026-04-21': 'Idul Fitri 1447 H',
+  '2026-05-01': 'Hari Buruh',
+  '2026-05-14': 'Kenaikan Isa Almasih',
+  '2026-05-27': 'Hari Raya Waisak',
+  '2026-06-01': 'Hari Lahir Pancasila',
+  '2026-06-27': 'Idul Adha 1447 H',
+  '2026-07-17': 'Tahun Baru Islam 1448 H',
+  '2026-08-17': 'Proklamasi Kemerdekaan RI',
+  '2026-09-26': 'Maulid Nabi Muhammad SAW',
+  '2026-12-25': 'Hari Raya Natal',
+};
+
+function isWeekend(date: Date) {
+  const day = date.getDay();
+  return day === 0 || day === 6; // Sunday or Saturday
+}
+
 export default function CalendarPage() {
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setTaskDetailOpen } = useUIStore();
@@ -241,7 +267,7 @@ export default function CalendarPage() {
             </a>
           )}
 
-          <Button size="sm" variant="gradient" className="gap-1.5" onClick={() => openCreate(new Date())}><Plus className="h-4 w-4" /> Acara</Button>
+          <Button size="sm" variant="gradient" className="gap-1.5" style={{ background: '#106CD8' }} onClick={() => openCreate(new Date())}><Plus className="h-4 w-4" /> Acara</Button>
         </div>
       </motion.div>
 
@@ -251,28 +277,55 @@ export default function CalendarPage() {
           const ev = events.find((x) => x.id === evId); if (ev) setActiveDrag({ key: id, event: ev, date: new Date(dayKey + 'T00:00:00') });
         }} onDragEnd={handleDragEnd}>
           <div className="overflow-hidden rounded-2xl border border-border bg-card">
-            <div className="grid grid-cols-7 border-b border-border bg-muted/40 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {DOW.map((d) => <div key={d}>{d}</div>)}
+            {/* Day of Week Header */}
+            <div className="grid grid-cols-7 border-b border-border bg-neutral-50/70 py-2 text-center text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+              {DOW.map((d, i) => (
+                <div key={d} className={cn(i === 0 && 'text-red-500', i === 6 && 'text-neutral-600')}>{d}</div>
+              ))}
             </div>
             <div className="grid grid-cols-7">
               {gridDays.map((day) => {
                 const key = format(day, 'yyyy-MM-dd');
                 const occ = occByDay.get(key) || [];
                 const dayTasks = showTasks ? tasks.filter((t) => t.due_date && isSameDay(new Date(t.due_date), day)) : [];
+                const holiday = INDONESIAN_HOLIDAYS_2026[key];
+                const weekend = isWeekend(day);
+                
                 return (
-                  <DayCell key={key} dayKey={key} inMonth={isSameMonth(day, currentDate)} today={isToday(day)} onCreate={() => openCreate(day)}>
+                  <DayCell 
+                    key={key} 
+                    dayKey={key} 
+                    inMonth={isSameMonth(day, currentDate)} 
+                    today={isToday(day)} 
+                    weekend={weekend}
+                    onCreate={() => openCreate(day)}
+                  >
+                    {/* Day number absolutely positioned */}
                     <span className={cn(
-                      'absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold z-10',
-                      isToday(day) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                      'absolute top-1.5 right-1.5 flex h-4.5 w-4.5 items-center justify-center rounded-full text-[10px] font-bold z-10 transition-colors',
+                      isToday(day) 
+                        ? 'bg-[#106CD8] text-white' 
+                        : holiday || day.getDay() === 0 
+                          ? 'text-red-500' 
+                          : 'text-neutral-700'
                     )}>
                       {format(day, 'd')}
                     </span>
+                    
+                    {/* Events / Tasks container */}
                     <div className="flex flex-1 flex-col gap-1 overflow-hidden pr-6">
+                      {/* Holiday indicator */}
+                      {holiday && (
+                        <span className="mb-0.5 truncate rounded bg-red-50 px-1 py-0.5 text-[8px] font-bold text-red-600 leading-tight border border-red-100/60 max-w-full" title={holiday}>
+                          🇲🇨 {holiday}
+                        </span>
+                      )}
+                      
                       {occ.slice(0, 3).map((o) => <EventChip key={o.key} occ={o} onClick={() => openEdit(o.event)} />)}
-                      {occ.length > 3 && <span className="px-1 text-[9px] font-semibold text-muted-foreground">+{occ.length - 3} lagi</span>}
+                      {occ.length > 3 && <span className="px-1 text-[9px] font-bold text-neutral-400">+{occ.length - 3} lagi</span>}
                       {dayTasks.slice(0, 2).map((t) => (
                         <button key={t.id} onClick={(e) => { e.stopPropagation(); setTaskDetailOpen(true, t.id); }}
-                          className="truncate rounded border border-dashed border-amber-400/50 bg-amber-400/10 px-1 py-0.5 text-left text-[9px] font-semibold text-amber-700 hover:bg-amber-400/20">
+                          className="truncate rounded border border-dashed border-amber-350 bg-amber-50/60 px-1 py-0.5 text-left text-[9px] font-bold text-amber-700 hover:bg-amber-100/70 transition-colors">
                           {t.project?.icon} {t.title}
                         </button>
                       ))}
@@ -309,14 +362,21 @@ export default function CalendarPage() {
   );
 }
 
-function DayCell({ dayKey, inMonth, today, onCreate, children }: { dayKey: string; inMonth: boolean; today: boolean; onCreate: () => void; children: React.ReactNode }) {
+function DayCell({ dayKey, inMonth, today, weekend, onCreate, children }: { 
+  dayKey: string; inMonth: boolean; today: boolean; weekend: boolean; onCreate: () => void; children: React.ReactNode 
+}) {
   const { setNodeRef, isOver } = useDroppable({ id: dayKey });
   return (
     <div ref={setNodeRef} onClick={onCreate}
-      className={cn('group relative flex min-h-[104px] cursor-pointer flex-col border-b border-r border-border p-1.5 transition-colors',
-        !inMonth && 'bg-muted/20', today && 'bg-primary/[0.04]', isOver && 'bg-primary/10 ring-1 ring-inset ring-primary/40')}>
+      className={cn(
+        'group relative flex min-h-[96px] cursor-pointer flex-col border-b border-r border-neutral-200/60 p-1.5 transition-all duration-150',
+        !inMonth && 'opacity-35 bg-neutral-50/20', 
+        weekend && inMonth && 'bg-neutral-50/30',
+        today && 'bg-[#106CD8]/[0.03] ring-1 ring-inset ring-[#106CD8]/10', 
+        isOver && 'bg-[#106CD8]/10 ring-1 ring-inset ring-[#106CD8]/30'
+      )}>
       {children}
-      <span className="mt-auto hidden items-center gap-0.5 self-start text-[9px] font-medium text-muted-foreground/0 group-hover:flex group-hover:text-primary"><Plus className="h-2.5 w-2.5" /></span>
+      <span className="mt-auto hidden items-center gap-0.5 self-start text-[9px] font-medium text-[#106CD8]/0 group-hover:flex group-hover:text-[#106CD8]"><Plus className="h-2.5 w-2.5" /></span>
     </div>
   );
 }
