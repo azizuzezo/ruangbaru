@@ -182,7 +182,7 @@ export default function DashboardPage() {
         const [tasksRes, projectsRes, membersRes, activityRes, meetingsRes] = await Promise.all([
           supabase
             .from('tasks')
-            .select('id,title,status,priority,due_date,assignee_id,project_id,completed_at, assignee:profiles(id,full_name,avatar_url), project:projects(id,name,icon,color)')
+            .select('id,title,status,priority,due_date,assignee_id,project_id,completed_at, assignee:assignee_id(id,full_name,avatar_url), project:projects(id,name,icon,color)')
             .eq('workspace_id', wsId)
             .order('due_date', { ascending: true })
             .limit(300),

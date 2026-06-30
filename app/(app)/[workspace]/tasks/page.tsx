@@ -60,7 +60,7 @@ export default function TasksPage() {
       // Fetch workspace tasks
       const { data: tasksData } = await supabase
         .from('tasks')
-        .select('*, assignee:profiles(full_name, avatar_url), project:projects(name, icon)')
+        .select('*, assignee:assignee_id(full_name, avatar_url), project:projects(name, icon)')
         .eq('workspace_id', currentWorkspace.id)
         .order('created_at', { ascending: false });
 
@@ -94,7 +94,7 @@ export default function TasksPage() {
           due_date: dueDate || null,
           created_by: currentUser.id,
         })
-        .select('*, assignee:profiles(full_name, avatar_url), project:projects(name, icon)')
+        .select('*, assignee:assignee_id(full_name, avatar_url), project:projects(name, icon)')
         .single();
 
       if (error) throw error;

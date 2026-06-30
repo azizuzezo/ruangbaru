@@ -22,13 +22,17 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showArchived, setShowArchived] = useState(false);
 
-  // Create project form state
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [icon, setIcon] = useState('📁');
-  const [color, setColor] = useState('#6366f1');
+  const [icon, setIcon] = useState('');
+  const [color, setColor] = useState('#106CD8');
   const [creating, setCreating] = useState(false);
+
+  // Emoji presets for project icons
+  const EMOJI_OPTIONS = ['📁','🚀','💡','🎯','🛠️','📊','🎨','📝','🔧','🌐','⚡','🏆','📱','🔬','💼'];
+  const COLOR_OPTIONS = ['#106CD8','#10B29F','#FDB31A','#EF4444','#8B5CF6','#F97316'];
+  
 
   const supabase = createClient();
 
@@ -83,8 +87,8 @@ export default function ProjectsPage() {
       setCreateOpen(false);
       setName('');
       setDescription('');
-      setIcon('📁');
-      setColor('#6366f1');
+      setIcon('');
+      setColor('#106CD8');
     } catch (err: any) {
       toast.error(err.message || 'Gagal membuat proyek');
     } finally {
@@ -160,61 +164,90 @@ export default function ProjectsPage() {
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateProject} className="space-y-4 pt-2">
-              <div className="grid grid-cols-4 gap-3 items-center">
-                <Input
-                  id="icon"
-                  value={icon}
-                  onChange={(e) => setIcon(e.target.value)}
-                  className="text-center font-bold text-base h-10 col-span-1"
-                  title="Emoji Ikon"
-                  required
-                />
-                <Input
-                  id="name"
-                  placeholder="Nama Proyek..."
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  disabled={creating}
-                  required
-                  className="col-span-3 h-10"
-                />
+              {/* Project Name */}
+              <Input
+                id="name"
+                placeholder="Nama Proyek..."
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                disabled={creating}
+                required
+                className="h-10"
+              />
+              {/* Description */}
+              <Input
+                placeholder="Deskripsi singkat proyek... (opsional)"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                disabled={creating}
+                className="h-10"
+              />
+              {/* Icon picker — optional */}
+              <div className="space-y-2">
+                <p className="text-xs font-semibold text-muted-foreground">
+                  Ikon <span className="font-normal text-muted-foreground/60">(opsional)</span>
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {EMOJI_OPTIONS.map((e) => (
+                    <button
+                      key={e}
+                      type="button"
+                      onClick={() => setIcon(icon === e ? '' : e)}
+                      className="h-9 w-9 rounded-lg border text-lg transition-all"
+                      style={{
+                        borderColor: icon === e ? color : 'var(--border)',
+                        background: icon === e ? `${color}18` : 'transparent',
+                        transform: icon === e ? 'scale(1.12)' : 'none',
+                      }}
+                    >
+                      {e}
+                    </button>
+                  ))}
+                </div>
+                {icon && (
+                  <button
+                    type="button"
+                    onClick={() => setIcon('')}
+                    className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
+                  >
+                    Hapus ikon
+                  </button>
+                )}
               </div>
-              <div className="space-y-1">
-                <Input
-                  placeholder="Deskripsi singkat proyek..."
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  disabled={creating}
-                  className="h-10"
-                />
-              </div>
-              <div className="flex items-center gap-2 pt-1">
-                <span className="text-xs text-muted-foreground font-semibold">Pilih Warna:</span>
-                {['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#3b82f6', '#8b5cf6'].map((c) => (
+              {/* Color picker */}
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground">Warna:</span>
+                {COLOR_OPTIONS.map((c) => (
                   <button
                     key={c}
                     type="button"
                     onClick={() => setColor(c)}
-                    className="h-6 w-6 rounded-full border border-background focus:outline-none transition-transform"
+                    className="h-6 w-6 rounded-full border-2 transition-all focus:outline-none"
                     style={{
                       backgroundColor: c,
-                      transform: color === c ? 'scale(1.15)' : 'none',
-                      boxShadow: color === c ? `0 0 8px ${c}` : 'none',
+                      borderColor: color === c ? c : 'transparent',
+                      boxShadow: color === c ? `0 0 0 3px ${c}33` : 'none',
                     }}
                   />
                 ))}
               </div>
+              {/* Preview */}
+              <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                <span
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 text-base"
+                  style={{ borderColor: color, background: `${color}18` }}
+                >
+                  {icon || '📁'}
+                </span>
+                <span className="text-sm font-semibold text-foreground truncate">
+                  {name || 'Nama Proyek'}
+                </span>
+              </div>
               <Button type="submit" className="w-full h-10 mt-2" disabled={creating || !name.trim()}>
                 {creating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Memproses...
-                  </>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Memproses...</>
                 ) : (
-                  <>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Buat Proyek
-                  </>
+                  <><Plus className="mr-2 h-4 w-4" />Buat Proyek</>
                 )}
               </Button>
             </form>
@@ -274,8 +307,11 @@ export default function ProjectsPage() {
             >
               <CardHeader className="p-5 pb-3">
                 <div className="flex justify-between items-start">
-                  <span className="text-3xl bg-background/80 p-2 rounded-xl border shrink-0">
-                    {project.icon}
+                  <span
+                    className="flex h-10 w-10 items-center justify-center rounded-xl border-2 text-2xl shrink-0"
+                    style={{ borderColor: project.color, background: `${project.color}18` }}
+                  >
+                    {project.icon || '📁'}
                   </span>
                   
                   <DropdownMenu>

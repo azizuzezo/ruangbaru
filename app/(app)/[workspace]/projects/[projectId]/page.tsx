@@ -59,7 +59,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         // 2. Fetch project tasks
         const { data: tasksData } = await supabase
           .from('tasks')
-          .select('*, assignee:profiles(full_name, avatar_url)')
+          .select('*, assignee:assignee_id(full_name, avatar_url)')
           .eq('project_id', resolvedParams.projectId)
           .order('position', { ascending: true });
 

@@ -55,7 +55,7 @@ export function TaskDetailSheet() {
         // 1. Load task data
         const { data: taskData, error: taskErr } = await supabase
           .from('tasks')
-          .select('*, assignee:profiles(id, full_name, avatar_url)')
+          .select('*, assignee:assignee_id(id, full_name, avatar_url)')
           .eq('id', taskDetailId)
           .single();
 
