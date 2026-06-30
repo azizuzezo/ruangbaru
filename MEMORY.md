@@ -136,6 +136,21 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 - White/gray neutrals dominate. No dark hero sections. Subtle borders (1px, #E5E7EB). Minimal shadows.
 - Website: ruangbaru.my.id (used in metadata, footer, emails)
 
+### Done in session 6 (2026-06-30) — Interactive Calendar Redesign & Holiday Correction
+
+- **Interactive Calendar Redesign** (`app/(app)/[workspace]/calendar/page.tsx`):
+  - Completely redesigned the calendar page to deliver a premium, interactive experience inspired by 21st.dev.
+  - Added smooth month transition animations using Framer Motion's `AnimatePresence` (sliding left/right based on navigation direction).
+  - Added a sliding tab indicator for Month/Agenda view toggle using Framer Motion's `layoutId="activeViewTab"`.
+  - Implemented Cron/Amie-style event chips with left-border color accents, matching 5% opacity backgrounds, bold text, and hover scale-and-lift micro-animations.
+  - Redesigned day cells with floating "+" buttons appearing on hover.
+  - Re-styled the Agenda view as an elegant timeline with vertical lines and glowing nodes indicating today.
+- **Indonesian National Holidays (SKB 3 Menteri 2026)**:
+  - Corrected the entire `INDONESIAN_HOLIDAYS_2026` mapping (Idul Adha on May 27, Waisak on May 31, Lahir Pancasila on June 1, etc.).
+  - Removed the `🇲🇨` flag emoji from holiday badges to prevent Windows systems from buggy rendering of the text `mc`.
+- **Dialog Centering Fix** (`components/calendar/EventDialog.tsx`):
+  - Centered the "Buat Acara Baru" dialog by removing the `relative` class from `DialogContent`, which was overriding the `fixed` centering classes from Radix UI / Tailwind v4.
+
 ### Done in session 5 (2026-06-29) — Enterprise gating, RLS fix, Admin panel
 
 - **Meetings Enterprise gate** (`app/(app)/[workspace]/meetings/page.tsx`): Free/Pro/Business users see `MeetingsUpgradeWall` — blurred preview behind a lock icon, plan label, upgrade CTA linking to billing, and list of Enterprise features. Only `plan === 'enterprise'` workspaces access the full meetings UI.
