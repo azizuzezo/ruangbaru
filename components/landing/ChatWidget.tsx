@@ -2,17 +2,15 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
-import { MessageCircle, X, Send, Sparkles } from 'lucide-react';
+import { MessageCircle, X, Send, Sparkles, Loader2, Check } from 'lucide-react';
 
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
-const FONT_BODY = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
+const FONT_BODY = "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif";
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
 type Msg = { id: number; from: 'bot' | 'user'; text: string };
 
-/* ── Knowledge base (rule-based; runs fully in the browser) ──────
-   Note: answers intentionally never reference internal tech/backend. */
 type Entry = { patterns: string[]; answer: string };
 
 const KB: Entry[] = [
@@ -49,8 +47,8 @@ const KB: Entry[] = [
     answer: 'Antarmuka RuangBaru sepenuhnya dalam Bahasa Indonesia, dirancang khusus untuk cara kerja tim dan UMKM di Indonesia. 🇮🇩',
   },
   {
-    patterns: ['kontak', 'bantuan', 'hubungi', 'email', 'support', 'cs', 'tanya orang', 'admin'],
-    answer: 'Tim kami siap membantu di halo@ruangbaru.my.id. Anda juga bisa mengisi formulir di halaman Kontak. 😊',
+    patterns: ['kontak', 'bantuan', 'hubungi', 'email', 'support', 'cs', 'tanya orang', 'admin', 'tiket'],
+    answer: 'Tim kami siap membantu di halo@ruangbaru.my.id. Anda juga bisa membuat tiket dukungan secara langsung dari chat ini dengan mengklik tombol "Hubungi Dukungan & Buat Tiket" di bawah. 😊',
   },
   {
     patterns: ['siapa', 'pembuat', 'dibuat', 'duacincin', 'pemilik', 'siapa yang buat'],
@@ -67,7 +65,7 @@ const KB: Entry[] = [
 ];
 
 const FALLBACK =
-  'Hmm, saya belum punya jawaban pasti untuk itu. Untuk pertanyaan lebih spesifik, tim kami senang membantu di halo@ruangbaru.my.id. Sementara itu, Anda bisa coba salah satu pertanyaan ini:';
+  'Hmm, saya belum punya jawaban pasti untuk itu. Untuk pertanyaan lebih spesifik, tim kami senang membantu di halo@ruangbaru.my.id. Atau Anda bisa klik "Hubungi Dukungan & Buat Tiket" di bawah untuk langsung membuat tiket bantuan.';
 
 const QUICK_REPLIES = ['Apa itu RuangBaru?', 'Apakah gratis?', 'Fitur apa saja?', 'Bagaimana cara mulai?'];
 
@@ -82,6 +80,8 @@ function answerFor(input: string): string {
   return best ? best.answer : FALLBACK;
 }
 
+type TicketStep = 'none' | 'ask_question' | 'ask_name' | 'ask_email' | 'ask_company' | 'submitting';
+
 export function ChatWidget() {
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(false);
@@ -93,27 +93,130 @@ export function ChatWidget() {
   const idRef = useRef(1);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Ticketing Flow State
+  const [ticketStep, setTicketStep] = useState<TicketStep>('none');
+  const [ticketData, setTicketData] = useState({
+    question: '',
+    name: '',
+    email: '',
+    company: '',
+  });
+
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: reduce ? 'auto' : 'smooth' });
   }, [messages, typing, reduce]);
 
+  const validateEmail = (emailStr: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailStr);
+  };
+
+  const startTicketFlow = (initialQuestion: string = '') => {
+    setTicketStep(initialQuestion ? 'ask_name' : 'ask_question');
+    setTicketData({
+      question: initialQuestion,
+      name: '',
+      email: '',
+      company: '',
+    });
+
+    if (initialQuestion) {
+      setMessages((m) => [
+        ...m,
+        { id: idRef.current++, from: 'user', text: 'Saya ingin membuat tiket dukungan' },
+        { id: idRef.current++, from: 'bot', text: `Pertanyaan Anda: "${initialQuestion}"\n\nBaik, saya akan bantu membuatkan tiket untuk tim kami. Boleh tahu siapa nama lengkap Anda?` }
+      ]);
+    } else {
+      setMessages((m) => [
+        ...m,
+        { id: idRef.current++, from: 'user', text: 'Saya ingin menghubungi dukungan / membuat tiket' },
+        { id: idRef.current++, from: 'bot', text: 'Tentu! Saya akan bantu membuatkan tiket dukungan untuk Anda. Pertama-tama, silakan tuliskan pertanyaan atau kendala yang sedang Anda hadapi:' }
+      ]);
+    }
+  };
+
   const send = async (raw: string) => {
     const text = raw.trim();
     if (!text || typing) return;
+
+    // Add user message
     const userMsg: Msg = { id: idRef.current++, from: 'user', text };
-    const history = [...messages, userMsg];
-    setMessages(history);
+    setMessages((prev) => [...prev, userMsg]);
     setInput('');
     setTyping(true);
 
-    // Ask the AI proxy; gracefully fall back to the local knowledge base.
+    // 1. If in Ticketing Flow
+    if (ticketStep !== 'none') {
+      setTimeout(async () => {
+        if (ticketStep === 'ask_question') {
+          setTicketData((prev) => ({ ...prev, question: text }));
+          setTicketStep('ask_name');
+          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Terima kasih. Selanjutnya, boleh tahu siapa nama lengkap Anda?' }]);
+          setTyping(false);
+        } else if (ticketStep === 'ask_name') {
+          setTicketData((prev) => ({ ...prev, name: text }));
+          setTicketStep('ask_email');
+          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: `Salam kenal, ${text}! Mohon masukkan alamat email aktif Anda agar kami dapat mengirimkan tanggapan.` }]);
+          setTyping(false);
+        } else if (ticketStep === 'ask_email') {
+          if (!validateEmail(text)) {
+            setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Maaf, format email Anda sepertinya kurang tepat. Silakan masukkan alamat email yang valid (contoh: nama@domain.com).' }]);
+            setTyping(false);
+            return;
+          }
+          setTicketData((prev) => ({ ...prev, email: text }));
+          setTicketStep('ask_company');
+          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Terakhir, apa nama perusahaan atau organisasi Anda? (Ketik "tidak ada" jika tidak ada).' }]);
+          setTyping(false);
+        } else if (ticketStep === 'ask_company') {
+          const companyVal = text.toLowerCase() === 'tidak ada' ? '' : text;
+          const finalData = { ...ticketData, company: companyVal };
+          setTicketData(finalData);
+          setTicketStep('submitting');
+          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Mengirimkan tiket dukungan Anda...' }]);
+
+          try {
+            const res = await fetch('/api/support/ticket', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name: finalData.name,
+                email: finalData.email,
+                company: finalData.company,
+                question: finalData.question,
+              }),
+            });
+
+            if (res.ok) {
+              setMessages((m) => [
+                ...m,
+                {
+                  id: idRef.current++,
+                  from: 'bot',
+                  text: `Tiket Anda berhasil dibuat! 🎉\n\nDetail tiket telah dikirimkan ke halo@ruangbaru.my.id. Tim kami akan menghubungi Anda kembali melalui email di ${finalData.email}.\n\nAda hal lain yang ingin Anda tanyakan?`
+                }
+              ]);
+            } else {
+              setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Maaf, terjadi kesalahan saat membuat tiket. Silakan coba lagi.' }]);
+            }
+          } catch (err) {
+            setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Gagal menghubungi server. Silakan periksa koneksi internet Anda.' }]);
+          } finally {
+            setTicketStep('none');
+            setTyping(false);
+          }
+        }
+      }, 1000);
+      return;
+    }
+
+    // 2. If in normal AI Chat mode
     let reply = '';
     try {
       const res = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          messages: history.slice(-8).map((m) => ({
+          messages: [...messages, userMsg].slice(-8).map((m) => ({
             role: m.from === 'user' ? 'user' : 'assistant',
             content: m.text,
           })),
@@ -141,7 +244,7 @@ export function ChatWidget() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 16, scale: 0.96 }}
             transition={{ duration: 0.25, ease: E }}
-            className="mb-3 flex h-[30rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl"
+            className="mb-3 flex h-[32rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl"
           >
             {/* Header */}
             <div className="flex items-center gap-3 px-4 py-3 text-white" style={{ background: `linear-gradient(135deg, ${BLUE}, #0D59B4)` }}>
@@ -163,7 +266,7 @@ export function ChatWidget() {
               {messages.map((m) => (
                 <div key={m.id} className={`flex ${m.from === 'user' ? 'justify-end' : 'justify-start'}`}>
                   <div
-                    className="max-w-[80%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed shadow-sm"
+                    className="max-w-[80%] rounded-2xl px-3.5 py-2 text-[13px] leading-relaxed shadow-sm whitespace-pre-wrap"
                     style={m.from === 'user'
                       ? { background: BLUE, color: '#fff', borderBottomRightRadius: 4 }
                       : { background: '#fff', color: '#374151', border: '1px solid #F0F0F0', borderBottomLeftRadius: 4 }}
@@ -176,14 +279,18 @@ export function ChatWidget() {
               {typing && (
                 <div className="flex justify-start">
                   <div className="flex items-center gap-1 rounded-2xl border border-neutral-100 bg-white px-3.5 py-2.5 shadow-sm" style={{ borderBottomLeftRadius: 4 }}>
-                    {[0, 1, 2].map((i) => (
-                      <motion.span
-                        key={i}
-                        className="h-1.5 w-1.5 rounded-full bg-neutral-300"
-                        animate={reduce ? undefined : { y: [0, -3, 0], opacity: [0.4, 1, 0.4] }}
-                        transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
-                      />
-                    ))}
+                    {ticketStep === 'submitting' ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                    ) : (
+                      [0, 1, 2].map((i) => (
+                        <motion.span
+                          key={i}
+                          className="h-1.5 w-1.5 rounded-full bg-neutral-300"
+                          animate={reduce ? undefined : { y: [0, -3, 0], opacity: [0.4, 1, 0.4] }}
+                          transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.15 }}
+                        />
+                      ))
+                    )}
                   </div>
                 </div>
               )}
@@ -204,6 +311,19 @@ export function ChatWidget() {
               )}
             </div>
 
+            {/* Ticket Shortcut Button */}
+            {ticketStep === 'none' && (
+              <div className="px-4 pb-2 bg-white">
+                <button
+                  type="button"
+                  onClick={() => startTicketFlow()}
+                  className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 py-2 text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
+                >
+                  🎫 Hubungi Dukungan & Buat Tiket
+                </button>
+              </div>
+            )}
+
             {/* Input */}
             <form
               onSubmit={(e) => { e.preventDefault(); send(input); }}
@@ -212,7 +332,17 @@ export function ChatWidget() {
               <input
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Tulis pertanyaan…"
+                placeholder={
+                  ticketStep === 'ask_question'
+                    ? 'Tulis pertanyaan Anda...'
+                    : ticketStep === 'ask_name'
+                    ? 'Nama lengkap Anda...'
+                    : ticketStep === 'ask_email'
+                    ? 'Alamat email Anda...'
+                    : ticketStep === 'ask_company'
+                    ? 'Nama perusahaan Anda...'
+                    : 'Tulis pertanyaan…'
+                }
                 className="min-w-0 flex-1 rounded-full bg-neutral-100 px-4 py-2.5 text-[13px] text-neutral-800 outline-none placeholder:text-neutral-400 focus:bg-neutral-50 focus:ring-2 focus:ring-blue-100"
               />
               <button
