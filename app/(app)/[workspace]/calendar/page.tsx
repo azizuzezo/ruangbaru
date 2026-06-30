@@ -289,6 +289,15 @@ export default function CalendarPage() {
           workspace={currentWorkspace} currentUser={currentUser} members={members}
           event={editing} initialDate={createDate || undefined}
           onSaved={onSaved} onDeleted={onDeleted}
+          onTaskSaved={(newTask) => {
+            setTasks((prev) => {
+              const exists = prev.some((t) => t.id === newTask.id);
+              if (exists) {
+                return prev.map((t) => (t.id === newTask.id ? newTask : t));
+              }
+              return [...prev, newTask];
+            });
+          }}
         />
       )}
     </div>
