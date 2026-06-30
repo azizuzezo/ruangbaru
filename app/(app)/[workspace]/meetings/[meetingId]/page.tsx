@@ -300,6 +300,20 @@ function CustomVideoConference() {
         {/* Responsive Chat Sidebar */}
         {showChat && (
           <div className="absolute md:relative inset-y-0 right-0 z-20 w-full md:w-80 h-full border-l border-neutral-850 bg-neutral-900 flex flex-col shrink-0 overflow-hidden rounded-2xl md:ml-3 shadow-2xl md:shadow-none">
+            <style>{`
+              .lk-chat-header {
+                display: none !important;
+              }
+              .lk-chat {
+                height: 100% !important;
+                background: transparent !important;
+                border: none !important;
+              }
+              .lk-chat-form {
+                border-top: 1px solid var(--lk-border-color, #222) !important;
+                padding: 0.75rem !important;
+              }
+            `}</style>
             <div className="p-3.5 border-b border-neutral-850 flex justify-between items-center bg-neutral-900 shrink-0">
               <span className="text-xs font-bold text-white">Chat Rapat</span>
               <button 
