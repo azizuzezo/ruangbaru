@@ -261,8 +261,13 @@ export default function CalendarPage() {
                 const dayTasks = showTasks ? tasks.filter((t) => t.due_date && isSameDay(new Date(t.due_date), day)) : [];
                 return (
                   <DayCell key={key} dayKey={key} inMonth={isSameMonth(day, currentDate)} today={isToday(day)} onCreate={() => openCreate(day)}>
-                    <span className={cn('mb-1 flex h-5 w-5 items-center justify-center self-end rounded-full text-[10px] font-bold', isToday(day) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground')}>{format(day, 'd')}</span>
-                    <div className="flex flex-1 flex-col gap-1 overflow-hidden">
+                    <span className={cn(
+                      'absolute top-1.5 right-1.5 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold z-10',
+                      isToday(day) ? 'bg-primary text-primary-foreground' : 'text-muted-foreground'
+                    )}>
+                      {format(day, 'd')}
+                    </span>
+                    <div className="flex flex-1 flex-col gap-1 overflow-hidden pr-6">
                       {occ.slice(0, 3).map((o) => <EventChip key={o.key} occ={o} onClick={() => openEdit(o.event)} />)}
                       {occ.length > 3 && <span className="px-1 text-[9px] font-semibold text-muted-foreground">+{occ.length - 3} lagi</span>}
                       {dayTasks.slice(0, 2).map((t) => (
@@ -308,7 +313,7 @@ function DayCell({ dayKey, inMonth, today, onCreate, children }: { dayKey: strin
   const { setNodeRef, isOver } = useDroppable({ id: dayKey });
   return (
     <div ref={setNodeRef} onClick={onCreate}
-      className={cn('group flex min-h-[104px] cursor-pointer flex-col border-b border-r border-border p-1.5 transition-colors',
+      className={cn('group relative flex min-h-[104px] cursor-pointer flex-col border-b border-r border-border p-1.5 transition-colors',
         !inMonth && 'bg-muted/20', today && 'bg-primary/[0.04]', isOver && 'bg-primary/10 ring-1 ring-inset ring-primary/40')}>
       {children}
       <span className="mt-auto hidden items-center gap-0.5 self-start text-[9px] font-medium text-muted-foreground/0 group-hover:flex group-hover:text-primary"><Plus className="h-2.5 w-2.5" /></span>
