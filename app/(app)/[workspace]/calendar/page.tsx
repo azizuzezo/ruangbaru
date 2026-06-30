@@ -316,8 +316,8 @@ export default function CalendarPage() {
                     <div className="flex flex-1 flex-col gap-1 overflow-hidden pr-6">
                       {/* Holiday indicator */}
                       {holiday && (
-                        <span className="mb-0.5 truncate rounded bg-red-50 px-1 py-0.5 text-[8px] font-bold text-red-600 leading-tight border border-red-100/60 max-w-full" title={holiday}>
-                          🇲🇨 {holiday}
+                        <span className="mb-0.5 truncate rounded bg-red-50/70 px-1.5 py-0.5 text-[8px] font-bold text-red-600 leading-tight border border-red-100/60 max-w-full" title={holiday}>
+                          {holiday}
                         </span>
                       )}
                       
