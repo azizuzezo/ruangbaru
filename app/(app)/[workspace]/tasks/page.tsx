@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import type { Task, Project, TaskStatus } from '@/types';
+import type { Task, Project, TaskStatus, TaskPriority } from '@/types';
 import { cn } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { KanbanBoard } from '@/components/tasks/KanbanBoard';
@@ -33,14 +33,17 @@ export default function TasksPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [projectId, setProjectId] = useState('');
-  const [status, setStatus] = useState<'todo' | 'in_progress' | 'done'>('todo');
-  const [priority, setPriority] = useState<'no_priority' | 'urgent' | 'high' | 'medium' | 'low'>('no_priority');
+  const [status, setStatus] = useState<TaskStatus>('backlog');
+  const [priority, setPriority] = useState<TaskPriority>('no_priority');
   const [dueDate, setDueDate] = useState('');
+  const [assigneeId, setAssigneeId] = useState('');
+  const [description, setDescription] = useState('');
+  const [members, setMembers] = useState<any[]>([]);
   const [creating, setCreating] = useState(false);
 
   const supabase = createClient();
 
-  // Load tasks and projects
+  // Load tasks, projects and members
   const loadTasksAndProjects = async () => {
     if (!currentWorkspace) return;
     try {
@@ -56,6 +59,14 @@ export default function TasksPage() {
       if (projData && projData.length > 0) {
         setProjectId(projData[0].id);
       }
+
+      // Fetch workspace members
+      const { data: memData } = await supabase
+        .from('workspace_members')
+        .select('user_id, profile:profiles(id, full_name, avatar_url, email)')
+        .eq('workspace_id', currentWorkspace.id);
+      
+      setMembers(memData || []);
 
       // Fetch workspace tasks
       const { data: tasksData } = await supabase
@@ -88,24 +99,42 @@ export default function TasksPage() {
         .insert({
           workspace_id: currentWorkspace.id,
           project_id: projectId,
-          title,
+          title: title.trim(),
           status,
           priority,
           due_date: dueDate || null,
+          assignee_id: assigneeId || null,
           created_by: currentUser.id,
+          description: description.trim() ? { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: description.trim() }] }] } : null,
+          description_text: description.trim() || null,
         })
         .select('*, assignee:assignee_id(full_name, avatar_url), project:projects(name, icon)')
         .single();
 
       if (error) throw error;
 
+      // Send notification to assignee if assigned to someone else
+      if (assigneeId && assigneeId !== currentUser.id) {
+        await supabase.from('notifications').insert({
+          user_id: assigneeId,
+          type: 'task_assigned',
+          title: 'Tugas Baru Ditugaskan',
+          body: `"${title}" telah ditugaskan kepada Anda oleh ${currentUser.full_name || currentUser.email}`,
+          link: `/${currentWorkspace.slug}/tasks`,
+          actor_id: currentUser.id,
+          workspace_id: currentWorkspace.id,
+        });
+      }
+
       toast.success('Tugas baru berhasil dibuat!');
       setTasks((prev) => [data as Task, ...prev]);
       setCreateOpen(false);
       setTitle('');
       setDueDate('');
-      setStatus('todo');
+      setStatus('backlog');
       setPriority('no_priority');
+      setAssigneeId('');
+      setDescription('');
     } catch (err: any) {
       toast.error(err.message || 'Gagal membuat tugas');
     } finally {
@@ -150,7 +179,7 @@ export default function TasksPage() {
               <Plus className="h-4 w-4" /> Tugas Baru
             </Button>
           </DialogTrigger>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckSquare className="h-5 w-5 text-primary" />
@@ -172,19 +201,32 @@ export default function TasksPage() {
                 />
               </div>
 
-              <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">Proyek</label>
-                <select
-                  value={projectId}
-                  onChange={(e) => setProjectId(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                >
-                  {projects.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.icon} {p.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">Proyek</label>
+                  <select
+                    value={projectId}
+                    onChange={(e) => setProjectId(e.target.value)}
+                    className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.icon} {p.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">Tenggat Waktu</label>
+                  <Input
+                    type="date"
+                    value={dueDate}
+                    onChange={(e) => setDueDate(e.target.value)}
+                    disabled={creating}
+                    className="h-10 text-xs"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -193,11 +235,14 @@ export default function TasksPage() {
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value as any)}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
+                    <option value="backlog">Backlog</option>
                     <option value="todo">Todo</option>
                     <option value="in_progress">In Progress</option>
+                    <option value="in_review">In Review</option>
                     <option value="done">Done</option>
+                    <option value="cancelled">Cancelled</option>
                   </select>
                 </div>
 
@@ -206,7 +251,7 @@ export default function TasksPage() {
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value as any)}
-                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                    className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
                     <option value="no_priority">No Priority</option>
                     <option value="urgent">Urgent</option>
@@ -217,18 +262,37 @@ export default function TasksPage() {
                 </div>
               </div>
 
+              {/* Assignee Selection */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">Tenggat Waktu</label>
-                <Input
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
+                <label className="text-xs font-semibold text-muted-foreground uppercase">Penerima Tugas</label>
+                <select
+                  value={assigneeId}
+                  onChange={(e) => setAssigneeId(e.target.value)}
+                  className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Pilih Anggota Tim (opsional)</option>
+                  {members.filter(m => m.profile).map((m) => (
+                    <option key={m.user_id} value={m.user_id}>
+                      {m.profile?.full_name || m.profile?.email}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Description */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">Deskripsi Tugas</label>
+                <textarea
+                  placeholder="Tambahkan detail tugas..."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
                   disabled={creating}
-                  className="h-10"
+                  rows={3}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
 
-              <Button type="submit" className="w-full h-10 mt-2" disabled={creating || !title.trim()}>
+              <Button type="submit" className="w-full h-10 mt-2 text-xs font-bold" style={{ background: '#106CD8' }} disabled={creating || !title.trim()}>
                 {creating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

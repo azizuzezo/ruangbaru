@@ -86,7 +86,7 @@ export function EventDialog({
   // --- Task form states ---
   const [taskTitle, setTaskTitle] = useState('');
   const [projectId, setProjectId] = useState('');
-  const [taskStatus, setTaskStatus] = useState<TaskStatus>('todo');
+  const [taskStatus, setTaskStatus] = useState<TaskStatus>('backlog');
   const [taskPriority, setTaskPriority] = useState<TaskPriority>('no_priority');
   const [taskDueDate, setTaskDueDate] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
@@ -273,6 +273,19 @@ export function EventDialog({
 
       if (error) throw error;
 
+      // Send notification to assignee if assigned to someone else
+      if (taskAssigneeId && taskAssigneeId !== currentUser.id) {
+        await supabase.from('notifications').insert({
+          user_id: taskAssigneeId,
+          type: 'task_assigned',
+          title: 'Tugas Baru Ditugaskan',
+          body: `"${taskTitle}" telah ditugaskan kepada Anda oleh ${currentUser.full_name || currentUser.email}`,
+          link: `/${workspace.slug}/tasks`,
+          actor_id: currentUser.id,
+          workspace_id: workspace.id,
+        });
+      }
+
       toast.success(`Tugas "${taskTitle}" berhasil dibuat!`);
       if (onTaskSaved) {
         onTaskSaved(data as unknown as Task);
@@ -302,7 +315,7 @@ export function EventDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="relative max-h-[90vh] overflow-hidden p-0 sm:max-w-lg" style={{ fontFamily: FONT }}>
+      <DialogContent className="relative max-h-[85vh] overflow-hidden p-0 sm:max-w-lg" style={{ fontFamily: FONT }}>
         {/* Glassmorphic Loading Overlay */}
         <AnimatePresence>
           {(saving || deleting) && (
@@ -320,14 +333,14 @@ export function EventDialog({
           )}
         </AnimatePresence>
 
-        <div className="flex flex-col max-h-[90vh]">
+        <div className="flex flex-col max-h-[85vh]">
           {/* Header */}
-          <div className="border-b border-neutral-100 p-5 pb-4">
+          <div className="border-b border-neutral-100 p-4 pb-3">
             <DialogHeader className="space-y-1">
-              <DialogTitle className="text-lg font-bold text-neutral-900 leading-none">
+              <DialogTitle className="text-base font-bold text-neutral-900 leading-none">
                 {isEdit ? 'Edit Acara' : activeTab === 'event' ? 'Buat Acara Baru' : 'Buat Tugas Baru'}
               </DialogTitle>
-              <DialogDescription className="text-xs text-neutral-500">
+              <DialogDescription className="text-[11px] text-neutral-500">
                 {activeTab === 'event'
                   ? 'Jadwalkan rapat atau agenda kolaborasi dengan tim.'
                   : 'Buat tugas kerja baru dan tentukan penanggung jawab.'}
@@ -336,12 +349,12 @@ export function EventDialog({
 
             {/* Segmented Tab Switcher (only when creating new) */}
             {!isEdit && (
-              <div className="mt-4 flex rounded-lg bg-neutral-100 p-1">
+              <div className="mt-3 flex rounded-lg bg-neutral-100 p-1">
                 <button
                   type="button"
                   onClick={() => setActiveTab('event')}
                   className={cn(
-                    'relative flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5',
+                    'relative flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5',
                     activeTab === 'event' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'
                   )}
                 >
@@ -352,7 +365,7 @@ export function EventDialog({
                   type="button"
                   onClick={() => setActiveTab('task')}
                   className={cn(
-                    'relative flex-1 py-1.5 text-xs font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5',
+                    'relative flex-1 py-1.5 text-[11px] font-semibold rounded-md transition-colors flex items-center justify-center gap-1.5',
                     activeTab === 'task' ? 'bg-white text-neutral-900 shadow-sm' : 'text-neutral-500 hover:text-neutral-900'
                   )}
                 >
@@ -364,7 +377,7 @@ export function EventDialog({
           </div>
 
           {/* Form container */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div className="flex-1 overflow-y-auto p-4.5 space-y-3.5">
             {activeTab === 'event' ? (
               /* ==========================================
                  EVENT FORM
@@ -670,7 +683,7 @@ export function EventDialog({
           </div>
 
           {/* Footer */}
-          <div className="border-t border-neutral-100 p-5 flex items-center justify-between bg-neutral-50/50">
+          <div className="border-t border-neutral-100 p-4 flex items-center justify-between bg-neutral-50/50">
             {isEdit && activeTab === 'event' ? (
               <Button
                 type="button"
