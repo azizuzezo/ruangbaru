@@ -150,6 +150,11 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
   - Removed the `🇲🇨` flag emoji from holiday badges to prevent Windows systems from buggy rendering of the text `mc`.
 - **Dialog Centering Fix** (`components/calendar/EventDialog.tsx`):
   - Centered the "Buat Acara Baru" dialog by removing the `relative` class from `DialogContent`, which was overriding the `fixed` centering classes from Radix UI / Tailwind v4.
+- **Conversational Support Bot & Ticketing System** (`components/support/SupportBotWidget.tsx` & `app/api/support/ticket/route.ts`):
+  - Created a beautiful, interactive floating support chatbot widget ("Tanya Asisten") in the bottom-right corner of all pages.
+  - The bot guides visitors/users through a conversational flow: asks for their question/issue first, then collects their name, email, and company/organization details.
+  - Once the information is fully collected, it creates a support ticket and sends it via Resend to **halo@ruangbaru.my.id**.
+  - Handles fallback scenarios gracefully: if `RESEND_API_KEY` is not configured locally, it logs the ticket details and returns a simulated success response to keep the UI fully functional.
 
 ### Done in session 5 (2026-06-29) — Enterprise gating, RLS fix, Admin panel
 
