@@ -64,3 +64,41 @@ export async function sendWorkspaceInvitation(opts: {
     ),
   });
 }
+
+export async function sendTicketEmail(opts: {
+  name: string;
+  email: string;
+  company?: string;
+  question: string;
+}) {
+  if (!resend) throw new Error('RESEND_API_KEY not configured');
+  return resend.emails.send({
+    from: EMAIL_FROM,
+    to: 'halo@ruangbaru.my.id',
+    subject: `[TIKET BARU] Pertanyaan dari ${opts.name}`,
+    html: shell(
+      'Tiket Dukungan Baru',
+      `<p>Anda menerima tiket baru dari asisten chatbot dukungan pelanggan.</p>
+       <table style="width:100%; border-collapse:collapse; margin-top:16px; font-size:14px; color:#3a3f4b;">
+         <tr style="border-bottom:1px solid #e8e9ee;">
+           <td style="padding:10px 0; font-weight:bold; width:120px;">Nama Pengirim</td>
+           <td style="padding:10px 0;">${opts.name}</td>
+         </tr>
+         <tr style="border-bottom:1px solid #e8e9ee;">
+           <td style="padding:10px 0; font-weight:bold;">Alamat Email</td>
+           <td style="padding:10px 0;"><a href="mailto:${opts.email}" style="color:#5b34d6; text-decoration:none; font-weight:600;">${opts.email}</a></td>
+         </tr>
+         ${opts.company ? `
+         <tr style="border-bottom:1px solid #e8e9ee;">
+           <td style="padding:10px 0; font-weight:bold;">Perusahaan</td>
+           <td style="padding:10px 0;">${opts.company}</td>
+         </tr>` : ''}
+         <tr>
+           <td style="padding:10px 0; font-weight:bold; vertical-align:top;">Pertanyaan</td>
+           <td style="padding:10px 0; white-space:pre-wrap; line-height:1.6;">${opts.question}</td>
+         </tr>
+       </table>`
+    ),
+  });
+}
+
