@@ -19,6 +19,7 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
         initial="initial"
         animate="enter"
         exit="exit"
+        className="h-full w-full"
       >
         {children}
       </motion.div>
