@@ -3,6 +3,15 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { headers } from 'next/headers';
+
+async function getOrigin() {
+  const headersList = await headers();
+  const host = headersList.get('host') || 'localhost:3000';
+  const isLocal = host.includes('localhost') || host.includes('127.0.0.1');
+  const protocol = isLocal ? 'http' : 'https';
+  return `${protocol}://${host}`;
+}
 
 export async function signIn(formData: FormData) {
   const supabase = await createClient();
@@ -31,6 +40,8 @@ export async function signUp(formData: FormData) {
   const fullName = formData.get('full_name') as string;
   const workspaceName = formData.get('workspace_name') as string | null;
 
+  const origin = await getOrigin();
+
   const { error } = await supabase.auth.signUp({
     email,
     password,
@@ -39,7 +50,7 @@ export async function signUp(formData: FormData) {
         full_name: fullName,
         ...(workspaceName ? { workspace_name: workspaceName } : {}),
       },
-      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
+      emailRedirectTo: `${origin}/auth/callback`,
     },
   });
 
@@ -62,8 +73,10 @@ export async function resetPassword(formData: FormData) {
 
   const email = formData.get('email') as string;
 
+  const origin = await getOrigin();
+
   const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback?next=/reset-password`,
+    redirectTo: `${origin}/auth/callback?next=/reset-password`,
   });
 
   if (error) {
@@ -76,7 +89,8 @@ export async function resetPassword(formData: FormData) {
 export async function signInWithGoogle(next?: string) {
   const supabase = await createClient();
 
-  const callback = `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`;
+  const origin = await getOrigin();
+  const callback = `${origin}/auth/callback`;
   const redirectTo = next ? `${callback}?next=${encodeURIComponent(next)}` : callback;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
