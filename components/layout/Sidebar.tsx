@@ -36,7 +36,7 @@ export function Sidebar() {
     sidebarCollapsed,
     toggleSidebar
   } = useWorkspaceStore();
-  const { setCommandPaletteOpen } = useUIStore();
+  const { setCommandPaletteOpen, setIsLoggingOut } = useUIStore();
   
   const activeWorkspaceSlug = currentWorkspace?.slug || 'dashboard';
 
@@ -52,12 +52,8 @@ export function Sidebar() {
     { label: 'Tagihan', href: `/${activeWorkspaceSlug}/billing`, icon: CreditCard, tour: 'billing' },
   ];
 
-  const handleLogout = async () => {
-    try {
-      await signOut();
-    } catch (err: any) {
-      if (!err?.digest?.startsWith('NEXT_REDIRECT')) toast.error('Gagal keluar.');
-    }
+  const handleLogout = () => {
+    setIsLoggingOut(true);
   };
 
   return (

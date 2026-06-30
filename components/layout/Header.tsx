@@ -31,7 +31,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export function Header() {
   const pathname = usePathname();
   const { currentWorkspace, currentUser } = useWorkspaceStore();
-  const { setCommandPaletteOpen, notificationPanelOpen, setNotificationPanelOpen } = useUIStore();
+  const { setCommandPaletteOpen, notificationPanelOpen, setNotificationPanelOpen, setIsLoggingOut } = useUIStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(true);
@@ -254,7 +254,7 @@ export function Header() {
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={async () => { try { await signOut(); } catch (err: any) { if (!err?.digest?.startsWith('NEXT_REDIRECT')) toast.error('Gagal keluar.'); } }}
+              onClick={() => setIsLoggingOut(true)}
               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
             >
               <LogOut className="h-4 w-4 mr-2" /> Keluar
