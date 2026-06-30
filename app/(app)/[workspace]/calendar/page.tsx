@@ -49,24 +49,24 @@ function occurrencesInRange(ev: CalendarEvent, rangeStart: Date, rangeEnd: Date)
   return out;
 }
 
-// Daftar Hari Libur Nasional Indonesia 2026
+// Daftar Hari Libur Nasional Indonesia 2026 (Resmi SKB 3 Menteri)
 const INDONESIAN_HOLIDAYS_2026: Record<string, string> = {
-  '2026-01-01': 'Tahun Baru 2026',
-  '2026-02-17': 'Isra Mikraj',
-  '2026-02-18': 'Tahun Baru Imlek',
-  '2026-03-29': 'Hari Suci Nyepi',
-  '2026-04-03': 'Wafat Isa Almasih',
+  '2026-01-01': 'Tahun Baru 2026 Masehi',
+  '2026-01-16': 'Isra Mikraj',
+  '2026-02-17': 'Tahun Baru Imlek',
+  '2026-03-19': 'Hari Suci Nyepi',
+  '2026-03-21': 'Hari Raya Idul Fitri',
+  '2026-03-22': 'Hari Raya Idul Fitri',
+  '2026-04-03': 'Wafat Yesus Kristus',
   '2026-04-05': 'Hari Paskah',
-  '2026-04-20': 'Idul Fitri 1447 H',
-  '2026-04-21': 'Idul Fitri 1447 H',
-  '2026-05-01': 'Hari Buruh',
-  '2026-05-14': 'Kenaikan Isa Almasih',
-  '2026-05-27': 'Hari Raya Waisak',
+  '2026-05-01': 'Hari Buruh Internasional',
+  '2026-05-14': 'Kenaikan Yesus Kristus',
+  '2026-05-27': 'Hari Raya Idul Adha',
+  '2026-05-31': 'Hari Raya Waisak',
   '2026-06-01': 'Hari Lahir Pancasila',
-  '2026-06-27': 'Idul Adha 1447 H',
-  '2026-07-17': 'Tahun Baru Islam 1448 H',
-  '2026-08-17': 'Proklamasi Kemerdekaan RI',
-  '2026-09-26': 'Maulid Nabi Muhammad SAW',
+  '2026-06-16': 'Tahun Baru Islam 1448 H',
+  '2026-08-17': 'Hari Kemerdekaan RI',
+  '2026-08-25': 'Maulid Nabi Muhammad SAW',
   '2026-12-25': 'Hari Raya Natal',
 };
 
