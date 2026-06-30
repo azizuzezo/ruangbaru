@@ -9,12 +9,14 @@ import {
   RoomAudioRenderer, 
   useTracks, 
   useLocalParticipant, 
-  VideoTrack 
+  VideoTrack,
+  Chat
 } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import { 
   ArrowLeft, Loader2, Video, VideoOff, Settings, 
-  Link2, PhoneOff, Mic, MicOff, ScreenShare, Pin, PinOff 
+  Link2, PhoneOff, Mic, MicOff, ScreenShare, Pin, PinOff,
+  MessageSquare, X
 } from 'lucide-react';
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { createClient } from '@/lib/supabase/client';
@@ -162,7 +164,7 @@ export default function MeetingRoomPage() {
   return (
     <RoomShell title={meeting?.title} backHref={backHref} onLeave={handleLeave} onCopy={copyLink} onEnd={isHost ? handleEnd : undefined}>
       <div
-        className="h-full w-full overflow-hidden rounded-b-2xl"
+        className="h-full w-full overflow-hidden"
         style={{ '--lk-accent-bg': '#106CD8', '--lk-accent-fg': '#ffffff' } as React.CSSProperties}
         data-lk-theme="default"
       >
@@ -193,8 +195,15 @@ function CustomVideoConference() {
     { onlySubscribed: false }
   );
 
-  const { localParticipant } = useLocalParticipant();
+  const { 
+    isMicrophoneEnabled, 
+    isCameraEnabled, 
+    isScreenShareEnabled, 
+    localParticipant 
+  } = useLocalParticipant();
+
   const [pinnedTrackKey, setPinnedTrackKey] = useState<string | null>(null);
+  const [showChat, setShowChat] = useState(false);
 
   // Auto-pin screen share if available
   const screenShareTrack = tracks.find((t) => t.source === Track.Source.ScreenShare);
@@ -205,128 +214,153 @@ function CustomVideoConference() {
     ? tracks.filter((t) => `${t.participant.sid}_${t.source}` !== `${activePinnedTrack.participant.sid}_${activePinnedTrack.source}`)
     : tracks;
 
-  // Local media controls state
-  const [isMuted, setIsMuted] = useState(false);
-  const [isCamOff, setIsCamOff] = useState(false);
-  const [isScreenSharing, setIsScreenSharing] = useState(false);
-
-  useEffect(() => {
-    if (localParticipant) {
-      setIsMuted(!localParticipant.isMicrophoneEnabled);
-      setIsCamOff(!localParticipant.isCameraEnabled);
-      setIsScreenSharing(localParticipant.isScreenShareEnabled);
-    }
-  }, [localParticipant]);
-
   const toggleMic = async () => {
     if (!localParticipant) return;
-    const enabled = localParticipant.isMicrophoneEnabled;
-    await localParticipant.setMicrophoneEnabled(!enabled);
-    setIsMuted(enabled);
+    try {
+      await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
+    } catch (err) {
+      console.error('Failed to toggle mic:', err);
+      toast.error('Gagal mengakses mikrofon.');
+    }
   };
 
   const toggleCam = async () => {
     if (!localParticipant) return;
-    const enabled = localParticipant.isCameraEnabled;
-    await localParticipant.setCameraEnabled(!enabled);
-    setIsCamOff(enabled);
+    try {
+      await localParticipant.setCameraEnabled(!isCameraEnabled);
+    } catch (err) {
+      console.error('Failed to toggle camera:', err);
+      toast.error('Gagal mengakses kamera.');
+    }
   };
 
   const toggleScreen = async () => {
     if (!localParticipant) return;
-    const enabled = localParticipant.isScreenShareEnabled;
     try {
-      await localParticipant.setScreenShareEnabled(!enabled);
-      setIsScreenSharing(!enabled);
+      await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
     } catch (err) {
       console.error('Failed to toggle screen share:', err);
+      toast.error('Gagal membagikan layar.');
     }
   };
 
   return (
-    <div className="relative flex h-full w-full flex-col bg-neutral-950 p-3 justify-between">
-      {/* Video Grid / Split View */}
-      <div className="flex-1 min-h-0 flex flex-col md:flex-row gap-3">
-        {activePinnedTrack ? (
-          // Split Layout (Pinned / Screen Share active)
-          <>
-            {/* Pinned Video (Large) */}
-            <div className="flex-1 min-w-0 h-full relative">
-              <VideoTile
-                track={activePinnedTrack}
-                isPinned={true}
-                onPinToggle={() => setPinnedTrackKey(null)}
-              />
-            </div>
+    <div className="relative flex h-full w-full flex-col bg-neutral-950 p-3 justify-between overflow-hidden">
+      {/* Video Area & Chat Panel */}
+      <div className="flex-1 min-h-0 flex flex-row gap-0 md:gap-3 overflow-hidden relative">
+        {/* Video Grid / Split View */}
+        <div className="flex-1 min-w-0 flex flex-col md:flex-row gap-3 overflow-hidden">
+          {activePinnedTrack ? (
+            // Split Layout (Pinned / Screen Share active)
+            <>
+              {/* Pinned Video (Large) */}
+              <div className="flex-1 min-w-0 h-full relative">
+                <VideoTile
+                  track={activePinnedTrack}
+                  isPinned={true}
+                  onPinToggle={() => setPinnedTrackKey(null)}
+                />
+              </div>
 
-            {/* Sidebar / Bottom strip for other participants */}
-            <div className="w-full md:w-64 shrink-0 flex md:flex-col gap-3 overflow-x-auto md:overflow-x-visible md:overflow-y-auto max-h-[120px] md:max-h-none pb-2 md:pb-0">
-              {otherTracks.map((t) => (
-                <div key={`${t.participant.sid}_${t.source}`} className="w-40 h-24 md:w-full md:h-36 shrink-0">
-                  <VideoTile
-                    track={t}
-                    isPinned={false}
-                    onPinToggle={() => setPinnedTrackKey(`${t.participant.sid}_${t.source}`)}
-                  />
-                </div>
+              {/* Sidebar / Bottom strip for other participants */}
+              <div className="w-full md:w-64 shrink-0 flex md:flex-col gap-3 overflow-x-auto md:overflow-x-visible md:overflow-y-auto max-h-[120px] md:max-h-none pb-2 md:pb-0">
+                {otherTracks.map((t) => (
+                  <div key={`${t.participant.sid}_${t.source}`} className="w-40 h-24 md:w-full md:h-36 shrink-0">
+                    <VideoTile
+                      track={t}
+                      isPinned={false}
+                      onPinToggle={() => setPinnedTrackKey(`${t.participant.sid}_${t.source}`)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </>
+          ) : (
+            // Grid Layout (No one pinned)
+            <div className={cn(
+              "grid w-full h-full gap-3",
+              tracks.length === 1 ? "grid-cols-1 grid-rows-1" :
+              tracks.length === 2 ? "grid-cols-1 md:grid-cols-2 grid-rows-2 md:grid-rows-1" :
+              tracks.length <= 4 ? "grid-cols-2 grid-rows-2" :
+              tracks.length <= 6 ? "grid-cols-2 md:grid-cols-3 grid-rows-3 md:grid-rows-2" :
+              "grid-cols-3 grid-rows-3"
+            )}>
+              {tracks.map((t) => (
+                <VideoTile
+                  key={`${t.participant.sid}_${t.source}`}
+                  track={t}
+                  isPinned={false}
+                  onPinToggle={() => setPinnedTrackKey(`${t.participant.sid}_${t.source}`)}
+                />
               ))}
             </div>
-          </>
-        ) : (
-          // Grid Layout (No one pinned)
-          <div className={cn(
-            "grid w-full h-full gap-3",
-            tracks.length === 1 ? "grid-cols-1 grid-rows-1" :
-            tracks.length === 2 ? "grid-cols-1 md:grid-cols-2 grid-rows-2 md:grid-rows-1" :
-            tracks.length <= 4 ? "grid-cols-2 grid-rows-2" :
-            tracks.length <= 6 ? "grid-cols-2 md:grid-cols-3 grid-rows-3 md:grid-rows-2" :
-            "grid-cols-3 grid-rows-3"
-          )}>
-            {tracks.map((t) => (
-              <VideoTile
-                key={`${t.participant.sid}_${t.source}`}
-                track={t}
-                isPinned={false}
-                onPinToggle={() => setPinnedTrackKey(`${t.participant.sid}_${t.source}`)}
-              />
-            ))}
+          )}
+        </div>
+
+        {/* Responsive Chat Sidebar */}
+        {showChat && (
+          <div className="absolute md:relative inset-y-0 right-0 z-20 w-full md:w-80 h-full border-l border-neutral-850 bg-neutral-900 flex flex-col shrink-0 overflow-hidden rounded-2xl md:ml-3 shadow-2xl md:shadow-none">
+            <div className="p-3.5 border-b border-neutral-850 flex justify-between items-center bg-neutral-900 shrink-0">
+              <span className="text-xs font-bold text-white">Chat Rapat</span>
+              <button 
+                onClick={() => setShowChat(false)} 
+                className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="flex-1 min-h-0 overflow-hidden bg-neutral-950/50">
+              <Chat />
+            </div>
           </div>
         )}
       </div>
 
       {/* Premium Custom Control Bar */}
-      <div className="mt-3 flex justify-center items-center gap-3 bg-neutral-900/80 border border-neutral-800/40 backdrop-blur-md px-5 py-3 rounded-2xl mx-auto max-w-fit shadow-xl">
+      <div className="mt-3 flex justify-center items-center gap-3 bg-neutral-900/80 border border-neutral-800/40 backdrop-blur-md px-5 py-3 rounded-2xl mx-auto max-w-fit shadow-xl z-10">
         <button
           onClick={toggleMic}
-          aria-label={isMuted ? 'Nyalakan mikrofon' : 'Matikan mikrofon'}
+          aria-label={!isMicrophoneEnabled ? 'Nyalakan mikrofon' : 'Matikan mikrofon'}
           className={cn(
             "p-3 rounded-xl transition-all duration-200 active:scale-95",
-            isMuted ? "bg-rose-500 text-white" : "bg-neutral-850 hover:bg-neutral-750 text-neutral-200"
+            !isMicrophoneEnabled ? "bg-rose-500 text-white" : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200"
           )}
         >
-          {isMuted ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          {!isMicrophoneEnabled ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
         </button>
 
         <button
           onClick={toggleCam}
-          aria-label={isCamOff ? 'Nyalakan kamera' : 'Matikan kamera'}
+          aria-label={!isCameraEnabled ? 'Nyalakan kamera' : 'Matikan kamera'}
           className={cn(
             "p-3 rounded-xl transition-all duration-200 active:scale-95",
-            isCamOff ? "bg-rose-500 text-white" : "bg-neutral-850 hover:bg-neutral-750 text-neutral-200"
+            !isCameraEnabled ? "bg-rose-500 text-white" : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200"
           )}
         >
-          {isCamOff ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
+          {!isCameraEnabled ? <VideoOff className="h-5 w-5" /> : <Video className="h-5 w-5" />}
         </button>
 
         <button
           onClick={toggleScreen}
-          aria-label={isScreenSharing ? 'Hentikan berbagi layar' : 'Mulai berbagi layar'}
+          aria-label={isScreenShareEnabled ? 'Hentikan berbagi layar' : 'Mulai berbagi layar'}
           className={cn(
             "p-3 rounded-xl transition-all duration-200 active:scale-95",
-            isScreenSharing ? "bg-emerald-500 text-white animate-pulse" : "bg-neutral-850 hover:bg-neutral-750 text-neutral-200"
+            isScreenShareEnabled ? "bg-emerald-500 text-white animate-pulse" : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200"
           )}
         >
           <ScreenShare className="h-5 w-5" />
+        </button>
+
+        {/* Chat Toggle Button */}
+        <button
+          onClick={() => setShowChat(!showChat)}
+          aria-label="Buka obrolan"
+          className={cn(
+            "p-3 rounded-xl transition-all duration-200 active:scale-95",
+            showChat ? "bg-primary text-white" : "bg-neutral-800 hover:bg-neutral-750 text-neutral-200"
+          )}
+        >
+          <MessageSquare className="h-5 w-5" />
         </button>
       </div>
     </div>
@@ -341,7 +375,7 @@ function VideoTile({ track, isPinned, onPinToggle }: { track: any; isPinned: boo
   return (
     <div className="relative w-full h-full bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-850/60 group shadow-lg flex items-center justify-center">
       {isVideoEnabled ? (
-        <VideoTrack trackRef={track} className="w-full h-full object-cover" />
+        <VideoTrack trackRef={track} className="w-full h-full object-cover animate-fade-in" />
       ) : (
         <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-neutral-800 to-neutral-950 text-white gap-3">
           <div className="relative flex h-14 w-14 items-center justify-center rounded-full bg-primary/10 border border-primary/20 shadow-inner">
@@ -384,9 +418,9 @@ function VideoTile({ track, isPinned, onPinToggle }: { track: any; isPinned: boo
 
 function RoomShell({ title, backHref, onLeave, onCopy, onEnd, children }: { title?: string; backHref: string; onLeave?: () => void; onCopy?: () => void; onEnd?: () => void; children: React.ReactNode }) {
   return (
-    <div className="-mx-4 -my-6 flex h-[calc(100vh-4rem)] flex-col sm:-mx-6 lg:-mx-8">
+    <div className="absolute inset-0 z-30 flex flex-col bg-neutral-950">
       {/* Top bar */}
-      <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-4 py-2.5">
+      <div className="flex items-center justify-between gap-2 border-b border-border bg-card px-4 py-2.5 shrink-0">
         <div className="flex items-center gap-3 min-w-0">
           <Link href={backHref} className="rounded-lg p-1.5 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground">
             <ArrowLeft className="h-4 w-4" />
@@ -412,7 +446,7 @@ function RoomShell({ title, backHref, onLeave, onCopy, onEnd, children }: { titl
           )}
         </div>
       </div>
-      <div className="relative flex-1 bg-neutral-950">{children}</div>
+      <div className="relative flex-1 bg-neutral-950 overflow-hidden">{children}</div>
     </div>
   );
 }
