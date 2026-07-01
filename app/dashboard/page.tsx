@@ -1,9 +1,12 @@
+import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { NOINDEX } from '@/lib/seo';
 
 // Entry point after login / OAuth. Resolves the user's workspace and forwards
 // to the real slug-scoped dashboard route, or to onboarding if they have none.
 export const dynamic = 'force-dynamic';
+export const metadata: Metadata = NOINDEX;
 
 export default async function DashboardEntry() {
   const supabase = await createClient();

@@ -1,8 +1,14 @@
 import Link from 'next/link';
+import type { Metadata } from 'next';
 import { Logo } from '@/components/brand/Logo';
 import { AuthShowcase } from '@/components/landing/AuthShowcase';
+import { NOINDEX } from '@/lib/seo';
 
 const FONT = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
+
+// Account/auth flows have no unique content for search engines and reset
+// links carry sensitive tokens — keep them out of the index (still crawlable).
+export const metadata: Metadata = NOINDEX;
 
 export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (

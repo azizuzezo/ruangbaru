@@ -15,6 +15,21 @@ import {
 import { HeroPreview } from '@/components/landing/HeroPreview';
 import { SiteFooter } from '@/components/landing/SiteFooter';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { SITE_URL, SITE_NAME } from '@/lib/seo';
+
+// Homepage-specific structured data. No aggregateRating/review data is
+// fabricated here — only facts that are actually true of the product.
+const softwareAppJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'SoftwareApplication',
+  name: SITE_NAME,
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Web',
+  url: SITE_URL,
+  description: 'RuangBaru menyatukan proyek, tugas, kalender, catatan, dan rapat video dalam satu workspace untuk tim Indonesia.',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'IDR', description: 'Paket gratis untuk tim hingga 5 anggota' },
+};
 
 // Three.js ambient field — client-only, kept out of SSR & initial bundle.
 const CollabField = dynamic(
@@ -303,6 +318,18 @@ const FAQS = [
   { q: 'Bahasa apa yang didukung?', a: 'Antarmuka RuangBaru sepenuhnya dalam Bahasa Indonesia, dirancang untuk cara kerja tim di Indonesia.' },
 ];
 
+// Derived from FAQS so the structured data can never drift from what's
+// actually visible on the page (a Google structured-data policy requirement).
+const faqJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: FAQS.map((f) => ({
+    '@type': 'Question',
+    name: f.q,
+    acceptedAnswer: { '@type': 'Answer', text: f.a },
+  })),
+};
+
 function Faq() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
   return (
@@ -382,6 +409,8 @@ function Cta() {
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-white antialiased" style={{ fontFamily: FONT_BODY }}>
+      <JsonLd data={softwareAppJsonLd} />
+      <JsonLd data={faqJsonLd} />
       <MarketingHeader />
       <main>
         <Hero />

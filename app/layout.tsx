@@ -1,18 +1,21 @@
 import type { Metadata, Viewport } from 'next';
 import { Providers } from './providers';
+import { JsonLd } from '@/components/seo/JsonLd';
+import { SITE_URL, SITE_NAME } from '@/lib/seo';
 import './globals.css';
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'https://ruangbaru.my.id'),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: 'RuangBaru — Workspace untuk Tim Indonesia',
     template: '%s | RuangBaru',
   },
   description:
     'RuangBaru membantu tim mengorganisir proyek, tugas, catatan, dan kolaborasi dalam satu workspace. Tersedia gratis untuk tim hingga 5 anggota.',
-  keywords: ['workspace', 'manajemen proyek', 'manajemen tugas', 'kolaborasi tim', 'Indonesia', 'kanban', 'catatan tim'],
-  authors: [{ name: 'RuangBaru', url: 'https://ruangbaru.my.id' }],
+  keywords: ['RuangBaru', 'workspace', 'manajemen proyek', 'manajemen tugas', 'kolaborasi tim', 'Indonesia', 'kanban', 'catatan tim', 'aplikasi manajemen proyek Indonesia'],
+  authors: [{ name: 'RuangBaru', url: SITE_URL }],
   creator: 'RuangBaru',
+  alternates: { canonical: '/' },
   icons: {
     icon: [{ url: '/favicon.png', type: 'image/png' }],
     apple: [{ url: '/favicon.png', type: 'image/png' }],
@@ -21,19 +24,41 @@ export const metadata: Metadata = {
   openGraph: {
     type: 'website',
     locale: 'id_ID',
-    url: 'https://ruangbaru.my.id',
+    url: SITE_URL,
     title: 'RuangBaru — Workspace untuk Tim Indonesia',
     description: 'Kelola proyek, tugas, catatan, dan tim dalam satu workspace yang mudah digunakan.',
     siteName: 'RuangBaru',
-    images: [{ url: '/logo.png', width: 1024, height: 1024, alt: 'RuangBaru Logo' }],
+    // Image comes from app/opengraph-image.tsx (dynamic, 1200×630, branded).
   },
   twitter: {
     card: 'summary_large_image',
     title: 'RuangBaru — Workspace untuk Tim Indonesia',
     description: 'Kelola proyek, tugas, catatan, dan tim dalam satu workspace yang mudah digunakan.',
-    images: ['/logo.png'],
+    // Falls back to app/opengraph-image.tsx.
   },
   robots: { index: true, follow: true },
+  ...(process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION
+    ? { verification: { google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION } }
+    : {}),
+};
+
+// Sitewide structured data — helps Google understand RuangBaru as a brand
+// entity (Organization) and enables the search box / sitelinks (WebSite).
+const organizationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  name: SITE_NAME,
+  url: SITE_URL,
+  logo: `${SITE_URL}/logo.png`,
+  description: 'RuangBaru adalah workspace kolaborasi untuk tim dan UMKM Indonesia — proyek, tugas, kalender, catatan, dan rapat video dalam satu ruang.',
+};
+
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  name: SITE_NAME,
+  url: SITE_URL,
+  inLanguage: 'id-ID',
 };
 
 export const viewport: Viewport = {
@@ -53,6 +78,10 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" data-scroll-behavior="smooth" suppressHydrationWarning>
+      <head>
+        <JsonLd data={organizationJsonLd} />
+        <JsonLd data={websiteJsonLd} />
+      </head>
       <body>
         <Providers>{children}</Providers>
       </body>
