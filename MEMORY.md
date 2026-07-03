@@ -5,7 +5,7 @@
 > without losing history. **Read this first.** Update it whenever you make a
 > meaningful change.
 
-Last updated: 2026-06-29 (session 5 — meetings enterprise gating + settings RLS fix + admin panel)
+Last updated: 2026-07-03 (session 7 — signup confirmation email sent via Resend)
 
 ---
 
@@ -92,7 +92,7 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 - **App shell:** [app/(app)/layout.tsx](app/(app)/layout.tsx) → Sidebar (desktop), Header, BottomNav (mobile), CommandPalette, TaskDetailSheet, PageTransition.
 - **Layout components:** [components/layout/](components/layout/) — Sidebar, Header, BottomNav, CommandPalette, PageTransition.
 - **Supabase:** [lib/supabase/](lib/supabase/) — client.ts (browser), server.ts, middleware.ts, actions.ts (auth server actions).
-- **Email:** [lib/email/resend.ts](lib/email/resend.ts) + [app/api/invitations/send/route.ts](app/api/invitations/send/route.ts).
+- **Email:** [lib/email/resend.ts](lib/email/resend.ts) + [app/api/invitations/send/route.ts](app/api/invitations/send/route.ts). Signup confirmation is sent from `signUp()` in [lib/supabase/actions.ts](lib/supabase/actions.ts) via `sendConfirmationEmail()`.
 - **Stores:** [lib/stores/](lib/stores/) — workspace-store (persisted), ui-store.
 - **Types:** [types/index.ts](types/index.ts).
 
@@ -167,9 +167,26 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 - **Admin API** (`app/api/admin/workspaces/route.ts`, `app/api/admin/update-plan/route.ts`): Service-role Supabase client (bypasses RLS) gated by admin email check via session cookie. GET lists all workspaces with owner info; POST updates workspace plan.
 - **Service-role client** (`lib/supabase/admin.ts`): `createAdminClient()` using `SUPABASE_SERVICE_ROLE_KEY` env var. Server-only.
 
+### Done in session 7 (2026-07-03) — Signup confirmation email via Resend
+- **Signup confirmation now sent by Resend**, not Supabase's mailer. `signUp()` in
+  [lib/supabase/actions.ts](lib/supabase/actions.ts) uses `createAdminClient()`
+  ([lib/supabase/admin.ts](lib/supabase/admin.ts)) to call
+  `auth.admin.generateLink({ type: 'signup', ... })`, which creates the
+  unconfirmed user and mints the confirmation link **without** triggering
+  Supabase's own email. The link is then sent via the new
+  `sendConfirmationEmail()` in [lib/email/resend.ts](lib/email/resend.ts) using
+  the same branded shell as the other transactional emails.
+  - Requires both `RESEND_API_KEY` and `SUPABASE_SERVICE_ROLE_KEY` to be set. If
+    either is missing, `signUp()` falls back to the original
+    `supabase.auth.signUp()` path so Supabase's default mailer still sends the
+    confirmation email — signup never silently breaks.
+  - Password reset (`resetPassword()`) still uses Supabase's built-in mailer for
+    the reset *trigger* (`resetPasswordForEmail`), though `sendPasswordReset()`
+    already exists in resend.ts if that flow gets the same treatment later.
+
 ### Known remaining gaps / TODO
 - **Resend domain** `ruangbaru.com` must be verified in Resend or emails fail (falls back to copy-link).
-- **Auth emails** (signup confirm / password reset) still use Supabase's mailer. To use Resend, set Resend as custom SMTP in Supabase Dashboard → Auth → SMTP (config, not code).
+- **Password reset email** still uses Supabase's mailer (only signup confirmation was moved to Resend in session 7). To move it too, either repeat the `generateLink({ type: 'recovery' })` + `sendPasswordReset()` pattern, or set Resend as custom SMTP in Supabase Dashboard → Auth → SMTP.
 - **Payments** intentionally stubbed (honest "coming soon" toast on Billing).
 - **Realtime collaboration** enabled at DB level, but only Header notifications subscribe; boards/notes don't live-sync between users yet.
 - Notes, Tasks (Kanban), and Settings pages still lack skeleton loading states.

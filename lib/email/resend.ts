@@ -44,6 +44,22 @@ export async function sendPasswordReset(opts: { to: string; resetLink: string })
   });
 }
 
+export async function sendConfirmationEmail(opts: { to: string; fullName?: string; confirmLink: string }) {
+  if (!resend) throw new Error('RESEND_API_KEY not configured');
+  return resend.emails.send({
+    from: EMAIL_FROM,
+    to: opts.to,
+    subject: 'Konfirmasi email Anda untuk RuangBaru',
+    html: shell(
+      'Konfirmasi Email Anda',
+      `<p>Halo${opts.fullName ? ` ${opts.fullName}` : ''},</p>
+       <p>Terima kasih telah mendaftar di RuangBaru. Klik tombol di bawah untuk mengonfirmasi alamat email Anda dan mulai menggunakan workspace Anda.</p>
+       <p style="margin-top:12px;font-size:12px;color:#8a8f9c;">Jika Anda tidak mendaftar di RuangBaru, abaikan email ini.</p>`,
+      { label: 'Konfirmasi Email', href: opts.confirmLink }
+    ),
+  });
+}
+
 export async function sendWorkspaceInvitation(opts: {
   to: string;
   workspaceName: string;
