@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
+import { resend, sendConfirmationEmail } from '@/lib/email/resend';
 import { headers } from 'next/headers';
 
 async function getOrigin() {
@@ -33,25 +35,55 @@ export async function signIn(formData: FormData) {
 }
 
 export async function signUp(formData: FormData) {
-  const supabase = await createClient();
-
   const email = formData.get('email') as string;
   const password = formData.get('password') as string;
   const fullName = formData.get('full_name') as string;
   const workspaceName = formData.get('workspace_name') as string | null;
 
   const origin = await getOrigin();
+  const redirectTo = `${origin}/auth/callback`;
+  const userData = {
+    full_name: fullName,
+    ...(workspaceName ? { workspace_name: workspaceName } : {}),
+  };
 
+  // Preferred path: mint the confirmation link ourselves and send it via Resend,
+  // so the "from" address and branding match our other transactional emails
+  // instead of Supabase's default mailer.
+  if (resend && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    const admin = createAdminClient();
+    const { data, error } = await admin.auth.admin.generateLink({
+      type: 'signup',
+      email,
+      password,
+      options: { data: userData, redirectTo },
+    });
+
+    if (error) {
+      return { error: error.message };
+    }
+
+    const confirmLink = data.properties?.action_link;
+    if (!confirmLink) {
+      return { error: 'Gagal membuat tautan konfirmasi.' };
+    }
+
+    try {
+      await sendConfirmationEmail({ to: email, fullName, confirmLink });
+    } catch (e) {
+      console.error('[signUp] Resend confirmation email failed:', e);
+      return { error: 'Gagal mengirim email konfirmasi. Coba lagi.' };
+    }
+
+    return { success: 'Check your email to confirm your account.' };
+  }
+
+  // Fallback: Resend/service role not configured, let Supabase send its own email.
+  const supabase = await createClient();
   const { error } = await supabase.auth.signUp({
     email,
     password,
-    options: {
-      data: {
-        full_name: fullName,
-        ...(workspaceName ? { workspace_name: workspaceName } : {}),
-      },
-      emailRedirectTo: `${origin}/auth/callback`,
-    },
+    options: { data: userData, emailRedirectTo: redirectTo },
   });
 
   if (error) {
