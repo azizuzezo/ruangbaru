@@ -15,6 +15,9 @@ export function googleConfigured() {
   return !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 }
 
+/** Cookie carrying the CSRF nonce that binds an OAuth connect attempt to its callback. */
+export const GOOGLE_OAUTH_NONCE_COOKIE = 'google_oauth_nonce';
+
 /**
  * The OAuth redirect URI. Derived from the actual request origin so it always
  * matches wherever the app is served (any host/port) — this exact value must be

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createClient } from '@/lib/supabase/server';
-import { googleConfigured, exchangeCode, getUserEmail, redirectUri } from '@/lib/google/calendar';
+import { googleConfigured, exchangeCode, getUserEmail, redirectUri, GOOGLE_OAUTH_NONCE_COOKIE } from '@/lib/google/calendar';
 
 /** Google OAuth redirect target: exchanges the code and stores tokens. */
 export async function GET(req: Request) {
@@ -9,11 +10,28 @@ export async function GET(req: Request) {
   const state = url.searchParams.get('state');
 
   let workspaceSlug = '';
-  try { workspaceSlug = JSON.parse(Buffer.from(state || '', 'base64url').toString()).w || ''; } catch { /* ignore */ }
-  const back = (status: string) => NextResponse.redirect(new URL(`/${workspaceSlug || 'dashboard'}/calendar?google=${status}`, req.url));
+  let nonce = '';
+  try {
+    const parsed = JSON.parse(Buffer.from(state || '', 'base64url').toString());
+    workspaceSlug = parsed.w || '';
+    nonce = parsed.n || '';
+  } catch { /* ignore */ }
+
+  const cookieStore = await cookies();
+  const back = (status: string) => {
+    const res = NextResponse.redirect(new URL(`/${workspaceSlug || 'dashboard'}/calendar?google=${status}`, req.url));
+    res.cookies.delete(GOOGLE_OAUTH_NONCE_COOKIE);
+    return res;
+  };
 
   if (url.searchParams.get('error')) return back('denied');
   if (!code || !googleConfigured()) return back('error');
+
+  // Verify this callback belongs to the flow this browser actually started.
+  const expectedNonce = cookieStore.get(GOOGLE_OAUTH_NONCE_COOKIE)?.value;
+  if (!nonce || !expectedNonce || nonce !== expectedNonce) {
+    return back('error');
+  }
 
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();

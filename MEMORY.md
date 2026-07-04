@@ -205,6 +205,32 @@ engineering health) found 15 issues. Fixed the critical and highest-severity one
   plaintext OAuth tokens, no rate limiting, missing security headers, etc.) are not
   yet fixed — see the audit report for the full list if picking this back up.
 
+### Done in session 8 (cont'd) — auth.users grant narrowed + Google OAuth CSRF nonce
+- **Narrowed the `auth.users` grant from migration 008** (`supabase/migrations/009_fix_auth_users_grant.sql`):
+  008 granted table-wide `SELECT` on `auth.users` to `anon`/`authenticated` to fix a
+  PostgREST permission error. The real cause was the `workspace_invitations` RLS
+  policy `"Invitees can view their invitation by token"`, whose `USING` clause ran
+  `(SELECT email FROM auth.users WHERE id = auth.uid())` as the *calling* role. Added
+  a `SECURITY DEFINER` helper `public.current_user_email()` that only ever returns the
+  caller's own email, pointed the policy at it, and revoked the table-wide grant.
+  `accept_invitation()` also reads `auth.users` directly but is already `SECURITY
+  DEFINER`, so it never depended on this grant. **Run this migration** — not yet
+  applied to the live DB. Worth a smoke test of the invite-accept flow after applying,
+  since this touches an RLS policy on the invitations table.
+- **Google Calendar OAuth CSRF nonce** (`app/api/google/connect/route.ts`,
+  `app/api/google/callback/route.ts`, `lib/google/calendar.ts`): `state` used to be
+  just `base64(workspace slug)` with nothing tying it to the browser that started the
+  flow — a login/consent-CSRF vector. `/connect` now generates a random nonce
+  (`crypto.randomBytes`), embeds it in `state` alongside the workspace slug, and sets
+  it as an httpOnly cookie (`google_oauth_nonce`, `lib/google/calendar.ts`) scoped to
+  `/api/google`. `/callback` compares the `state`'s nonce against the cookie and
+  aborts (`?google=error`) on any mismatch or missing cookie, then clears the cookie
+  either way. Pure application code — no migration needed for this one.
+- Still open from the audit: plaintext Google OAuth tokens at rest, no rate limiting
+  on public endpoints, missing security headers, `accept_invitation()`'s missing
+  `search_path`, the Google-connection-vs-workspace-membership gap, zero test
+  coverage.
+
 ### Known remaining gaps / TODO
 - **Resend domain** `ruangbaru.com` must be verified in Resend or emails fail (falls back to copy-link).
 - **Password reset email** still uses Supabase's mailer (only signup confirmation was moved to Resend in session 7). To move it too, either repeat the `generateLink({ type: 'recovery' })` + `sendPasswordReset()` pattern, or set Resend as custom SMTP in Supabase Dashboard → Auth → SMTP.
