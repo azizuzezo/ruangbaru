@@ -9,6 +9,16 @@ export const EMAIL_FROM = FROM;
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
+/** Escapes user-supplied text before it's interpolated into an email's HTML body. */
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
 /** Shared branded HTML shell so every transactional email looks consistent. */
 function shell(title: string, bodyHtml: string, cta?: { label: string; href: string }) {
   return `<!doctype html><html><body style="margin:0;background:#f4f5f7;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#0f1115;">
@@ -46,13 +56,14 @@ export async function sendPasswordReset(opts: { to: string; resetLink: string })
 
 export async function sendConfirmationEmail(opts: { to: string; fullName?: string; confirmLink: string }) {
   if (!resend) throw new Error('RESEND_API_KEY not configured');
+  const fullName = opts.fullName ? escapeHtml(opts.fullName) : '';
   return resend.emails.send({
     from: EMAIL_FROM,
     to: opts.to,
     subject: 'Konfirmasi email Anda untuk RuangBaru',
     html: shell(
       'Konfirmasi Email Anda',
-      `<p>Halo${opts.fullName ? ` ${opts.fullName}` : ''},</p>
+      `<p>Halo${fullName ? ` ${fullName}` : ''},</p>
        <p>Terima kasih telah mendaftar di RuangBaru. Klik tombol di bawah untuk mengonfirmasi alamat email Anda dan mulai menggunakan workspace Anda.</p>
        <p style="margin-top:12px;font-size:12px;color:#8a8f9c;">Jika Anda tidak mendaftar di RuangBaru, abaikan email ini.</p>`,
       { label: 'Konfirmasi Email', href: opts.confirmLink }
@@ -68,13 +79,15 @@ export async function sendWorkspaceInvitation(opts: {
 }) {
   if (!resend) throw new Error('RESEND_API_KEY not configured');
   const href = `${APP_URL}/invite/${opts.token}`;
+  const workspaceName = escapeHtml(opts.workspaceName);
+  const inviterName = escapeHtml(opts.inviterName);
   return resend.emails.send({
     from: EMAIL_FROM,
     to: opts.to,
     subject: `${opts.inviterName} mengundang Anda ke ${opts.workspaceName} di RuangBaru`,
     html: shell(
-      `Anda diundang ke ${opts.workspaceName}`,
-      `<p><strong>${opts.inviterName}</strong> mengundang Anda untuk berkolaborasi di ruang kerja <strong>${opts.workspaceName}</strong> di RuangBaru.</p>
+      `Anda diundang ke ${workspaceName}`,
+      `<p><strong>${inviterName}</strong> mengundang Anda untuk berkolaborasi di ruang kerja <strong>${workspaceName}</strong> di RuangBaru.</p>
        <p>Klik tombol di bawah untuk menerima undangan dan mulai bekerja bersama tim.</p>`,
       { label: 'Terima Undangan', href }
     ),
@@ -88,6 +101,10 @@ export async function sendTicketEmail(opts: {
   question: string;
 }) {
   if (!resend) throw new Error('RESEND_API_KEY not configured');
+  const name = escapeHtml(opts.name);
+  const email = escapeHtml(opts.email);
+  const company = opts.company ? escapeHtml(opts.company) : '';
+  const question = escapeHtml(opts.question);
   return resend.emails.send({
     from: EMAIL_FROM,
     to: 'halo@ruangbaru.my.id',
@@ -98,20 +115,20 @@ export async function sendTicketEmail(opts: {
        <table style="width:100%; border-collapse:collapse; margin-top:16px; font-size:14px; color:#3a3f4b;">
          <tr style="border-bottom:1px solid #e8e9ee;">
            <td style="padding:10px 0; font-weight:bold; width:120px;">Nama Pengirim</td>
-           <td style="padding:10px 0;">${opts.name}</td>
+           <td style="padding:10px 0;">${name}</td>
          </tr>
          <tr style="border-bottom:1px solid #e8e9ee;">
            <td style="padding:10px 0; font-weight:bold;">Alamat Email</td>
-           <td style="padding:10px 0;"><a href="mailto:${opts.email}" style="color:#5b34d6; text-decoration:none; font-weight:600;">${opts.email}</a></td>
+           <td style="padding:10px 0;"><a href="mailto:${email}" style="color:#5b34d6; text-decoration:none; font-weight:600;">${email}</a></td>
          </tr>
-         ${opts.company ? `
+         ${company ? `
          <tr style="border-bottom:1px solid #e8e9ee;">
            <td style="padding:10px 0; font-weight:bold;">Perusahaan</td>
-           <td style="padding:10px 0;">${opts.company}</td>
+           <td style="padding:10px 0;">${company}</td>
          </tr>` : ''}
          <tr>
            <td style="padding:10px 0; font-weight:bold; vertical-align:top;">Pertanyaan</td>
-           <td style="padding:10px 0; white-space:pre-wrap; line-height:1.6;">${opts.question}</td>
+           <td style="padding:10px 0; white-space:pre-wrap; line-height:1.6;">${question}</td>
          </tr>
        </table>`
     ),

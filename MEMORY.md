@@ -5,7 +5,7 @@
 > without losing history. **Read this first.** Update it whenever you make a
 > meaningful change.
 
-Last updated: 2026-07-03 (session 7 — signup confirmation email sent via Resend)
+Last updated: 2026-07-04 (session 8 — security audit + fixed attachments storage RLS & invitation email relay)
 
 ---
 
@@ -184,9 +184,31 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
     the reset *trigger* (`resetPasswordForEmail`), though `sendPasswordReset()`
     already exists in resend.ts if that flow gets the same treatment later.
 
+### Done in session 8 (2026-07-04) — Security audit fixes: storage RLS + invitation endpoint
+A full codebase + security audit (4 parallel reviews: DB/RLS, API/auth, client/secrets,
+engineering health) found 15 issues. Fixed the critical and highest-severity ones:
+- **Attachments storage policy had no tenant scoping** (`supabase/migrations/20260704_fix_attachments_storage_rls.sql`):
+  the old policy let any authenticated user read/write any object in the `attachments`
+  bucket. Replaced with policies that resolve `<task_id>/<filename>` back to
+  `tasks.workspace_id` and require `is_workspace_member`/`is_workspace_admin`. **Run
+  this migration** — it's additive but must be applied to close the gap.
+- **`/api/invitations/send` was an open email relay** (`app/api/invitations/send/route.ts`):
+  previously trusted client-supplied `email`/`workspaceName`/`inviterName` with only a
+  logged-in check — any authenticated user could make RuangBaru's domain send
+  arbitrary-content mail to any address. Rewrote it to only accept invitation
+  `token`s, look up email/workspace name from the DB (RLS already hides rows from
+  non-members), and require the caller be admin/owner of that workspace.
+- **HTML-escaped all user-supplied text in `lib/email/resend.ts`** (new `escapeHtml()`
+  helper) — `fullName`, `workspaceName`, `inviterName`, and the support-ticket fields
+  are no longer interpolated raw into outbound email HTML.
+- Remaining audit findings (broad `auth.users` grant, Google OAuth CSRF nonce,
+  plaintext OAuth tokens, no rate limiting, missing security headers, etc.) are not
+  yet fixed — see the audit report for the full list if picking this back up.
+
 ### Known remaining gaps / TODO
 - **Resend domain** `ruangbaru.com` must be verified in Resend or emails fail (falls back to copy-link).
 - **Password reset email** still uses Supabase's mailer (only signup confirmation was moved to Resend in session 7). To move it too, either repeat the `generateLink({ type: 'recovery' })` + `sendPasswordReset()` pattern, or set Resend as custom SMTP in Supabase Dashboard → Auth → SMTP.
+- **Security audit follow-ups (session 8):** broad `SELECT` grant on `auth.users` to anon/authenticated (008_grant_auth_users.sql), Google OAuth `state` has no CSRF nonce, Google Calendar tokens stored in plaintext, `accept_invitation()` missing explicit `search_path`, no rate limiting on public endpoints (chat/support/forgot-password), no security headers in `next.config.ts`, zero automated tests, 13 real `react-hooks/set-state-in-effect` lint errors in KanbanBoard/Tour components.
 - **Payments** intentionally stubbed (honest "coming soon" toast on Billing).
 - **Realtime collaboration** enabled at DB level, but only Header notifications subscribe; boards/notes don't live-sync between users yet.
 - Notes, Tasks (Kanban), and Settings pages still lack skeleton loading states.
