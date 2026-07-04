@@ -1,18 +1,18 @@
-import type { MetadataRoute } from 'next';
+import type { MetadataRoute } from "next";
+import { person } from "@/lib/content/profile";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'RuangBaru — Workspace untuk Tim Indonesia',
-    short_name: 'RuangBaru',
-    description: 'Proyek, tugas, kalender, catatan, dan rapat video dalam satu workspace untuk tim Indonesia.',
-    start_url: '/',
-    display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#106CD8',
-    lang: 'id',
+    name: `${person.name} — Portfolio`,
+    short_name: person.name,
+    description: person.headline,
+    start_url: "/",
+    display: "standalone",
+    background_color: "#05060a",
+    theme_color: "#05060a",
     icons: [
-      { src: '/favicon.png', sizes: '512x512', type: 'image/png' },
-      { src: '/logo-icon.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+      { src: "/icon", sizes: "32x32", type: "image/png" },
+      { src: "/apple-icon", sizes: "180x180", type: "image/png" },
     ],
   };
 }
