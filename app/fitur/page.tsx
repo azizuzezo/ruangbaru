@@ -15,8 +15,6 @@ const BLUE = '#106CD8';
 const TEAL = '#10B29F';
 const YELLOW = '#FDB31A';
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
-const FONT = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-const DFONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
 
 function FadeIn({ children, delay = 0, className = '' }: {
   children: React.ReactNode; delay?: number; className?: string;
@@ -249,7 +247,7 @@ export default function FiturPage() {
   const [active, setActive] = useState(0);
 
   return (
-    <div className="min-h-screen bg-white antialiased" style={{ fontFamily: FONT }}>
+    <div className="min-h-screen bg-white antialiased">
       <MarketingHeader />
 
       {/* Hero */}
@@ -257,16 +255,12 @@ export default function FiturPage() {
         <div className="mx-auto max-w-3xl text-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: E }}>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-600 shadow-sm mb-5">
-              <FolderKanban className="h-3.5 w-3.5" style={{ color: BLUE }} />
-              Fitur RuangBaru
-            </span>
-            <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl"
-              style={{ fontFamily: DFONT }}>
-              Semua yang tim kecil butuhkan
+            <h1 className="text-[clamp(1.9rem,3.6vw,2.75rem)] font-semibold tracking-tight text-neutral-900" style={{ lineHeight: 1.2 }}>
+              Empat alat kerja, bukan empat aplikasi terpisah.
             </h1>
             <p className="mt-4 text-lg text-neutral-600 max-w-xl mx-auto">
-              Empat modul utama yang terintegrasi. Tidak perlu berpindah aplikasi — semuanya ada di satu workspace.
+              Klik-klik dulu sebelum daftar. Kartu, kalender, dan daftar tugas
+              di bawah ini beneran interaktif — bukan tangkapan layar.
             </p>
             <div className="mt-8 flex items-center justify-center gap-3">
               <Link href="/register">
@@ -318,7 +312,7 @@ export default function FiturPage() {
             {/* Preview panel */}
             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm min-h-[360px]">
               <div className="mb-4">
-                <h2 className="text-lg font-bold text-neutral-900" style={{ fontFamily: DFONT }}>
+                <h2 className="text-lg font-semibold text-neutral-900">
                   {FEATURES[active].label}
                 </h2>
                 <p className="mt-1 text-sm text-neutral-500">{FEATURES[active].desc}</p>
@@ -338,17 +332,17 @@ export default function FiturPage() {
       {/* Feature grid */}
       <section className="border-t border-neutral-100 bg-[#F9FAFB] px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-6xl">
-          <FadeIn className="mb-12 text-center">
-            <h2 className="text-3xl font-extrabold text-neutral-900" style={{ fontFamily: DFONT }}>
-              Dirancang untuk produktivitas tim
+          <FadeIn className="mb-12 max-w-xl">
+            <h2 className="text-[clamp(1.4rem,2.4vw,1.9rem)] font-semibold text-neutral-900">
+              Detail yang biasanya baru ketahuan setelah daftar
             </h2>
           </FadeIn>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { title: 'Semua terhubung', desc: 'Tugas, proyek, kalender, dan tim saling terhubung otomatis.', color: BLUE },
-              { title: 'Berbasis web', desc: 'Akses dari browser mana saja, tanpa instalasi.', color: TEAL },
-              { title: 'Aman dan privat', desc: 'Data tim Anda tersimpan aman dengan enkripsi.', color: '#8B5CF6' },
-              { title: 'Untuk tim Indonesia', desc: 'Antarmuka Bahasa Indonesia, harga lokal.', color: YELLOW },
+              { title: 'Ganti 5 tab jadi 1', desc: 'Proyek, tugas, kalender, dan catatan ada di domain yang sama — tidak login berkali-kali ke aplikasi berbeda.', color: BLUE },
+              { title: 'Jalan di browser apa saja', desc: 'Chrome di kantor, Safari di HP, Edge di komputer klien — datanya sama, tanpa instal apa pun.', color: TEAL },
+              { title: 'Data terisolasi per workspace', desc: 'Tim lain tidak bisa lihat data Anda meski satu server. Anda yang atur siapa boleh masuk.', color: '#8B5CF6' },
+              { title: 'Dibuat untuk kerja Indonesia', desc: 'Bahasa Indonesia asli, bukan hasil translate — dan harga dalam Rupiah.', color: YELLOW },
             ].map((item, i) => (
               <FadeIn key={item.title} delay={i * 0.07}>
                 <div className="card-interactive h-full overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6">
@@ -366,8 +360,8 @@ export default function FiturPage() {
       <section className="px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <FadeIn>
-            <h2 className="text-3xl font-extrabold text-neutral-900" style={{ fontFamily: DFONT }}>
-              Siap mencoba semua fiturnya?
+            <h2 className="text-[clamp(1.5rem,2.6vw,2.15rem)] font-semibold text-neutral-900">
+              Sudah lihat semuanya? Coba pakai buat kerjaan asli.
             </h2>
             <p className="mt-3 text-neutral-600">Gratis untuk tim hingga 5 anggota. Tidak perlu kartu kredit.</p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">

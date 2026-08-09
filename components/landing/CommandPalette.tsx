@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 
 const BLUE = '#106CD8';
-const FONT_BODY = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
 type Item = { icon: React.ElementType; label: string; href: string; group: string; keywords?: string };
@@ -79,7 +78,6 @@ export function CommandPalette({ open, setOpen }: { open: boolean; setOpen: (v: 
           exit={{ opacity: 0 }}
           transition={{ duration: 0.18 }}
           className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[12vh]"
-          style={{ fontFamily: FONT_BODY }}
         >
           <button
             aria-label="Tutup"

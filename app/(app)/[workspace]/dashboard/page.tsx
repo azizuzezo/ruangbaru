@@ -19,6 +19,7 @@ import { cn, getInitials, formatRelativeTime } from '@/lib/utils';
 import { useTour } from '@/components/tour/TourProvider';
 import { JourneyButton } from '@/components/tour/JourneyButton';
 import { usePresence, getPageLabel } from '@/lib/hooks/usePresence';
+import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 import type { Task, Project, ActivityLog, Meeting } from '@/types';
 
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
@@ -59,6 +60,28 @@ function greetingFor(hour: number) {
   if (hour < 15) return 'Selamat siang';
   if (hour < 18) return 'Selamat sore';
   return 'Selamat malam';
+}
+
+const STATUS_LABELS: Record<string, string> = {
+  backlog: 'Backlog', todo: 'Perlu Dikerjakan', in_progress: 'Sedang Berjalan',
+  in_review: 'Sedang Ditinjau', done: 'Selesai', cancelled: 'Dibatalkan',
+};
+
+// Maps the machine-readable `activity_logs.action` codes (written by the
+// DB triggers in supabase/migrations/20260809_activity_log_triggers.sql)
+// to the Indonesian phrase shown in the feed.
+function activityLabel(a: ActivityLog): string {
+  switch (a.action) {
+    case 'task.created': return 'membuat tugas';
+    case 'task.status_changed': {
+      const to = (a.metadata as { to?: string })?.to;
+      if (to === 'done') return 'menyelesaikan tugas';
+      return `memindahkan tugas ke ${to ? (STATUS_LABELS[to] || to) : 'status baru'}`;
+    }
+    case 'project.created': return 'membuat proyek';
+    case 'member.joined': return 'bergabung ke ruang kerja';
+    default: return a.action;
+  }
 }
 
 function startOfDay(d: Date) {
@@ -149,6 +172,7 @@ export default function DashboardPage() {
   const { setTaskDetailOpen } = useUIStore();
   const { maybeAutoStart } = useTour();
   const onlineMembers = usePresence('dashboard');
+  const { statuses, doneKeys } = useTaskStatuses(currentWorkspace?.id);
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -198,7 +222,7 @@ export default function DashboardPage() {
             .eq('workspace_id', wsId)
             .limit(12),
           supabase
-            .from('activity_log')
+            .from('activity_logs')
             .select('*, user:profiles(full_name,avatar_url)')
             .eq('workspace_id', wsId)
             .order('created_at', { ascending: false })
@@ -227,6 +251,31 @@ export default function DashboardPage() {
     load();
   }, [currentWorkspace]);
 
+  // Live activity feed — new rows (from the triggers in
+  // supabase/migrations/20260809_activity_log_triggers.sql) appear without
+  // a refresh. postgres_changes payloads don't include joined columns, so
+  // each new row is re-fetched once with its `user` relation attached.
+  useEffect(() => {
+    if (!currentWorkspace) return;
+    const wsId = currentWorkspace.id;
+    const channel = supabase
+      .channel(`activity-${wsId}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'activity_logs', filter: `workspace_id=eq.${wsId}` },
+        async (payload: { new: { id: string } }) => {
+          const { data } = await supabase
+            .from('activity_logs')
+            .select('*, user:profiles(full_name,avatar_url)')
+            .eq('id', payload.new.id)
+            .single();
+          if (data) setActivity((prev) => [data as unknown as ActivityLog, ...prev].slice(0, 8));
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [currentWorkspace]);
+
   useEffect(() => {
     if (!loading && !autoStarted.current) {
       autoStarted.current = true;
@@ -241,9 +290,9 @@ export default function DashboardPage() {
   const weekAgo = new Date(now.getTime() - 7 * 864e5);
 
   const derived = useMemo(() => {
-    const isOpen = (t: Task) => t.status !== 'done' && t.status !== 'cancelled';
+    const isOpen = (t: Task) => !doneKeys.has(t.status) && t.status !== 'cancelled';
     const open = tasks.filter(isOpen);
-    const doneThisWeek = tasks.filter((t) => t.status === 'done' && t.completed_at && new Date(t.completed_at) >= weekAgo).length;
+    const doneThisWeek = tasks.filter((t) => doneKeys.has(t.status) && t.completed_at && new Date(t.completed_at) >= weekAgo).length;
 
     const mine = open.filter((t) => t.assignee_id && currentUser && t.assignee_id === currentUser.id);
     const due = (t: Task) => (t.due_date ? new Date(t.due_date) : null);
@@ -270,21 +319,22 @@ export default function DashboardPage() {
     const momentum = projects.map((p) => {
       const pTasks = tasks.filter((t) => t.project_id === p.id);
       const total = pTasks.length;
-      const done = pTasks.filter((t) => t.status === 'done').length;
+      const done = pTasks.filter((t) => doneKeys.has(t.status)).length;
       const inProgress = pTasks.filter((t) => t.status === 'in_progress').length;
-      const overdue = pTasks.filter((t) => t.due_date && new Date(t.due_date) < todayStart && t.status !== 'done').length;
+      const overdue = pTasks.filter((t) => t.due_date && new Date(t.due_date) < todayStart && !doneKeys.has(t.status)).length;
       return { project: p, total, done, inProgress, overdue, pct: total ? Math.round((done / total) * 100) : 0 };
     }).sort((a, b) => b.total - a.total).slice(0, 4);
 
     return { open, doneThisWeek, focus, myOverdue, myToday, groups, momentum };
-  }, [tasks, projects, currentUser, todayStart.getTime()]);
+  }, [tasks, projects, currentUser, todayStart.getTime(), doneKeys]);
 
   const completeTask = useCallback(async (taskId: string) => {
+    const doneStatus = statuses.find((s) => s.is_done)?.key || 'done';
     setCompleting((s) => new Set(s).add(taskId));
-    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: 'done', completed_at: new Date().toISOString() } : t)));
-    await supabase.from('tasks').update({ status: 'done', completed_at: new Date().toISOString() }).eq('id', taskId);
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: doneStatus, completed_at: new Date().toISOString() } : t)));
+    await supabase.from('tasks').update({ status: doneStatus, completed_at: new Date().toISOString() }).eq('id', taskId);
     setTimeout(() => setCompleting((s) => { const n = new Set(s); n.delete(taskId); return n; }), 600);
-  }, []);
+  }, [statuses]);
 
   if (loading) return <DashboardSkeleton />;
 
@@ -318,7 +368,7 @@ export default function DashboardPage() {
           className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"
         >
           <div>
-            <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
               {greetingFor(now.getHours())}, {firstName}
             </h1>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -411,7 +461,7 @@ export default function DashboardPage() {
               className="flex flex-col gap-1 p-4"
             >
               <span className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{p.label}</span>
-              <span className={cn('font-display text-2xl font-extrabold tracking-tight', p.tone)}>{p.value}</span>
+              <span className={cn('font-display text-2xl font-semibold tracking-tight', p.tone)}>{p.value}</span>
             </motion.div>
           ))}
         </motion.div>
@@ -535,7 +585,6 @@ export default function DashboardPage() {
                                     {t.title}
                                   </p>
                                   <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                    {t.project?.icon && <span>{t.project.icon}</span>}
                                     <span className="truncate">{t.project?.name || 'Tanpa proyek'}</span>
                                     {t.due_date && (
                                       <span className={cn('font-semibold', overdue ? 'text-rose-600' : 'text-muted-foreground')}>
@@ -768,8 +817,8 @@ export default function DashboardPage() {
                           >
                             <ActivityRow
                               name={a.user?.full_name || 'Seseorang'}
-                              action={a.action}
-                              resource={a.resource_name || ''}
+                              action={activityLabel(a)}
+                              resource={a.action === 'member.joined' ? '' : (a.resource_name || '')}
                               time={formatRelativeTime(a.created_at)}
                               avatarUrl={a.user?.avatar_url || null}
                             />
@@ -834,7 +883,7 @@ export default function DashboardPage() {
                             className="block rounded-xl border border-border p-3 transition-all hover:border-primary/30 hover:shadow-sm hover:bg-accent/20"
                           >
                             <div className="flex items-center gap-2">
-                              <span className="text-base">{m.project.icon}</span>
+                              <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: m.project.color || '#106CD8' }} />
                               <span className="min-w-0 flex-1 truncate text-xs font-bold text-foreground">{m.project.name}</span>
                               <span className="text-[10px] font-semibold text-muted-foreground">{m.done}/{m.total}</span>
                             </div>

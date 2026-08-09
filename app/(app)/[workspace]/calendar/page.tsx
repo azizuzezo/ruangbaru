@@ -261,42 +261,44 @@ export default function CalendarPage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <motion.div 
-        initial={{ opacity: 0, y: -10 }} 
-        animate={{ opacity: 1, y: 0 }} 
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.4, ease: E }}
-        className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        className="relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5"
       >
+        <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full opacity-[0.07] blur-2xl" style={{ background: '#106CD8' }} />
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
-            <h1 className="font-display text-2xl font-black tracking-tight text-foreground sm:text-3xl capitalize leading-none">
+            <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl capitalize leading-none">
               {format(currentDate, 'MMMM')}
             </h1>
-            <span className="text-xs font-extrabold text-neutral-400 mt-1 tracking-wider">
+            <span className="text-xs font-semibold text-neutral-400 mt-1 tracking-wider">
               {format(currentDate, 'yyyy')}
             </span>
           </div>
-          
-          <div className="flex items-center gap-0.5 bg-neutral-50/50 rounded-xl border border-border p-1">
-            <Button 
-              variant="ghost" 
-              size="icon" 
+
+          <div className="flex items-center gap-0.5 bg-neutral-50/70 rounded-xl border border-border p-1 shadow-sm">
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-8 w-8 rounded-lg text-neutral-500 hover:text-foreground hover:bg-white"
               onClick={handlePrevMonth}
             >
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 rounded-lg font-extrabold text-xs text-neutral-600 hover:text-foreground hover:bg-white px-2.5"
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-8 rounded-lg font-semibold text-xs text-neutral-600 hover:text-foreground hover:bg-white px-2.5"
               onClick={handleToday}
             >
               Hari ini
             </Button>
-            <Button 
-              variant="ghost" 
-              size="icon" 
+            <Button
+              variant="ghost"
+              size="icon"
               className="h-8 w-8 rounded-lg text-neutral-500 hover:text-foreground hover:bg-white"
               onClick={handleNextMonth}
             >
@@ -382,14 +384,15 @@ export default function CalendarPage() {
             ))}
           </div>
 
-          <Button 
-            size="sm" 
-            className="gap-1.5 rounded-xl font-bold shadow-sm hover:opacity-90" 
-            style={{ background: '#106CD8' }} 
+          <Button
+            size="sm"
+            className="gap-1.5 rounded-xl font-bold shadow-sm hover:opacity-90"
+            style={{ background: '#106CD8' }}
             onClick={() => openCreate(new Date())}
           >
             <Plus className="h-4 w-4" /> Acara
           </Button>
+        </div>
         </div>
       </motion.div>
 
@@ -401,7 +404,7 @@ export default function CalendarPage() {
         }} onDragEnd={handleDragEnd}>
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             {/* Day of Week Header */}
-            <div className="grid grid-cols-7 border-b border-border bg-neutral-50/70 py-3 text-center text-[10px] font-extrabold uppercase tracking-wider text-neutral-500">
+            <div className="grid grid-cols-7 border-b border-border bg-neutral-50/70 py-3 text-center text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
               {DOW.map((d, i) => (
                 <div key={d} className={cn(i === 0 && 'text-red-500', i === 6 && 'text-neutral-500')}>{d}</div>
               ))}
@@ -437,7 +440,7 @@ export default function CalendarPage() {
                       >
                         {/* Day number absolutely positioned */}
                         <span className={cn(
-                          'absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-extrabold z-10 transition-all',
+                          'absolute top-2 right-2 flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-semibold z-10 transition-all',
                           isToday(day) 
                             ? 'bg-[#106CD8] text-white shadow-sm shadow-[#106CD8]/30 scale-105' 
                             : holiday || day.getDay() === 0 
@@ -453,7 +456,7 @@ export default function CalendarPage() {
                           {holiday && (
                             <div className="mb-0.5 flex items-center gap-1.5 truncate rounded-md bg-red-50/80 px-2 py-0.5 border border-red-100/50 max-w-full" title={holiday}>
                               <span className="h-1 w-1 rounded-full bg-red-500 shrink-0" />
-                              <span className="truncate text-[8px] font-extrabold text-red-600 leading-tight uppercase tracking-wider">
+                              <span className="truncate text-[8px] font-semibold text-red-600 leading-tight uppercase tracking-wider">
                                 {holiday}
                               </span>
                             </div>
@@ -474,10 +477,7 @@ export default function CalendarPage() {
                               className="truncate rounded-md border border-dashed border-amber-200 bg-amber-50/30 hover:bg-amber-50/60 px-2 py-0.5 text-left text-[10px] font-bold text-amber-800 transition-all flex items-center gap-1.5"
                             >
                               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-                              <span className="truncate flex-1">
-                                {t.project?.icon && <span className="mr-1">{t.project.icon}</span>}
-                                {t.title}
-                              </span>
+                              <span className="truncate flex-1">{t.title}</span>
                             </motion.button>
                           ))}
                         </div>
@@ -549,7 +549,7 @@ function EventChip({ occ, onClick }: { occ: Occurrence; onClick: () => void }) {
       onClick={(e) => { e.stopPropagation(); onClick(); }}
       whileHover={{ y: -0.5, boxShadow: '0 2px 4px rgba(0,0,0,0.03)' }}
       className={cn(
-        'flex items-center gap-1.5 truncate rounded-lg border-l-2 px-2 py-1 text-left text-[10px] font-extrabold transition-all',
+        'flex items-center gap-1.5 truncate rounded-lg border-l-2 px-2 py-1 text-left text-[10px] font-semibold transition-all',
         isDragging && 'opacity-40'
       )}
       style={{ 
@@ -594,13 +594,13 @@ function AgendaView({ events, wsSlug, onEdit }: { events: CalendarEvent[]; wsSlu
         return (
           <div key={k} className="flex gap-6">
             <div className="w-16 shrink-0 text-right pt-1.5">
-              <p className={cn('text-[10px] font-extrabold uppercase tracking-wider', isToday(d) ? 'text-primary' : 'text-neutral-400')}>{format(d, 'EEE')}</p>
-              <p className={cn('font-display text-2xl font-black mt-0.5', isToday(d) ? 'text-primary' : 'text-neutral-800')}>{format(d, 'd')}</p>
+              <p className={cn('text-[10px] font-semibold uppercase tracking-wider', isToday(d) ? 'text-primary' : 'text-neutral-400')}>{format(d, 'EEE')}</p>
+              <p className={cn('font-display text-2xl font-semibold mt-0.5', isToday(d) ? 'text-primary' : 'text-neutral-800')}>{format(d, 'd')}</p>
             </div>
             <div className="flex-1 space-y-3 border-l border-neutral-100 pl-6 relative pb-1">
               {/* Vertical timeline node */}
               <div className={cn(
-                'absolute -left-[5px] top-4.5 h-2.5 w-2.5 rounded-full border-2 border-white shadow-sm',
+                'absolute -left-[5px] top-[18px] h-2.5 w-2.5 rounded-full border-2 border-white shadow-sm',
                 isToday(d) ? 'bg-[#106CD8] ring-4 ring-[#106CD8]/15' : 'bg-neutral-300'
               )} />
               
@@ -663,7 +663,7 @@ function CalendarSkeleton() {
       <div className="overflow-hidden rounded-2xl border border-border bg-card">
         <div className="grid grid-cols-7 border-b border-border bg-muted/20 py-3">
           {DOW.map((d) => (
-            <div key={d} className="text-center text-[10px] font-extrabold uppercase text-muted-foreground">{d}</div>
+            <div key={d} className="text-center text-[10px] font-semibold uppercase text-muted-foreground">{d}</div>
           ))}
         </div>
         <div className="grid grid-cols-7">

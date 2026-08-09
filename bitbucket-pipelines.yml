@@ -1,0 +1,109 @@
+# RuangBaru CI/CD — builds the Next.js frontend and the Go backend images
+# in parallel, pushes both to ECR, then (manual trigger only) applies the
+# k8s manifests to EKS.
+#
+# Nothing here has been run — this is scaffolding. Before the first real
+# run, set these as Bitbucket repository/deployment variables:
+#
+#   AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_DEFAULT_REGION
+#   ECR_FRONTEND_REPO   e.g. 123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/ruangbaru-frontend
+#   ECR_BACKEND_REPO    e.g. 123456789012.dkr.ecr.ap-southeast-1.amazonaws.com/ruangbaru-backend
+#   EKS_CLUSTER_NAME
+#   NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY,
+#   NEXT_PUBLIC_APP_URL, NEXT_PUBLIC_LIVEKIT_URL
+#     (frontend build args — these get compiled INTO the frontend image;
+#      everything else, including secrets, is runtime-only via k8s Secrets,
+#      see k8s/secret.example.yaml)
+#
+# Both ECR repos must already exist (`aws ecr create-repository ...`) —
+# this pipeline pushes to them, it doesn't create them.
+
+image: atlassian/default-image:4
+
+definitions:
+  steps:
+    - step: &build-frontend
+        name: Build & push frontend image
+        services:
+          - docker
+        script:
+          - export IMAGE_TAG="${BITBUCKET_COMMIT:0:12}"
+          - pipe: atlassian/aws-ecr-push-image:2.4.0
+            variables:
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              IMAGE_NAME: $ECR_FRONTEND_REPO
+              TAGS: "${IMAGE_TAG} latest"
+              DOCKERFILE: "Dockerfile"
+              BUILD_CONTEXT: "."
+              EXTRA_ARGS: >-
+                --build-arg NEXT_PUBLIC_SUPABASE_URL=$NEXT_PUBLIC_SUPABASE_URL
+                --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
+                --build-arg NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL
+                --build-arg NEXT_PUBLIC_LIVEKIT_URL=$NEXT_PUBLIC_LIVEKIT_URL
+
+    - step: &build-backend
+        name: Build & push backend image
+        services:
+          - docker
+        script:
+          - export IMAGE_TAG="${BITBUCKET_COMMIT:0:12}"
+          - pipe: atlassian/aws-ecr-push-image:2.4.0
+            variables:
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              IMAGE_NAME: $ECR_BACKEND_REPO
+              TAGS: "${IMAGE_TAG} latest"
+              DOCKERFILE: "go/Dockerfile"
+              BUILD_CONTEXT: "go"
+
+    - step: &deploy
+        name: Deploy to EKS
+        trigger: manual # never runs unattended — a human clicks "Run" in Bitbucket
+        script:
+          - export IMAGE_TAG="${BITBUCKET_COMMIT:0:12}"
+          - pipe: atlassian/aws-eks-kubectl-run:2.4.0
+            variables:
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              CLUSTER_NAME: $EKS_CLUSTER_NAME
+              KUBECTL_COMMAND: "apply"
+              RESOURCE_PATH: "k8s/frontend-deployment.yaml,k8s/backend-deployment.yaml"
+          - pipe: atlassian/aws-eks-kubectl-run:2.4.0
+            variables:
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              CLUSTER_NAME: $EKS_CLUSTER_NAME
+              KUBECTL_COMMAND: "set"
+              KUBECTL_ARGS: "image deployment/ruangbaru-frontend ruangbaru-frontend=${ECR_FRONTEND_REPO}:${IMAGE_TAG}"
+          - pipe: atlassian/aws-eks-kubectl-run:2.4.0
+            variables:
+              AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+              AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+              AWS_DEFAULT_REGION: $AWS_DEFAULT_REGION
+              CLUSTER_NAME: $EKS_CLUSTER_NAME
+              KUBECTL_COMMAND: "set"
+              KUBECTL_ARGS: "image deployment/ruangbaru-backend ruangbaru-backend=${ECR_BACKEND_REPO}:${IMAGE_TAG}"
+
+pipelines:
+  branches:
+    main:
+      - parallel:
+          # Frontend and backend build at the same time, as asked — neither
+          # waits on the other since they're independent images.
+          - step: *build-frontend
+          - step: *build-backend
+      - step: *deploy
+  pull-requests:
+    "**":
+      - parallel:
+          - step:
+              <<: *build-frontend
+              name: "PR: build frontend (no push)"
+          - step:
+              <<: *build-backend
+              name: "PR: build backend (no push)"

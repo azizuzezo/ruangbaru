@@ -8,9 +8,9 @@ import {
   useScroll, useTransform, useMotionValue, useSpring, useReducedMotion,
 } from 'framer-motion';
 import {
-  ArrowRight, X, Check,
+  ArrowRight, Check,
   FolderKanban, CheckSquare, CalendarDays, StickyNote, Users,
-  ChevronDown,
+  ChevronDown, MessageCircleWarning,
 } from 'lucide-react';
 import { HeroPreview } from '@/components/landing/HeroPreview';
 import { SiteFooter } from '@/components/landing/SiteFooter';
@@ -40,16 +40,26 @@ const CollabField = dynamic(
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
 const YELLOW = '#FDB31A';
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-const FONT_BODY = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
-/* ─── Reveal helper ──────────────────────────────────────────── */
-function Reveal({ children, delay = 0, className }: { children: React.ReactNode; delay?: number; className?: string }) {
+/* ─── Reveal helper — direction varies by section so the page doesn't
+   read as one animation copy-pasted five times ─────────────────── */
+function Reveal({
+  children, delay = 0, className, dir = 'up',
+}: {
+  children: React.ReactNode; delay?: number; className?: string;
+  dir?: 'up' | 'left' | 'right' | 'scale';
+}) {
+  const offsets = {
+    up: { y: 20, x: 0, scale: 1 },
+    left: { y: 0, x: -24, scale: 1 },
+    right: { y: 0, x: 24, scale: 1 },
+    scale: { y: 0, x: 0, scale: 0.96 },
+  }[dir];
   return (
     <motion.div
-      initial={{ opacity: 0, y: 22 }}
-      whileInView={{ opacity: 1, y: 0 }}
+      initial={{ opacity: 0, ...offsets }}
+      whileInView={{ opacity: 1, y: 0, x: 0, scale: 1 }}
       viewport={{ once: true, margin: '-80px' }}
       transition={{ duration: 0.6, delay, ease: E }}
       className={className}
@@ -64,12 +74,10 @@ function Hero() {
   const reduce = useReducedMotion();
   const sectionRef = useRef<HTMLElement>(null);
 
-  // Scroll parallax — background field drifts down, preview lifts up.
   const { scrollY } = useScroll();
   const fieldY = useTransform(scrollY, [0, 700], [0, 140]);
   const previewScrollY = useTransform(scrollY, [0, 700], [0, -48]);
 
-  // Mouse parallax — normalized [-0.5, 0.5] with spring smoothing.
   const mx = useMotionValue(0);
   const my = useMotionValue(0);
   const sx = useSpring(mx, { stiffness: 60, damping: 18, mass: 0.4 });
@@ -90,7 +98,6 @@ function Hero() {
 
   return (
     <section ref={sectionRef} onMouseMove={onMouseMove} className="relative overflow-hidden">
-      {/* Ambient Three.js field (scroll + mouse parallax) */}
       <motion.div style={{ y: reduce ? 0 : fieldY, x: reduce ? 0 : fieldX }} className="pointer-events-none absolute inset-0 -z-10">
         <CollabField className="h-full w-full opacity-70" />
       </motion.div>
@@ -103,11 +110,12 @@ function Hero() {
             initial={{ opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.06, ease: E }}
-            className="mt-6 text-4xl font-black tracking-tight text-neutral-950 sm:text-5xl lg:text-[3.6rem]"
-            style={{ fontFamily: FONT, lineHeight: 1.04, letterSpacing: '-0.025em' }}
+            className="text-[clamp(1.9rem,3.6vw,3rem)] font-semibold tracking-tight text-neutral-950"
+            style={{ lineHeight: 1.18, letterSpacing: '-0.015em' }}
           >
-            Tempat tim Anda merencanakan, bekerja, dan{' '}
-            <span style={{ color: BLUE }}>berkembang bersama.</span>
+            Progres kerja harusnya{' '}
+            <span style={{ color: BLUE }}>kelihatan sendiri</span> — bukan
+            hasil nanya di grup WA.
           </motion.h1>
 
           <motion.p
@@ -116,9 +124,10 @@ function Hero() {
             transition={{ duration: 0.55, delay: 0.13, ease: E }}
             className="mt-5 max-w-xl text-base leading-7 text-neutral-600 sm:text-lg"
           >
-            RuangBaru menyatukan proyek, tugas, kalender, dan catatan dalam satu
-            ruang yang sederhana — supaya tim bisa fokus pada pekerjaannya, bukan
-            pada alatnya.
+            RuangBaru menaruh proyek, tugas, dan jadwal tim di satu papan
+            kerja yang bisa dilihat semua orang. Klik kartu untuk buka
+            detailnya, geser untuk ubah status — tidak perlu japri satu-satu
+            cuma untuk tahu progres.
           </motion.p>
 
           <motion.div
@@ -149,7 +158,8 @@ function Hero() {
             transition={{ duration: 0.5, delay: 0.3 }}
             className="mt-5 text-sm text-neutral-400"
           >
-            Gratis untuk tim hingga 5 anggota · Setup dalam 2 menit · Tanpa kartu kredit
+            Gratis untuk tim hingga 5 orang · Tanpa kartu kredit · Langsung
+            jalan, tanpa training
           </motion.p>
         </div>
 
@@ -174,7 +184,8 @@ function Hero() {
           </motion.div>
 
           <p className="mt-3 text-center text-xs text-neutral-400">
-            Pratinjau interaktif — klik kartu, seret untuk mengatur ulang, ganti workspace.
+            Ini bukan mockup statis — klik kartu, seret untuk mengurutkan,
+            ganti workspace di atas.
           </p>
         </motion.div>
       </div>
@@ -182,30 +193,42 @@ function Hero() {
   );
 }
 
-/* ─── Problem ────────────────────────────────────────────────── */
-function Problem() {
+/* ─── Reality check — blunt, specific complaints, not icon cards ── */
+function RealityCheck() {
   const pains = [
-    { title: 'Pekerjaan tersebar', desc: 'Tugas di chat, catatan di dokumen, jadwal di tempat lain. Tidak ada satu sumber kebenaran.' },
-    { title: 'Status tidak jelas', desc: 'Siapa mengerjakan apa? Sudah sampai mana? Butuh rapat hanya untuk tahu progres.' },
-    { title: 'Terlalu banyak alat', desc: 'Berlangganan banyak aplikasi yang tidak saling terhubung — mahal dan membingungkan.' },
+    {
+      n: '01', color: BLUE,
+      title: 'Tugas hilang di scroll chat',
+      desc: 'Deadline dikirim H-1 di grup WA, lalu ketimpa 40 chat lain sebelum sempat dicatat di mana pun.',
+    },
+    {
+      n: '02', color: TEAL,
+      title: 'Progres cuma ada di kepala satu orang',
+      desc: 'Kalau PM-nya cuti sehari, tidak ada yang tahu status proyek sampai dia balik dan dicek satu-satu.',
+    },
+    {
+      n: '03', color: YELLOW,
+      title: 'Lima aplikasi untuk satu pekerjaan',
+      desc: 'Catatan di HP, jadwal di kalender lain, tugas di spreadsheet — pindah aplikasi cuma untuk cek "ini sampai mana".',
+    },
   ];
   return (
     <section className="border-t border-neutral-100 px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <Reveal className="max-w-2xl">
-          <p className="text-sm font-bold uppercase tracking-wider" style={{ color: YELLOW }}>Masalahnya</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-neutral-950 sm:text-4xl" style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}>
-            Kerja tim jadi berat ketika semuanya berserakan.
+        <Reveal dir="left" className="max-w-xl">
+          <h2 className="text-[clamp(1.5rem,2.6vw,2.15rem)] font-semibold tracking-tight text-neutral-950" style={{ lineHeight: 1.25, letterSpacing: '-0.01em' }}>
+            Tiga alasan kerja tim jadi ribet — dan biasanya bukan salah
+            orangnya.
           </h2>
         </Reveal>
-        <div className="mt-10 grid gap-5 md:grid-cols-3">
+        <div className="mt-10 grid gap-x-8 gap-y-8 md:grid-cols-3">
           {pains.map((p, i) => (
-            <Reveal key={p.title} delay={i * 0.08}>
-              <div className="card-interactive h-full rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm">
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-neutral-100 text-neutral-400">
-                  <X className="h-4 w-4" />
-                </div>
-                <h3 className="mt-4 text-base font-bold text-neutral-900">{p.title}</h3>
+            <Reveal key={p.n} delay={i * 0.1} dir="up">
+              <div className="h-full border-l-2 pl-5" style={{ borderColor: p.color }}>
+                <span className="text-2xl font-bold tracking-tight" style={{ color: `${p.color}35`, lineHeight: 1 }}>
+                  {p.n}
+                </span>
+                <h3 className="mt-2 text-base font-bold text-neutral-900">{p.title}</h3>
                 <p className="mt-2 text-sm leading-6 text-neutral-500">{p.desc}</p>
               </div>
             </Reveal>
@@ -219,21 +242,21 @@ function Problem() {
 /* ─── Solution ───────────────────────────────────────────────── */
 function Solution() {
   const points = [
-    'Satu tempat untuk proyek, tugas, kalender, catatan, dan tim',
-    'Progres terlihat real-time tanpa perlu rapat status',
-    'Cukup satu langganan — bukan lima aplikasi terpisah',
+    'Kartu tugas digeser antar kolom — status berubah, semua orang lihat perubahannya saat itu juga.',
+    'Kalender tim nempel ke tugas, jadi tenggat waktu tidak nyelip di catatan yang terpisah.',
+    'Satu tagihan bulanan, bukan lima aplikasi berbeda yang harus direkap ulang tiap akhir bulan.',
   ];
   return (
     <section className="px-4 py-20 sm:px-6">
       <div className="mx-auto grid max-w-6xl items-center gap-12 lg:grid-cols-2">
-        <Reveal>
-          <p className="text-sm font-bold uppercase tracking-wider" style={{ color: TEAL }}>Solusinya</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-neutral-950 sm:text-4xl" style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}>
-            RuangBaru menyatukan semuanya dalam satu alur kerja.
+        <Reveal dir="right">
+          <h2 className="text-[clamp(1.5rem,2.6vw,2.15rem)] font-semibold tracking-tight text-neutral-950" style={{ lineHeight: 1.25, letterSpacing: '-0.01em' }}>
+            Satu papan. Semua orang lihat progres yang sama.
           </h2>
           <p className="mt-4 text-base leading-7 text-neutral-600">
-            Dari perencanaan hingga selesai — tim Anda bekerja di satu ruang yang
-            tenang, terstruktur, dan selalu sinkron.
+            RuangBaru menaruh proyek, tugas, kalender, dan catatan tim di
+            tempat yang sama. Tidak ada versi berbeda-beda di HP masing-masing
+            orang — yang ada satu papan yang selalu terbaru.
           </p>
           <ul className="mt-6 space-y-3">
             {points.map((p) => (
@@ -247,17 +270,17 @@ function Solution() {
           </ul>
         </Reveal>
 
-        <Reveal delay={0.1}>
-          <div className="relative rounded-3xl border border-neutral-200 bg-gradient-to-br from-neutral-50 to-white p-6 shadow-sm">
+        <Reveal delay={0.1} dir="scale">
+          <div className="relative rounded-3xl border p-6 shadow-sm" style={{ borderColor: `${BLUE}30`, background: `linear-gradient(155deg, ${BLUE}0A, white 55%)` }}>
             <div className="space-y-3">
               {[
-                { label: 'Proyek aktif', value: '12', color: BLUE },
-                { label: 'Tugas selesai minggu ini', value: '48', color: TEAL },
-                { label: 'Anggota tim', value: '6', color: YELLOW },
+                { label: 'Proyek aktif minggu ini', value: '12', color: BLUE },
+                { label: 'Tugas ditutup minggu ini', value: '48', color: TEAL },
+                { label: 'Orang yang lihat papan ini', value: '6', color: YELLOW },
               ].map((s) => (
                 <div key={s.label} className="flex items-center justify-between rounded-xl border border-neutral-100 bg-white px-4 py-3 shadow-sm">
                   <span className="text-sm text-neutral-600">{s.label}</span>
-                  <span className="text-xl font-black" style={{ color: s.color, fontFamily: FONT }}>{s.value}</span>
+                  <span className="text-xl font-bold" style={{ color: s.color }}>{s.value}</span>
                 </div>
               ))}
             </div>
@@ -268,39 +291,41 @@ function Solution() {
   );
 }
 
-/* ─── Compact feature teaser (full demos live at /fitur) ─────── */
-function FeatureTeaser() {
+/* ─── Module strip — a list, not another icon-square grid ─────── */
+function ModuleStrip() {
   const items = [
-    { icon: FolderKanban, label: 'Papan Kanban', color: BLUE },
-    { icon: CheckSquare, label: 'Manajemen Tugas', color: TEAL },
-    { icon: CalendarDays, label: 'Kalender Tim', color: YELLOW },
-    { icon: StickyNote, label: 'Catatan', color: '#8B5CF6' },
-    { icon: Users, label: 'Manajemen Tim', color: BLUE },
+    { icon: FolderKanban, label: 'Papan Kanban', color: BLUE, desc: 'Geser kartu antar status — Perlu Dikerjakan, Berjalan, Selesai.' },
+    { icon: CheckSquare, label: 'Manajemen Tugas', color: TEAL, desc: 'Prioritas dan tenggat waktu yang kelihatan tanpa harus dibuka satu-satu.' },
+    { icon: CalendarDays, label: 'Kalender Tim', color: YELLOW, desc: 'Jadwal semua orang dalam satu tampilan, terhubung ke tugas terkait.' },
+    { icon: StickyNote, label: 'Catatan', color: '#8B5CF6', desc: 'Rapat, brief, dan dokumentasi kerja — bisa diedit bersama.' },
+    { icon: Users, label: 'Manajemen Tim', color: BLUE, desc: 'Undang lewat tautan, atur peran, lihat siapa yang online sekarang.' },
   ];
   return (
-    <section className="border-y border-neutral-100 bg-neutral-50/60 px-4 py-14 sm:px-6">
+    <section className="border-y border-neutral-100 bg-neutral-50/60 px-4 py-16 sm:px-6">
       <div className="mx-auto max-w-6xl">
-        <Reveal className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
-          <div>
-            <p className="text-sm font-bold uppercase tracking-wider" style={{ color: BLUE }}>Fitur</p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight text-neutral-950 sm:text-3xl" style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}>
-              Semua yang dibutuhkan tim, dalam satu tempat.
-            </h2>
-          </div>
-          <Link href="/fitur" prefetch className="group inline-flex items-center gap-1.5 text-sm font-semibold" style={{ color: BLUE }}>
+        <Reveal dir="up" className="flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-end">
+          <h2 className="text-[clamp(1.25rem,2vw,1.6rem)] font-semibold tracking-tight text-neutral-950">
+            Empat hal yang tim Anda buka setiap hari — sekarang ada di satu
+            tempat.
+          </h2>
+          <Link href="/fitur" prefetch className="group inline-flex shrink-0 items-center gap-1.5 text-sm font-semibold" style={{ color: BLUE }}>
             Lihat semua fitur
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </Reveal>
 
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mt-8 divide-y divide-neutral-200 border-t border-neutral-200">
           {items.map((item, i) => (
-            <Reveal key={item.label} delay={i * 0.05}>
-              <Link href="/fitur" prefetch className="card-interactive flex h-full flex-col gap-3 rounded-2xl border border-neutral-200 bg-white p-4 shadow-sm">
-                <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: `${item.color}14`, color: item.color }}>
-                  <item.icon className="h-5 w-5" />
-                </span>
-                <span className="text-sm font-semibold text-neutral-900">{item.label}</span>
+            <Reveal key={item.label} delay={i * 0.04} dir="left">
+              <Link
+                href="/fitur"
+                prefetch
+                className="group flex items-center gap-4 py-4 transition-colors hover:bg-white/70"
+              >
+                <item.icon className="h-4 w-4 shrink-0" style={{ color: item.color }} />
+                <span className="w-40 shrink-0 text-sm font-semibold text-neutral-900 sm:w-48">{item.label}</span>
+                <span className="hidden flex-1 text-sm text-neutral-500 sm:block">{item.desc}</span>
+                <ArrowRight className="h-4 w-4 shrink-0 text-neutral-300 transition-transform group-hover:translate-x-1 group-hover:text-neutral-500" />
               </Link>
             </Reveal>
           ))}
@@ -310,12 +335,35 @@ function FeatureTeaser() {
   );
 }
 
+/* ─── Honest note — same device used on /cara-kerja and /harga ─── */
+function HonestNote() {
+  return (
+    <section className="px-4 py-16 sm:px-6">
+      <Reveal dir="scale" className="mx-auto max-w-2xl">
+        <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-center">
+          <MessageCircleWarning className="mx-auto h-6 w-6" style={{ color: YELLOW }} />
+          <p className="mt-3 text-sm font-bold uppercase tracking-wider text-neutral-400">Ini produk baru</p>
+          <p className="mt-3 text-neutral-600 leading-7">
+            RuangBaru baru mulai jalan. Sebagian fitur masih kami rapikan, dan
+            harga Pro masih harga tahap awal yang bisa berubah. Kalau ada yang
+            aneh atau kurang pas, kabari kami — kami baca semua masukan yang
+            masuk lewat halaman kontak, bukan cuma auto-reply.
+          </p>
+          <Link href="/contact" className="mt-4 inline-flex items-center gap-2 text-sm font-semibold" style={{ color: BLUE }}>
+            Kirim masukan <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </Reveal>
+    </section>
+  );
+}
+
 /* ─── FAQ ────────────────────────────────────────────────────── */
 const FAQS = [
-  { q: 'Apakah RuangBaru benar-benar gratis?', a: 'Ya. Paket gratis mendukung hingga 5 anggota dan 3 proyek aktif, tanpa kartu kredit. Anda bisa upgrade kapan saja saat tim berkembang.' },
-  { q: 'Apakah saya perlu menginstal aplikasi?', a: 'Tidak. RuangBaru berbasis web dan langsung bisa dibuka di browser mana pun, baik di desktop maupun ponsel.' },
-  { q: 'Apakah data tim saya aman?', a: 'Data Anda disimpan dengan aman dan terenkripsi. Setiap workspace terisolasi, dan Anda mengatur sendiri siapa yang punya akses.' },
-  { q: 'Bahasa apa yang didukung?', a: 'Antarmuka RuangBaru sepenuhnya dalam Bahasa Indonesia, dirancang untuk cara kerja tim di Indonesia.' },
+  { q: 'Apakah RuangBaru benar-benar gratis?', a: 'Ya. Sampai 5 orang dan 3 proyek aktif, gratis tanpa batas waktu, tanpa kartu kredit. Upgrade hanya kalau tim Anda memang sudah butuh lebih dari itu.' },
+  { q: 'Apakah saya perlu menginstal aplikasi?', a: 'Tidak. RuangBaru berbasis web dan langsung bisa dibuka di browser mana pun, baik di laptop maupun HP.' },
+  { q: 'Apakah data tim saya aman?', a: 'Data Anda tersimpan terenkripsi, dan setiap workspace terisolasi dari workspace lain. Anda yang menentukan siapa boleh masuk.' },
+  { q: 'Bahasa apa yang didukung?', a: 'Antarmuka RuangBaru sepenuhnya Bahasa Indonesia, dibuat untuk cara kerja tim di Indonesia — bukan terjemahan mentah dari aplikasi luar.' },
 ];
 
 // Derived from FAQS so the structured data can never drift from what's
@@ -335,17 +383,16 @@ function Faq() {
   return (
     <section className="px-4 py-20 sm:px-6">
       <div className="mx-auto max-w-3xl">
-        <Reveal className="text-center">
-          <p className="text-sm font-bold uppercase tracking-wider" style={{ color: BLUE }}>FAQ</p>
-          <h2 className="mt-3 text-3xl font-black tracking-tight text-neutral-950 sm:text-4xl" style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}>
-            Pertanyaan yang sering diajukan.
+        <Reveal dir="up" className="text-center">
+          <h2 className="text-[clamp(1.5rem,2.6vw,2.15rem)] font-semibold tracking-tight text-neutral-950" style={{ lineHeight: 1.25, letterSpacing: '-0.01em' }}>
+            Yang biasanya ditanyakan sebelum coba.
           </h2>
         </Reveal>
         <div className="mt-10 space-y-3">
           {FAQS.map((f, i) => {
             const open = openIdx === i;
             return (
-              <Reveal key={f.q} delay={i * 0.05}>
+              <Reveal key={f.q} delay={i * 0.05} dir="up">
                 <div className="overflow-hidden rounded-2xl border border-neutral-200 bg-white">
                   <button onClick={() => setOpenIdx(open ? null : i)} className="flex w-full items-center justify-between gap-4 px-5 py-4 text-left">
                     <span className="text-sm font-semibold text-neutral-900">{f.q}</span>
@@ -378,15 +425,16 @@ function Faq() {
 function Cta() {
   return (
     <section className="px-4 py-20 sm:px-6">
-      <Reveal className="mx-auto max-w-5xl">
+      <Reveal dir="scale" className="mx-auto max-w-5xl">
         <div className="relative overflow-hidden rounded-3xl px-8 py-14 text-center sm:px-12" style={{ background: BLUE }}>
           <div aria-hidden className="pointer-events-none absolute -right-16 -top-16 h-56 w-56 rounded-full opacity-30 blur-3xl" style={{ background: TEAL }} />
           <div aria-hidden className="pointer-events-none absolute -bottom-16 -left-16 h-56 w-56 rounded-full opacity-20 blur-3xl" style={{ background: YELLOW }} />
-          <h2 className="relative text-3xl font-black tracking-tight text-white sm:text-4xl" style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}>
-            Siap menyatukan kerja tim Anda?
+          <h2 className="relative text-[clamp(1.5rem,2.6vw,2.15rem)] font-semibold tracking-tight text-white" style={{ lineHeight: 1.25 }}>
+            Buat workspace pertama sebelum rapat berikutnya selesai.
           </h2>
           <p className="relative mx-auto mt-3 max-w-md text-base text-blue-100">
-            Buat workspace pertama Anda hari ini — gratis untuk tim hingga 5 anggota.
+            Gratis untuk tim hingga 5 orang. Kalau ternyata tidak cocok,
+            tinggal berhenti pakai — tidak ada kontrak, tidak ada drama.
           </p>
           <div className="relative mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
             <Link href="/register" prefetch>
@@ -408,15 +456,16 @@ function Cta() {
 /* ─── Page ───────────────────────────────────────────────────── */
 export default function LandingPage() {
   return (
-    <div className="min-h-screen bg-white antialiased" style={{ fontFamily: FONT_BODY }}>
+    <div className="min-h-screen bg-white antialiased">
       <JsonLd data={softwareAppJsonLd} />
       <JsonLd data={faqJsonLd} />
       <MarketingHeader />
       <main>
         <Hero />
-        <Problem />
+        <RealityCheck />
         <Solution />
-        <FeatureTeaser />
+        <ModuleStrip />
+        <HonestNote />
         <Faq />
         <Cta />
       </main>

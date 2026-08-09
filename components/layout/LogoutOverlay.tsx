@@ -81,7 +81,7 @@ export function LogoutOverlay() {
                   </div>
                   
                   <div className="space-y-2">
-                    <h3 className="font-display text-lg font-extrabold text-foreground tracking-tight">
+                    <h3 className="font-display text-lg font-semibold text-foreground tracking-tight">
                       Mengamankan Sesi Anda
                     </h3>
                     <p className="text-xs text-muted-foreground leading-relaxed px-4">
@@ -108,7 +108,7 @@ export function LogoutOverlay() {
                   </m.div>
 
                   <div className="space-y-2">
-                    <h3 className="font-display text-lg font-extrabold text-foreground tracking-tight">
+                    <h3 className="font-display text-lg font-semibold text-foreground tracking-tight">
                       Keluar Berhasil
                     </h3>
                     <p className="text-xs text-muted-foreground leading-relaxed px-4">

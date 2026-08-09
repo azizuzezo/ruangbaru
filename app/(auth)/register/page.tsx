@@ -1,26 +1,29 @@
 'use client';
 
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { signUp } from '@/lib/supabase/actions';
 import { toast } from 'sonner';
-import { Loader2, Eye, EyeOff, Mail, ArrowRight, Check } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Mail, ArrowRight, Check, X, FolderKanban } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const BLUE = '#106CD8';
-const TEAL = '#10B29F';
-const FONT = "'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif";
 const E    = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
-const schema = z.object({
-  fullName:      z.string().min(2, 'Nama minimal 2 karakter'),
-  email:         z.string().email('Masukkan alamat email yang valid'),
-  workspaceName: z.string().min(2, 'Nama workspace minimal 2 karakter'),
-  password:      z.string().min(6, 'Kata sandi minimal 6 karakter'),
-});
+const schema = z
+  .object({
+    email:           z.string().email('Masukkan alamat email yang valid'),
+    password:        z.string().min(6, 'Kata sandi minimal 6 karakter'),
+    confirmPassword: z.string().min(1, 'Ulangi kata sandi Anda'),
+  })
+  .refine((v) => v.password === v.confirmPassword, {
+    message: 'Kata sandi tidak sama',
+    path: ['confirmPassword'],
+  });
 type Values = z.infer<typeof schema>;
 
 function StrengthBar({ password }: { password: string }) {
@@ -38,25 +41,45 @@ function StrengthBar({ password }: { password: string }) {
 }
 
 export default function RegisterPage() {
+  return (
+    <Suspense fallback={null}>
+      <RegisterForm />
+    </Suspense>
+  );
+}
+
+function RegisterForm() {
+  const searchParams = useSearchParams();
+  // Preserved through signup → email confirmation → /auth/callback, so a
+  // user who registers via an invitation link lands directly in that
+  // workspace instead of the generic onboarding wizard.
+  const redirectTo = searchParams.get('redirectTo') || '';
+
   const [loading, setLoading] = useState(false);
   const [showPw, setShowPw] = useState(false);
+  const [showPw2, setShowPw2] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<Values>({
     resolver: zodResolver(schema),
     mode: 'onTouched',
-    defaultValues: { fullName: '', email: '', workspaceName: '', password: '' },
+    defaultValues: { email: '', password: '', confirmPassword: '' },
   });
 
   const pw = watch('password');
+  const pw2 = watch('confirmPassword');
+  const pwMatch = pw2.length > 0 && pw === pw2;
+  const pwMismatch = pw2.length > 0 && pw !== pw2;
 
   const onSubmit = async (data: Values) => {
     setLoading(true);
     const fd = new FormData();
     fd.append('email', data.email);
     fd.append('password', data.password);
-    fd.append('full_name', data.fullName);
-    fd.append('workspace_name', data.workspaceName);
+    if (redirectTo) fd.append('next', redirectTo);
+    // No full_name / workspace_name here on purpose — collected right
+    // after first login, at the point the user actually creates their
+    // first workspace (see app/welcome/page.tsx).
     try {
       const result = await signUp(fd);
       if (result?.error) {
@@ -73,14 +96,18 @@ export default function RegisterPage() {
 
   if (successMsg) {
     return (
-      <motion.div className="space-y-6 text-center" style={{ fontFamily: FONT }}
+      <motion.div className="space-y-6 text-center"
         initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
         transition={{ duration: 0.35, ease: E }}>
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50">
+        <motion.div
+          initial={{ scale: 0 }} animate={{ scale: 1 }}
+          transition={{ type: 'spring', stiffness: 260, damping: 16, delay: 0.1 }}
+          className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-neutral-200 bg-neutral-50"
+        >
           <Mail className="h-6 w-6 text-neutral-700" />
-        </div>
+        </motion.div>
         <div>
-          <h1 className="text-xl font-800 text-neutral-900" style={{ fontWeight: 800 }}>Cek email Anda</h1>
+          <h1 className="text-xl font-semibold text-neutral-900">Cek email Anda</h1>
           <p className="mt-2 text-sm leading-6 text-neutral-500">{successMsg}</p>
         </div>
         <div className="rounded-lg border border-neutral-100 bg-neutral-50 p-4 text-left">
@@ -92,7 +119,7 @@ export default function RegisterPage() {
         </div>
         <Link href="/login">
           <motion.button className="w-full rounded-lg border border-neutral-200 bg-white py-2.5 text-sm font-semibold text-neutral-700 shadow-sm"
-            style={{ fontFamily: FONT }} whileHover={{ borderColor: '#9CA3AF' }} whileTap={{ scale: 0.97 }}>
+            whileHover={{ borderColor: '#9CA3AF' }} whileTap={{ scale: 0.97 }}>
             Kembali ke halaman masuk
           </motion.button>
         </Link>
@@ -101,70 +128,58 @@ export default function RegisterPage() {
   }
 
   return (
-    <motion.div className="space-y-6" style={{ fontFamily: FONT }}
+    <motion.div className="space-y-6"
       initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, ease: E }}>
 
       {/* Heading */}
       <div>
-        <h1 className="text-2xl font-800 tracking-tight text-neutral-900" style={{ fontWeight: 800 }}>
-          Buat workspace baru
+        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
+          Buat akun RuangBaru
         </h1>
         <p className="mt-1.5 text-sm text-neutral-500">
           Gratis untuk tim hingga 5 anggota. Tidak perlu kartu kredit.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {/* Full name */}
-        <div>
-          <label htmlFor="fullName" className="mb-1.5 block text-sm font-medium text-neutral-700">Nama Lengkap</label>
-          <input
-            id="fullName"
-            type="text"
-            placeholder="Budi Santoso"
-            disabled={loading}
-            {...register('fullName')}
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-all focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 disabled:opacity-60"
-            style={{ fontFamily: FONT }}
-          />
-          {errors.fullName && <p className="mt-1 text-xs text-red-500">{errors.fullName.message}</p>}
-        </div>
+      {/* What happens next — sets expectations since name/workspace aren't asked here */}
+      <motion.div
+        initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35, delay: 0.05, ease: E }}
+        className="flex items-start gap-2.5 rounded-xl border border-blue-100 bg-blue-50/60 px-3.5 py-3"
+      >
+        <FolderKanban className="mt-0.5 h-4 w-4 shrink-0" style={{ color: BLUE }} />
+        <p className="text-xs leading-5 text-neutral-600">
+          Cukup email dan kata sandi dulu. Nama Anda dan nama ruang kerja
+          diisi belakangan, tepat waktu Anda membuat ruang kerja pertama.
+        </p>
+      </motion.div>
 
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Email */}
-        <div>
-          <label htmlFor="reg-email" className="mb-1.5 block text-sm font-medium text-neutral-700">Email</label>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1, ease: E }}>
+          <label htmlFor="reg-email" className="mb-1.5 block text-sm font-semibold text-neutral-700">Email</label>
           <input
             id="reg-email"
             type="email"
             placeholder="nama@perusahaan.com"
             disabled={loading}
+            autoFocus
             {...register('email')}
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-all focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 disabled:opacity-60"
-            style={{ fontFamily: FONT }}
+            className="w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-all focus:border-[#106CD8] focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
           />
-          {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email.message}</p>}
-        </div>
-
-        {/* Workspace name */}
-        <div>
-          <label htmlFor="workspaceName" className="mb-1.5 block text-sm font-medium text-neutral-700">Nama Workspace</label>
-          <input
-            id="workspaceName"
-            type="text"
-            placeholder="Contoh: Kreasi Studio"
-            disabled={loading}
-            {...register('workspaceName')}
-            className="w-full rounded-lg border border-neutral-200 bg-white px-3.5 py-2.5 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-all focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 disabled:opacity-60"
-            style={{ fontFamily: FONT }}
-          />
-          {errors.workspaceName && <p className="mt-1 text-xs text-red-500">{errors.workspaceName.message}</p>}
-          <p className="mt-1 text-[11px] text-neutral-400">Ini akan menjadi nama workspace yang dilihat anggota tim Anda.</p>
-        </div>
+          <AnimatePresence>
+            {errors.email && (
+              <motion.p initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="mt-1 text-xs text-red-500">
+                {errors.email.message}
+              </motion.p>
+            )}
+          </AnimatePresence>
+        </motion.div>
 
         {/* Password */}
-        <div>
-          <label htmlFor="reg-password" className="mb-1.5 block text-sm font-medium text-neutral-700">Kata Sandi</label>
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15, ease: E }}>
+          <label htmlFor="reg-password" className="mb-1.5 block text-sm font-semibold text-neutral-700">Kata Sandi</label>
           <div className="relative">
             <input
               id="reg-password"
@@ -172,8 +187,7 @@ export default function RegisterPage() {
               placeholder="Min. 6 karakter"
               disabled={loading}
               {...register('password')}
-              className="w-full rounded-lg border border-neutral-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-all focus:border-neutral-400 focus:ring-2 focus:ring-neutral-100 disabled:opacity-60"
-              style={{ fontFamily: FONT }}
+              className="w-full rounded-lg border border-neutral-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-all focus:border-[#106CD8] focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
             />
             <button type="button" onClick={() => setShowPw(v => !v)}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-400 hover:text-neutral-600 transition-colors">
@@ -182,33 +196,79 @@ export default function RegisterPage() {
           </div>
           <StrengthBar password={pw} />
           {errors.password && <p className="mt-1 text-xs text-red-500">{errors.password.message}</p>}
-        </div>
+        </motion.div>
+
+        {/* Confirm password */}
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2, ease: E }}>
+          <label htmlFor="reg-password-2" className="mb-1.5 block text-sm font-semibold text-neutral-700">Ulangi Kata Sandi</label>
+          <div className="relative">
+            <input
+              id="reg-password-2"
+              type={showPw2 ? 'text' : 'password'}
+              placeholder="Ketik ulang kata sandi"
+              disabled={loading}
+              {...register('confirmPassword')}
+              className={`w-full rounded-lg border bg-white py-2.5 pl-3.5 pr-16 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-all focus:ring-2 disabled:opacity-60 ${
+                pwMismatch ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                : pwMatch ? 'border-emerald-300 focus:border-emerald-400 focus:ring-emerald-100'
+                : 'border-neutral-200 focus:border-[#106CD8] focus:ring-blue-100'
+              }`}
+            />
+            <div className="absolute right-2.5 top-1/2 flex -translate-y-1/2 items-center gap-1.5">
+              <AnimatePresence>
+                {pwMatch && (
+                  <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500">
+                    <Check className="h-3 w-3 text-white" />
+                  </motion.span>
+                )}
+                {pwMismatch && (
+                  <motion.span initial={{ scale: 0 }} animate={{ scale: 1 }} exit={{ scale: 0 }}
+                    transition={{ type: 'spring', stiffness: 300, damping: 20 }}
+                    className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500">
+                    <X className="h-3 w-3 text-white" />
+                  </motion.span>
+                )}
+              </AnimatePresence>
+              <button type="button" onClick={() => setShowPw2(v => !v)}
+                className="text-neutral-400 hover:text-neutral-600 transition-colors">
+                {showPw2 ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </button>
+            </div>
+          </div>
+          {errors.confirmPassword && <p className="mt-1 text-xs text-red-500">{errors.confirmPassword.message}</p>}
+        </motion.div>
 
         <motion.button
           type="submit"
-          id="btn-submit-register"
           disabled={loading}
-          className="flex w-full items-center justify-center gap-2 rounded-lg py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-          style={{ background: BLUE, fontFamily: FONT }}
-          whileHover={{ opacity: 0.9 }} whileTap={{ scale: 0.98 }}>
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.26, ease: E }}
+          whileHover={{ scale: loading ? 1 : 1.01 }} whileTap={{ scale: loading ? 1 : 0.98 }}
+          className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition-colors disabled:opacity-60"
+          style={{ background: BLUE }}>
           {loading
             ? <><Loader2 className="h-4 w-4 animate-spin" /> Membuat akun...</>
-            : <>Buat Workspace <ArrowRight className="h-4 w-4" /></>}
+            : <>Buat Akun <ArrowRight className="h-4 w-4" /></>}
         </motion.button>
       </form>
 
       {/* Terms note */}
       <p className="text-center text-xs text-neutral-400 leading-5">
         Dengan mendaftar, Anda menyetujui{' '}
-        <Link href="/terms" className="underline underline-offset-2 hover:text-neutral-600">ketentuan layanan</Link>
+        <Link href="/terms-of-service" className="underline underline-offset-2 hover:text-neutral-600">ketentuan layanan</Link>
         {' '}dan{' '}
-        <Link href="/privacy" className="underline underline-offset-2 hover:text-neutral-600">kebijakan privasi</Link>{' '}kami.
+        <Link href="/privacy-policy" className="underline underline-offset-2 hover:text-neutral-600">kebijakan privasi</Link>{' '}kami.
       </p>
 
       {/* Login link */}
       <p className="text-center text-sm text-neutral-500">
         Sudah punya akun?{' '}
-        <Link href="/login" className="font-semibold transition-colors hover:opacity-80" style={{ color: BLUE }}>
+        <Link
+          href={redirectTo ? `/login?redirectTo=${encodeURIComponent(redirectTo)}` : '/login'}
+          className="font-semibold transition-colors hover:opacity-80"
+          style={{ color: BLUE }}
+        >
           Masuk di sini
         </Link>
       </p>

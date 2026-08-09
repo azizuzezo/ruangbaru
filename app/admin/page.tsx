@@ -142,7 +142,7 @@ export default function AdminPage() {
               <ShieldCheck className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Panel Admin</h1>
+              <h1 className="text-2xl font-semibold tracking-tight text-foreground">Panel Admin</h1>
               <p className="text-xs text-muted-foreground">Kelola workspace, plan, dan pengguna RuangBaru</p>
             </div>
           </div>
@@ -161,7 +161,7 @@ export default function AdminPage() {
           ].map((s) => (
             <div key={s.label} className="rounded-xl border border-border bg-card p-4 space-y-1">
               <p className="text-[11px] text-muted-foreground">{s.label}</p>
-              <p className={`text-2xl font-extrabold ${s.color}`}>{loading ? '—' : s.value}</p>
+              <p className={`text-2xl font-semibold ${s.color}`}>{loading ? '—' : s.value}</p>
             </div>
           ))}
         </div>

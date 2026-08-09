@@ -25,14 +25,11 @@ export default function ProjectsPage() {
   const [createOpen, setCreateOpen] = useState(false);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
-  const [icon, setIcon] = useState('');
   const [color, setColor] = useState('#106CD8');
   const [creating, setCreating] = useState(false);
 
-  // Emoji presets for project icons
-  const EMOJI_OPTIONS = ['📁','🚀','💡','🎯','🛠️','📊','🎨','📝','🔧','🌐','⚡','🏆','📱','🔬','💼'];
   const COLOR_OPTIONS = ['#106CD8','#10B29F','#FDB31A','#EF4444','#8B5CF6','#F97316'];
-  
+
 
   const supabase = createClient();
 
@@ -72,7 +69,6 @@ export default function ProjectsPage() {
           workspace_id: currentWorkspace.id,
           name,
           description,
-          icon,
           color,
           status: 'active',
           created_by: currentUser.id,
@@ -87,7 +83,6 @@ export default function ProjectsPage() {
       setCreateOpen(false);
       setName('');
       setDescription('');
-      setIcon('');
       setColor('#106CD8');
     } catch (err: any) {
       toast.error(err.message || 'Gagal membuat proyek');
@@ -139,7 +134,7 @@ export default function ProjectsPage() {
       {/* Header action bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="font-display text-2xl font-extrabold text-foreground tracking-tight sm:text-3xl">
+          <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight sm:text-3xl">
             Proyek Kerja Tim
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
@@ -182,38 +177,6 @@ export default function ProjectsPage() {
                 disabled={creating}
                 className="h-10"
               />
-              {/* Icon picker — optional */}
-              <div className="space-y-2">
-                <p className="text-xs font-semibold text-muted-foreground">
-                  Ikon <span className="font-normal text-muted-foreground/60">(opsional)</span>
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {EMOJI_OPTIONS.map((e) => (
-                    <button
-                      key={e}
-                      type="button"
-                      onClick={() => setIcon(icon === e ? '' : e)}
-                      className="h-9 w-9 rounded-lg border text-lg transition-all"
-                      style={{
-                        borderColor: icon === e ? color : 'var(--border)',
-                        background: icon === e ? `${color}18` : 'transparent',
-                        transform: icon === e ? 'scale(1.12)' : 'none',
-                      }}
-                    >
-                      {e}
-                    </button>
-                  ))}
-                </div>
-                {icon && (
-                  <button
-                    type="button"
-                    onClick={() => setIcon('')}
-                    className="text-[11px] text-muted-foreground underline underline-offset-2 hover:text-foreground"
-                  >
-                    Hapus ikon
-                  </button>
-                )}
-              </div>
               {/* Color picker */}
               <div className="flex items-center gap-2">
                 <span className="text-xs font-semibold text-muted-foreground">Warna:</span>
@@ -232,13 +195,8 @@ export default function ProjectsPage() {
                 ))}
               </div>
               {/* Preview */}
-              <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
-                <span
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border-2 text-base"
-                  style={{ borderColor: color, background: `${color}18` }}
-                >
-                  {icon || '📁'}
-                </span>
+              <div className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
                 <span className="text-sm font-semibold text-foreground truncate">
                   {name || 'Nama Proyek'}
                 </span>
@@ -307,13 +265,8 @@ export default function ProjectsPage() {
             >
               <CardHeader className="p-5 pb-3">
                 <div className="flex justify-between items-start">
-                  <span
-                    className="flex h-10 w-10 items-center justify-center rounded-xl border-2 text-2xl shrink-0"
-                    style={{ borderColor: project.color, background: `${project.color}18` }}
-                  >
-                    {project.icon || '📁'}
-                  </span>
-                  
+                  <span className="h-2 w-2 rounded-full mt-1.5" style={{ background: project.color }} />
+
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded transition-opacity text-muted-foreground hover:text-foreground">

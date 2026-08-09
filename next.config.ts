@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  // Self-contained server.js + minimal node_modules — needed for a lean
+  // Docker image (see Dockerfile.frontend). Doesn't change `next dev`/local
+  // build behavior.
+  output: "standalone",
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "*.supabase.co" },

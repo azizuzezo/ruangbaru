@@ -32,11 +32,6 @@ export function Providers({ children }: { children: React.ReactNode }) {
           position="bottom-right"
           richColors
           expand={true}
-          toastOptions={{
-            style: {
-              fontFamily: 'Inter, sans-serif',
-            },
-          }}
         />
         <LogoutOverlay />
       </ThemeProvider>

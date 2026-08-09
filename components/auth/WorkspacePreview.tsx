@@ -78,7 +78,7 @@ export function WorkspacePreview() {
           {/* Headline */}
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: E }}>
-            <h2 className="text-3xl font-extrabold tracking-tight leading-[1.18] text-white">
+            <h2 className="text-3xl font-semibold tracking-tight leading-[1.18] text-white">
               Kelola proyek dan tim<br />
               <span style={{ color: 'rgba(255,255,255,0.7)' }}>dalam satu tempat.</span>
             </h2>
@@ -194,7 +194,7 @@ export function WorkspacePreview() {
             { v: '4 fitur', l: 'Kanban, Catatan, dst.' },
           ].map(s => (
             <div key={s.l} className="rounded-xl border border-white/10 bg-white/8 p-3 text-center">
-              <p className="text-base font-extrabold text-white">{s.v}</p>
+              <p className="text-base font-semibold text-white">{s.v}</p>
               <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{s.l}</p>
             </div>
           ))}

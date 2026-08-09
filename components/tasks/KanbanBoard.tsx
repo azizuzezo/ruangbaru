@@ -12,15 +12,7 @@ import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
 import { Calendar, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import type { Task, TaskStatus } from '@/types';
-
-export const BOARD_COLUMNS: { id: TaskStatus; title: string; accent: string }[] = [
-  { id: 'backlog', title: 'Backlog', accent: 'bg-neutral-400' },
-  { id: 'todo', title: 'Todo', accent: 'bg-sky-500' },
-  { id: 'in_progress', title: 'In Progress', accent: 'bg-amber-500' },
-  { id: 'in_review', title: 'Review', accent: 'bg-violet-500' },
-  { id: 'done', title: 'Done', accent: 'bg-emerald-500' },
-];
+import type { Task, TaskStatus, TaskStatusDef } from '@/types';
 
 const PRIORITY_STYLES: Record<string, string> = {
   urgent: 'bg-rose-500/10 text-rose-600',
@@ -31,6 +23,8 @@ const PRIORITY_STYLES: Record<string, string> = {
 
 interface KanbanBoardProps {
   tasks: Task[];
+  /** This workspace's Kanban columns, in order — see useTaskStatuses(). */
+  columns: TaskStatusDef[];
   onTaskClick: (taskId: string) => void;
   /** Persist a move. Parent already applied the optimistic state update. */
   onMove: (taskId: string, status: TaskStatus, position: number) => void;
@@ -92,21 +86,21 @@ function SortableTaskCard({ task, onClick }: { task: Task; onClick: () => void }
   );
 }
 
-function Column({ id, title, accent, tasks, onTaskClick }: {
-  id: TaskStatus; title: string; accent: string; tasks: Task[]; onTaskClick: (id: string) => void;
+function Column({ id, title, color, tasks, onTaskClick }: {
+  id: string; title: string; color: string; tasks: Task[]; onTaskClick: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id, data: { type: 'column', status: id } });
   return (
     <div
       ref={setNodeRef}
       className={cn(
-        'flex flex-col rounded-2xl border border-dashed border-border bg-muted/30 p-3 transition-colors min-h-[140px]',
+        'flex w-72 shrink-0 flex-col rounded-2xl border border-dashed border-border bg-muted/30 p-3 transition-colors min-h-[140px]',
         isOver && 'border-primary/50 bg-primary/5',
       )}
     >
       <div className="flex items-center justify-between pb-2.5 mb-1">
         <div className="flex items-center gap-2">
-          <span className={cn('h-2 w-2 rounded-full', accent)} />
+          <span className="h-2 w-2 rounded-full" style={{ background: color }} />
           <span className="text-xs font-bold text-foreground">{title}</span>
         </div>
         <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-bold">{tasks.length}</span>
@@ -125,7 +119,7 @@ function Column({ id, title, accent, tasks, onTaskClick }: {
   );
 }
 
-export function KanbanBoard({ tasks, onTaskClick, onMove }: KanbanBoardProps) {
+export function KanbanBoard({ tasks, columns, onTaskClick, onMove }: KanbanBoardProps) {
   const [items, setItems] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
 
@@ -134,21 +128,24 @@ export function KanbanBoard({ tasks, onTaskClick, onMove }: KanbanBoardProps) {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
+  const fallbackKey = columns[0]?.key ?? 'backlog';
+
   const byStatus = useMemo(() => {
-    const map: Record<TaskStatus, Task[]> = {
-      backlog: [], todo: [], in_progress: [], in_review: [], done: [], cancelled: [],
-    };
+    const map: Record<string, Task[]> = {};
+    columns.forEach((c) => { map[c.key] = []; });
     items
       .slice()
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-      .forEach((t) => { (map[t.status] ?? map.backlog).push(t); });
+      .forEach((t) => {
+        (map[t.status] ?? (map[fallbackKey] ??= [])).push(t);
+      });
     return map;
-  }, [items]);
+  }, [items, columns, fallbackKey]);
 
   const findTask = (id: string) => items.find((t) => t.id === id) ?? null;
 
-  const columnForId = (id: string): TaskStatus | null => {
-    if (BOARD_COLUMNS.some((c) => c.id === id)) return id as TaskStatus;
+  const columnForId = (id: string): string | null => {
+    if (columns.some((c) => c.key === id)) return id;
     return findTask(id)?.status ?? null;
   };
 
@@ -177,7 +174,7 @@ export function KanbanBoard({ tasks, onTaskClick, onMove }: KanbanBoardProps) {
     const targetStatus = columnForId(String(over.id));
     if (!targetStatus) return;
 
-    const colTasks = byStatus[targetStatus];
+    const colTasks = byStatus[targetStatus] || [];
     const oldIndex = colTasks.findIndex((t) => t.id === activeId);
     const overTaskIndex = colTasks.findIndex((t) => t.id === String(over.id));
     const newIndex = overTaskIndex === -1 ? colTasks.length - 1 : overTaskIndex;
@@ -213,14 +210,14 @@ export function KanbanBoard({ tasks, onTaskClick, onMove }: KanbanBoardProps) {
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        {BOARD_COLUMNS.map((col) => (
+      <div className="flex gap-3 overflow-x-auto pb-2">
+        {columns.map((col) => (
           <Column
-            key={col.id}
-            id={col.id}
-            title={col.title}
-            accent={col.accent}
-            tasks={byStatus[col.id]}
+            key={col.key}
+            id={col.key}
+            title={col.name}
+            color={col.color}
+            tasks={byStatus[col.key] || []}
             onTaskClick={onTaskClick}
           />
         ))}

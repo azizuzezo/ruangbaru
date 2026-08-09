@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useUIStore } from '@/lib/stores/ui-store';
 import { Sidebar } from '@/components/layout/Sidebar';
@@ -12,13 +13,7 @@ import { PageTransition } from '@/components/layout/PageTransition';
 import { BottomNav } from '@/components/layout/BottomNav';
 import { TourProvider } from '@/components/tour/TourProvider';
 import { createClient } from '@/lib/supabase/client';
-
-import { toast } from 'sonner';
-import { Layers, Loader2, Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { slugify } from '@/lib/utils';
+import { Loader2 } from 'lucide-react';
 import type { Workspace } from '@/types';
 
 export default function AppLayout({
@@ -26,21 +21,16 @@ export default function AppLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { 
-    currentWorkspace, 
-    setCurrentWorkspace, 
-    setWorkspaces, 
-    workspaces,
-    currentUser,
+  const router = useRouter();
+  const {
+    currentWorkspace,
+    setCurrentWorkspace,
+    setWorkspaces,
     setCurrentUser,
-    sidebarCollapsed 
   } = useWorkspaceStore();
   const { commandPaletteOpen, setCommandPaletteOpen } = useUIStore();
   const [loading, setLoading] = useState(true);
-  const [createWsOpen, setCreateWsOpen] = useState(false);
-  const [wsName, setWsName] = useState('');
-  const [creatingWs, setCreatingWs] = useState(false);
-  
+
   const supabase = createClient();
 
   // 1. Initial State Fetching
@@ -59,7 +49,7 @@ export default function AppLayout({
           .select('*')
           .eq('id', user.id)
           .single();
-        
+
         setCurrentUser(profile || {
           id: user.id,
           email: user.email!,
@@ -84,8 +74,12 @@ export default function AppLayout({
             setCurrentWorkspace(fetchedWorkspaces[0]);
           }
         } else {
-          // No workspaces exist, force create modal
-          setCreateWsOpen(true);
+          // Landed on a workspace-scoped page (e.g. a stale bookmark, or
+          // removed from their only workspace) with no workspace at all —
+          // send them through the same join-or-create choice a brand-new
+          // user gets, instead of a second, lesser "create workspace" modal.
+          router.replace('/welcome');
+          return;
         }
       } catch (err) {
         console.error('Error initializing app state:', err);
@@ -95,54 +89,8 @@ export default function AppLayout({
     }
 
     initUserAndWorkspaces();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  // 2. Workspace creation handler
-  const handleCreateWorkspace = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!wsName.trim() || !currentUser) return;
-    setCreatingWs(true);
-
-    try {
-      const slug = `${slugify(wsName)}-${Math.floor(Math.random() * 1000)}`;
-      
-      // Insert workspace
-      const { data: workspace, error: wsErr } = await supabase
-        .from('workspaces')
-        .insert({
-          name: wsName,
-          slug,
-          owner_id: currentUser.id,
-          plan: 'free',
-        })
-        .select()
-        .single();
-
-      if (wsErr) throw wsErr;
-
-      // Insert membership
-      const { error: memberErr } = await supabase
-        .from('workspace_members')
-        .insert({
-          workspace_id: workspace.id,
-          user_id: currentUser.id,
-          role: 'owner',
-        });
-
-      if (memberErr) throw memberErr;
-
-      toast.success(`Workspace "${wsName}" berhasil dibuat!`);
-      const updatedWorkspaces = [...workspaces, workspace];
-      setWorkspaces(updatedWorkspaces);
-      setCurrentWorkspace(workspace);
-      setCreateWsOpen(false);
-      setWsName('');
-    } catch (err: any) {
-      toast.error(err.message || 'Gagal membuat workspace');
-    } finally {
-      setCreatingWs(false);
-    }
-  };
 
   // Keyboard shortcut listener (Cmd+K)
   useEffect(() => {
@@ -154,7 +102,7 @@ export default function AppLayout({
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [commandPaletteOpen]);
+  }, [commandPaletteOpen, setCommandPaletteOpen]);
 
   if (loading) {
     return (
@@ -190,47 +138,6 @@ export default function AppLayout({
 
       {/* Task detail sheet */}
       <TaskDetailSheet />
-
-
-      {/* Force Workspace Creation Modal */}
-      <Dialog open={createWsOpen} onOpenChange={(open) => !creatingWs && setCreateWsOpen(open)}>
-        <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Layers className="h-5 w-5 text-primary" />
-              Buat Ruang Kerja Pertama Anda
-            </DialogTitle>
-            <DialogDescription>
-              Untuk memulai kolaborasi, Anda memerlukan sebuah ruang kerja (workspace). Beri nama untuk tim Anda.
-            </DialogDescription>
-          </DialogHeader>
-          <form onSubmit={handleCreateWorkspace} className="space-y-4 pt-2">
-            <div className="space-y-1.5">
-              <Input
-                placeholder="cth. Ruang Kerja Marketing, Agency HQ"
-                value={wsName}
-                onChange={(e) => setWsName(e.target.value)}
-                disabled={creatingWs}
-                required
-                className="col-span-3"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={creatingWs || !wsName.trim()}>
-              {creatingWs ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Membuat...
-                </>
-              ) : (
-                <>
-                  <Plus className="mr-2 h-4 w-4" />
-                  Buat Workspace Baru
-                </>
-              )}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
     </div>
     </TourProvider>
   );

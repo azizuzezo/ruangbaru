@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap');
 @import "tailwindcss";
 
 /* ============================================================
@@ -81,9 +81,9 @@
   --color-neutral-900: oklch(0.14 0.006 264);
   --color-neutral-950: oklch(0.09 0.004 264);
 
-  /* Fonts — SF Pro system stack */
-  --font-sans: 'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
-  --font-display: 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  /* Fonts — Poppins (single family, weight/scale carries the contrast) */
+  --font-sans: 'Poppins', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
+  --font-display: 'Poppins', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, monospace;
 
   /* Radius */
@@ -207,7 +207,7 @@ body {
   line-height: 1.6;
 }
 
-/* SF Pro Display for headings */
+/* Poppins for headings — weight carries the display/body contrast */
 h1, h2, h3, h4, h5, h6 {
   font-family: var(--font-display);
   font-feature-settings: 'kern' 1, 'liga' 1;

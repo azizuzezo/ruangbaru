@@ -6,9 +6,6 @@ import { Mail, Building2, Send, Check, MessageSquare } from 'lucide-react';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { SiteFooter } from '@/components/landing/SiteFooter';
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-const FONT_BODY = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
 
@@ -37,7 +34,7 @@ export default function ContactPage() {
     'h-11 w-full rounded-xl border border-neutral-200 px-3.5 text-sm focus:border-[#106CD8] focus:outline-none';
 
   return (
-    <div className="min-h-screen bg-white antialiased" style={{ fontFamily: FONT_BODY }}>
+    <div className="min-h-screen bg-white antialiased">
       <MarketingHeader />
       <main>
         <section className="mx-auto max-w-5xl px-4 py-16 sm:px-6">
@@ -50,8 +47,8 @@ export default function ContactPage() {
               Kontak
             </p>
             <h1
-              className="mt-3 text-3xl font-black tracking-tight text-neutral-950 sm:text-4xl"
-              style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}
+              className="mt-3 text-3xl font-semibold tracking-tight text-neutral-950 sm:text-4xl"
+              style={{ letterSpacing: '-0.02em' }}
             >
               Hubungi Kami
             </h1>
@@ -116,8 +113,8 @@ export default function ContactPage() {
             {/* Form (right) */}
             <div className="rounded-3xl border border-neutral-200 bg-neutral-50/60 p-7 sm:p-8">
               <h2
-                className="text-lg font-black tracking-tight text-neutral-950 sm:text-xl"
-                style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}
+                className="text-lg font-semibold tracking-tight text-neutral-950 sm:text-xl"
+                style={{ letterSpacing: '-0.02em' }}
               >
                 Kirim pesan
               </h2>

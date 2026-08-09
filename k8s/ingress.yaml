@@ -1,0 +1,44 @@
+# Routes /api/* (and the two backend-owned non-/api paths) to the Go
+# backend, everything else to the Next.js frontend, so the frontend's
+# existing same-origin fetch("/api/...") calls keep working unmodified —
+# no frontend code has to know the backend is a separate service.
+#
+# Requires the AWS Load Balancer Controller installed on the cluster
+# (kubernetes.io/ingress.class: alb). Replace the ACM cert ARN and host
+# before applying. Scaffolding only — not applied anywhere.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ruangbaru
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTPS":443}]'
+    alb.ingress.kubernetes.io/certificate-arn: REPLACE_WITH_ACM_CERT_ARN
+spec:
+  rules:
+    - host: REPLACE_WITH_DOMAIN # e.g. ruangbaru.my.id
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: ruangbaru-backend
+                port:
+                  number: 80
+          - path: /auth/callback
+            pathType: Exact
+            backend:
+              service:
+                name: ruangbaru-backend
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ruangbaru-frontend
+                port:
+                  number: 80

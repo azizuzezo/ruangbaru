@@ -17,6 +17,7 @@ import type { Project, Task, Profile, TaskStatus } from '@/types';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { KanbanBoard } from '@/components/tasks/KanbanBoard';
+import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 
 interface ProjectDetailPageProps {
   params: Promise<{
@@ -29,7 +30,8 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const resolvedParams = use(params);
   const { currentWorkspace } = useWorkspaceStore();
   const { setTaskDetailOpen } = useUIStore();
-  
+  const { statuses, doneKeys } = useTaskStatuses(currentWorkspace?.id);
+
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Profile[]>([]);
@@ -94,7 +96,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
       .update({
         status,
         position,
-        completed_at: status === 'done' ? new Date().toISOString() : null,
+        completed_at: doneKeys.has(status) ? new Date().toISOString() : null,
       })
       .eq('id', taskId);
     if (error) toast.error('Gagal memindahkan tugas');
@@ -137,8 +139,8 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
               <ArrowLeft className="h-4 w-4" />
             </button>
           </Link>
-          <div className="flex items-center gap-2">
-            <span className="text-2xl bg-card p-1.5 rounded-lg border shrink-0">{project.icon}</span>
+          <div className="flex items-center gap-2.5">
+            <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: project.color || '#106CD8' }} />
             <div>
               <h1 className="font-display text-xl font-bold text-foreground leading-tight tracking-tight sm:text-2xl">
                 {project.name}
@@ -188,14 +190,17 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                         <span className="text-xs font-bold text-foreground truncate">{task.title}</span>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className={cn(
-                          "text-[9px] px-1.5 py-0.5 rounded font-bold uppercase",
-                          task.status === 'todo' && "bg-sky-500/10 text-sky-600",
-                          task.status === 'in_progress' && "bg-amber-500/10 text-amber-600",
-                          task.status === 'done' && "bg-emerald-500/10 text-emerald-600",
-                        )}>
-                          {task.status.replace('_', ' ')}
-                        </span>
+                        {(() => {
+                          const s = statuses.find((x) => x.key === task.status);
+                          return (
+                            <span
+                              className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
+                              style={{ background: `${s?.color || '#6B7280'}1A`, color: s?.color || '#6B7280' }}
+                            >
+                              {s?.name || task.status}
+                            </span>
+                          );
+                        })()}
                         {task.assignee?.avatar_url && (
                           <img 
                             src={task.assignee.avatar_url} 
@@ -216,6 +221,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         <TabsContent value="kanban" className="space-y-4">
           <KanbanBoard
             tasks={tasks}
+            columns={statuses}
             onTaskClick={(id) => setTaskDetailOpen(true, id)}
             onMove={handleMove}
           />

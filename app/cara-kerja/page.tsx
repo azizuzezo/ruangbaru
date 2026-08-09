@@ -10,8 +10,6 @@ import { SiteFooter } from '@/components/landing/SiteFooter';
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
-const FONT = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-const DFONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
 
 function FadeIn({ children, delay = 0, className = '' }: {
   children: React.ReactNode; delay?: number; className?: string;
@@ -33,32 +31,32 @@ const STEPS = [
   {
     n: '01',
     icon: <Users className="h-6 w-6" />,
-    title: 'Buat workspace tim',
-    desc: 'Daftarkan akun dan buat workspace pertama Anda dalam hitungan menit. Pilih nama workspace dan undang anggota tim melalui tautan atau email.',
+    title: 'Buat workspace, undang tim lewat satu tautan',
+    desc: 'Isi nama workspace, bagikan tautan undangan ke grup WA tim Anda. Tidak ada persetujuan admin IT, tidak ada formulir approval — begitu klik tautannya, mereka sudah masuk.',
     color: BLUE,
-    details: ['Tidak perlu kartu kredit', 'Gratis untuk 5 anggota', 'Setup kurang dari 5 menit'],
+    details: ['Tanpa kartu kredit', 'Gratis untuk 5 anggota', 'Tautan undangan, bukan email satu-satu'],
   },
   {
     n: '02',
     icon: <FolderKanban className="h-6 w-6" />,
-    title: 'Tambahkan proyek dan tugas',
-    desc: 'Buat proyek, isi dengan tugas-tugas yang perlu diselesaikan, dan atur prioritas serta tenggat waktu. Semua langsung terlihat oleh seluruh anggota tim.',
+    title: 'Pindahkan proyek yang lagi berjalan sekarang',
+    desc: 'Bukan proyek contoh — proyek yang sedang Anda kerjakan hari ini. Buat kartu untuk tiap tugas, tempel tenggat waktu, lalu lihat papannya langsung terisi.',
     color: TEAL,
-    details: ['Papan kanban visual', 'Prioritas dan label', 'Tenggat waktu terintegrasi'],
+    details: ['Papan kanban, drag untuk pindah status', 'Prioritas dan label', 'Tenggat waktu nempel ke kalender'],
   },
   {
     n: '03',
     icon: <Zap className="h-6 w-6" />,
-    title: 'Bekerja bersama tim',
-    desc: 'Tulis catatan, pantau kalender tim, dan lihat progress pekerjaan secara keseluruhan dalam satu tampilan. Tim tetap sinkron tanpa perlu rapat panjang.',
+    title: 'Berhenti bikin rapat cuma buat lapor progres',
+    desc: 'Siapa pun bisa buka papan dan langsung tahu status tanpa nanya. Rapat yang tersisa jadi rapat yang benar-benar butuh diskusi, bukan sekadar update status.',
     color: '#8B5CF6',
-    details: ['Catatan kolaboratif', 'Kalender bersama', 'Dashboard progress real-time'],
+    details: ['Catatan bisa diedit bersama', 'Kalender tim satu tampilan', 'Progres kelihatan tanpa lapor manual'],
   },
 ];
 
 export default function CaraKerjaPage() {
   return (
-    <div className="min-h-screen bg-white antialiased" style={{ fontFamily: FONT }}>
+    <div className="min-h-screen bg-white antialiased">
       <MarketingHeader />
 
       {/* Hero */}
@@ -66,16 +64,12 @@ export default function CaraKerjaPage() {
         <div className="mx-auto max-w-3xl text-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: E }}>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-600 shadow-sm mb-5">
-              <Zap className="h-3.5 w-3.5" style={{ color: TEAL }} />
-              Cara Kerja RuangBaru
-            </span>
-            <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl"
-              style={{ fontFamily: DFONT }}>
-              Mulai dalam tiga langkah
+            <h1 className="text-[clamp(1.9rem,3.6vw,2.75rem)] font-semibold tracking-tight text-neutral-900" style={{ lineHeight: 1.2 }}>
+              Tiga langkah. Tidak ada langkah keempat.
             </h1>
             <p className="mt-4 text-lg text-neutral-600 max-w-xl mx-auto">
-              Dari mendaftar hingga tim bekerja bersama — hanya perlu beberapa menit tanpa setup yang rumit.
+              Tidak ada video onboarding 40 menit atau kelas training. Baca ini,
+              lalu langsung praktik dengan proyek yang sedang Anda kerjakan.
             </p>
           </motion.div>
         </div>
@@ -100,12 +94,12 @@ export default function CaraKerjaPage() {
                 {/* Content */}
                 <div className="rounded-2xl border border-neutral-200 bg-white p-8 hover:shadow-md transition-shadow">
                   <div className="flex items-start gap-4">
-                    <span className="text-4xl font-black tracking-tighter"
-                      style={{ color: `${step.color}20`, fontFamily: DFONT, lineHeight: 1 }}>
+                    <span className="text-4xl font-bold tracking-tight"
+                      style={{ color: `${step.color}30`, lineHeight: 1 }}>
                       {step.n}
                     </span>
                     <div className="flex-1">
-                      <h2 className="text-xl font-bold text-neutral-900" style={{ fontFamily: DFONT }}>
+                      <h2 className="text-xl font-semibold text-neutral-900">
                         {step.title}
                       </h2>
                       <p className="mt-3 text-base text-neutral-600 leading-7">{step.desc}</p>
@@ -131,14 +125,16 @@ export default function CaraKerjaPage() {
         <div className="mx-auto max-w-2xl text-center">
           <FadeIn>
             <div className="rounded-2xl border border-neutral-200 bg-white p-8">
-              <p className="text-sm font-semibold uppercase tracking-wider text-neutral-400 mb-2">Catatan jujur</p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-neutral-400 mb-2">Yang belum kami sebut di atas</p>
               <p className="text-neutral-600 leading-7">
-                RuangBaru saat ini dalam <strong>tahap awal pengembangan</strong>. Beberapa fitur mungkin belum sempurna.
-                Dengan bergabung sekarang, Anda membantu kami membentuk produk yang lebih baik untuk tim Indonesia.
+                RuangBaru masih tahap awal. Beberapa sudut fitur belum sehalus
+                yang kami mau, dan tim kami kecil — jadi kalau nemu bug, kabari
+                lewat kontak dan biasanya langsung kami tangani, bukan masuk
+                antrean tiket berbulan-bulan.
               </p>
-              <Link href="/register" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold"
+              <Link href="/contact" className="mt-5 inline-flex items-center gap-2 text-sm font-semibold"
                 style={{ color: BLUE }}>
-                Bergabung dan bantu kami <ArrowRight className="h-4 w-4" />
+                Lapor bug atau kasih masukan <ArrowRight className="h-4 w-4" />
               </Link>
             </div>
           </FadeIn>
@@ -148,17 +144,17 @@ export default function CaraKerjaPage() {
       {/* FAQ teaser */}
       <section className="px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-3xl">
-          <FadeIn className="mb-10 text-center">
-            <h2 className="text-3xl font-extrabold text-neutral-900" style={{ fontFamily: DFONT }}>
-              Pertanyaan umum
+          <FadeIn className="mb-10 max-w-xl">
+            <h2 className="text-[clamp(1.5rem,2.6vw,2.15rem)] font-semibold text-neutral-900">
+              Sebelum Anda tanya di kolom kontak
             </h2>
           </FadeIn>
           <div className="space-y-4">
             {[
-              { q: 'Apakah gratis selamanya?', a: 'Plan Gratis tersedia tanpa batas waktu untuk tim hingga 5 anggota dan 3 proyek aktif.' },
-              { q: 'Apakah data saya aman?', a: 'Data disimpan di server yang aman. Kami menggunakan enkripsi untuk semua data yang tersimpan dan dalam perjalanan.' },
-              { q: 'Bisakah saya mengundang tim lebih dari 5 orang?', a: 'Ya, dengan upgrade ke plan Pro Anda bisa mengundang anggota tidak terbatas.' },
-              { q: 'Di mana saya bisa mendapat bantuan?', a: 'Anda bisa menghubungi kami melalui halaman kontak. Kami akan merespons secepatnya.' },
+              { q: 'Apakah gratis selamanya?', a: 'Plan Gratis tidak punya tanggal habis. Selama tim Anda di bawah 5 orang dan 3 proyek aktif, tidak akan ada tagihan tiba-tiba.' },
+              { q: 'Apakah data saya aman?', a: 'Data tersimpan terenkripsi, dan workspace Anda terisolasi dari workspace tim lain — bahkan kalau satu server yang sama.' },
+              { q: 'Bisakah saya mengundang tim lebih dari 5 orang?', a: 'Bisa, dengan upgrade ke plan Pro. Tim yang sudah jalan tetap utuh, tidak perlu setup ulang.' },
+              { q: 'Di mana saya bisa mendapat bantuan?', a: 'Lewat halaman kontak. Tim kami masih kecil, jadi balasannya personal — bukan template auto-reply.' },
             ].map((item, i) => (
               <FadeIn key={item.q} delay={i * 0.06}>
                 <div className="rounded-2xl border border-neutral-200 bg-white p-6 hover:shadow-sm transition-shadow">
@@ -175,8 +171,8 @@ export default function CaraKerjaPage() {
       <section className="border-t border-neutral-100 px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <FadeIn>
-            <h2 className="text-3xl font-extrabold text-neutral-900" style={{ fontFamily: DFONT }}>
-              Siap memulai?
+            <h2 className="text-[clamp(1.5rem,2.6vw,2.15rem)] font-semibold text-neutral-900">
+              Langkah 01 dimulai sekarang, bukan setelah demo call.
             </h2>
             <p className="mt-3 text-neutral-600">Buat workspace pertama Anda sekarang, gratis.</p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">

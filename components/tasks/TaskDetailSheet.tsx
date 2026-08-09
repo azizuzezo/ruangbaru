@@ -15,14 +15,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { toast } from 'sonner';
 import { formatRelativeTime } from '@/lib/utils';
+import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
+import { useCustomFields } from '@/lib/hooks/useCustomFields';
+import type { TaskCustomFieldValue } from '@/types';
 
 export function TaskDetailSheet() {
   const { taskDetailOpen, taskDetailId, setTaskDetailOpen } = useUIStore();
   const { currentWorkspace, currentUser } = useWorkspaceStore();
-  
+  const { statuses, doneKeys } = useTaskStatuses(currentWorkspace?.id);
+  const { fields: customFields } = useCustomFields(currentWorkspace?.id);
+
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(false);
-  
+
   // Edit states
   const [title, setTitle] = useState('');
   const descriptionRef = useRef<RichTextValue>({ json: null, text: '' });
@@ -31,6 +36,7 @@ export function TaskDetailSheet() {
   const [dueDate, setDueDate] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
   // Comments states
   const [comments, setComments] = useState<TaskComment[]>([]);
@@ -88,6 +94,17 @@ export function TaskDetailSheet() {
 
         const profileData = wsMembers?.map((m: any) => m.profiles).filter(Boolean) as Profile[];
         setMembers(profileData || []);
+
+        // 4. Load this task's custom field values, if any workspace has any defined.
+        const { data: fvData } = await supabase
+          .from('task_custom_field_values')
+          .select('field_id, value')
+          .eq('task_id', taskDetailId);
+        const fv: Record<string, string> = {};
+        ((fvData as Pick<TaskCustomFieldValue, 'field_id' | 'value'>[]) || []).forEach((row) => {
+          fv[row.field_id] = row.value == null ? '' : String(row.value);
+        });
+        setFieldValues(fv);
       } catch (err: any) {
         console.error('Error loading task details:', err);
         toast.error('Gagal memuat detail tugas');
@@ -114,13 +131,22 @@ export function TaskDetailSheet() {
           priority,
           due_date: dueDate || null,
           assignee_id: assigneeId || null,
+          completed_at: doneKeys.has(status) ? (task.completed_at || new Date().toISOString()) : null,
         })
         .eq('id', task.id)
         .select()
         .single();
 
       if (error) throw error;
-      
+
+      // Save custom field values (one upsert per field that has a value).
+      const rows = customFields
+        .filter((f) => (fieldValues[f.id] ?? '').trim() !== '')
+        .map((f) => ({ task_id: task.id, field_id: f.id, value: fieldValues[f.id] }));
+      if (rows.length) {
+        await supabase.from('task_custom_field_values').upsert(rows, { onConflict: 'task_id,field_id' });
+      }
+
       toast.success('Tugas diperbarui');
       // Trigger a window event or update parent list indirectly
       window.dispatchEvent(new Event('task-updated'));
@@ -201,9 +227,9 @@ export function TaskDetailSheet() {
                     onChange={(e) => setStatus(e.target.value)}
                     className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="todo">Todo</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="done">Done</option>
+                    {statuses.map((s) => (
+                      <option key={s.key} value={s.key}>{s.name}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -260,6 +286,36 @@ export function TaskDetailSheet() {
                   onChange={(value) => { descriptionRef.current = value; }}
                 />
               </div>
+
+              {/* Custom fields — admin-defined per workspace, Pengaturan > Field Kustom */}
+              {customFields.length > 0 && (
+                <div className="grid grid-cols-2 gap-3 border-t border-border pt-4">
+                  {customFields.map((f) => (
+                    <div key={f.id} className="space-y-1.5">
+                      <label className="text-[10px] font-bold text-muted-foreground uppercase">{f.name}</label>
+                      {f.field_type === 'select' ? (
+                        <select
+                          value={fieldValues[f.id] || ''}
+                          onChange={(e) => setFieldValues((v) => ({ ...v, [f.id]: e.target.value }))}
+                          className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="">Pilih...</option>
+                          {f.options.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Input
+                          type={f.field_type === 'number' ? 'number' : f.field_type === 'date' ? 'date' : 'text'}
+                          value={fieldValues[f.id] || ''}
+                          onChange={(e) => setFieldValues((v) => ({ ...v, [f.id]: e.target.value }))}
+                          className="h-8 text-xs"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
 
               <Button onClick={handleSave} disabled={saving} className="w-full h-9 text-xs">
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}

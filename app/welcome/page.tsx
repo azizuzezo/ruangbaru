@@ -12,7 +12,7 @@ import { slugify } from '@/lib/utils';
 import { toast } from 'sonner';
 import {
   Loader2, Sparkles, ArrowRight, ArrowLeft, Plus, Check, Users, Mail,
-  FolderKanban, CheckSquare, Rocket, PartyPopper,
+  FolderKanban, CheckSquare, Rocket, PartyPopper, Layers, Link2, ChevronLeft,
 } from 'lucide-react';
 import type { Workspace, Profile, Project } from '@/types';
 
@@ -28,12 +28,20 @@ export default function WelcomeWizard() {
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
 
+  // A brand-new user (no workspace yet) picks a path first: create one, or
+  // join one they were already invited to but didn't sign up through the
+  // invite link for (e.g. they registered directly and separately have an
+  // invite email/link to redeem).
+  const [mode, setMode] = useState<'choice' | 'create' | 'join'>('choice');
+  const [joinInput, setJoinInput] = useState('');
+  const [joining, setJoining] = useState(false);
+
   // collected data
+  const [fullName, setFullName] = useState('');
   const [wsName, setWsName] = useState('');
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [invites, setInvites] = useState<string[]>(['', '', '']);
   const [projName, setProjName] = useState('');
-  const [projIcon, setProjIcon] = useState('🚀');
   const [project, setProject] = useState<Project | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
 
@@ -51,6 +59,7 @@ export default function WelcomeWizard() {
         avatar_url: null, bio: null, created_at: '', updated_at: '',
       };
       setProfile(resolved); setCurrentUser(resolved);
+      if (resolved.full_name) setFullName(resolved.full_name);
       const suggested = user.user_metadata?.workspace_name as string | undefined;
       if (suggested) setWsName(suggested);
       setChecking(false);
@@ -58,11 +67,22 @@ export default function WelcomeWizard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // STEP 1 — create workspace
+  // STEP 1 — save name + create workspace. Signup only asked for email and
+  // password, so this is the first point the user's actual name and their
+  // workspace's name are both known.
   const createWorkspace = async () => {
-    if (!wsName.trim() || !profile) return;
+    if (!wsName.trim() || !fullName.trim() || !profile) return;
     setBusy(true);
     try {
+      const trimmedName = fullName.trim();
+      if (trimmedName !== (profile.full_name || '')) {
+        const { error: pErr } = await supabase.from('profiles').update({ full_name: trimmedName }).eq('id', profile.id);
+        if (pErr) throw pErr;
+        const updatedProfile = { ...profile, full_name: trimmedName };
+        setProfile(updatedProfile);
+        setCurrentUser(updatedProfile);
+      }
+
       const slug = `${slugify(wsName)}-${Math.floor(Math.random() * 10000)}`;
       const { data: ws, error } = await supabase
         .from('workspaces').insert({ name: wsName, slug, owner_id: profile.id, plan: 'free' }).select().single();
@@ -110,7 +130,7 @@ export default function WelcomeWizard() {
     setBusy(true);
     try {
       const { data, error } = await supabase.from('projects').insert({
-        workspace_id: workspace.id, name: projName, icon: projIcon, color: '#6366f1', status: 'active', created_by: profile.id,
+        workspace_id: workspace.id, name: projName, color: '#6366f1', status: 'active', created_by: profile.id,
       }).select().single();
       if (error) throw error;
       setProject(data as Project);
@@ -135,6 +155,27 @@ export default function WelcomeWizard() {
     finally { setBusy(false); }
   };
 
+  // "Join a workspace" path — accepts either a bare invite token or a full
+  // invite link (https://.../invite/<token>); extracts the token and reuses
+  // the same accept_invitation() RPC the /invite/[token] page uses.
+  const handleJoin = async () => {
+    const raw = joinInput.trim();
+    if (!raw) return;
+    const token = raw.includes('/invite/') ? raw.split('/invite/').pop()!.split(/[?#]/)[0] : raw;
+    setJoining(true);
+    try {
+      const { data, error } = await supabase.rpc('accept_invitation', { invite_token: token });
+      if (error) throw error;
+      const { data: ws } = await supabase.from('workspaces').select('slug').eq('id', data as string).single();
+      toast.success('Berhasil bergabung ke ruang kerja!');
+      router.replace(ws?.slug ? `/${ws.slug}/dashboard` : '/dashboard');
+    } catch (e: any) {
+      toast.error(translateInviteError(e?.message || ''));
+    } finally {
+      setJoining(false);
+    }
+  };
+
   const finish = () => { if (workspace) router.replace(`/${workspace.slug}/dashboard`); };
 
   if (checking) {
@@ -148,28 +189,101 @@ export default function WelcomeWizard() {
         {/* header + progress */}
         <div className="flex flex-col items-center text-center">
           <Logo height={30} priority />
-          <div className="mt-8 flex w-full items-center gap-1.5">
-            {STEPS.map((_, i) => (
-              <div key={i} className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
-                <motion.div className="h-full gradient-brand" initial={false} animate={{ width: i <= step ? '100%' : '0%' }} transition={{ duration: 0.4 }} />
+          {mode === 'create' && (
+            <>
+              <div className="mt-8 flex w-full items-center gap-1.5">
+                {STEPS.map((_, i) => (
+                  <div key={i} className="h-1.5 flex-1 overflow-hidden rounded-full bg-muted">
+                    <motion.div className="h-full gradient-brand" initial={false} animate={{ width: i <= step ? '100%' : '0%' }} transition={{ duration: 0.4 }} />
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
-          <p className="mt-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-            Langkah {Math.min(step + 1, STEPS.length)} dari {STEPS.length} · {STEPS[step]}
-          </p>
+              <p className="mt-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Langkah {Math.min(step + 1, STEPS.length)} dari {STEPS.length} · {STEPS[step]}
+              </p>
+            </>
+          )}
         </div>
 
         <div className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-sm sm:p-8">
           <AnimatePresence mode="wait">
+            {/* CHOICE — no workspace yet */}
+            {mode === 'choice' && (
+              <Slide key="choice">
+                <div className="mb-6 text-center">
+                  <h2 className="font-display text-xl font-semibold tracking-tight">Anda belum punya ruang kerja</h2>
+                  <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+                    Buat ruang kerja baru, atau gabung ke ruang kerja yang sudah mengundang Anda.
+                  </p>
+                </div>
+                <div className="space-y-3">
+                  <button
+                    onClick={() => setMode('create')}
+                    className="group flex w-full items-center gap-4 rounded-xl border border-border bg-background/50 p-4 text-left transition-all hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <Layers className="h-5 w-5" />
+                    </span>
+                    <span className="flex-1">
+                      <span className="block text-sm font-bold text-foreground">Buat ruang kerja baru</span>
+                      <span className="block text-xs text-muted-foreground mt-0.5">Mulai dari kosong — cocok untuk tim atau proyek baru.</span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                  </button>
+                  <button
+                    onClick={() => setMode('join')}
+                    className="group flex w-full items-center gap-4 rounded-xl border border-border bg-background/50 p-4 text-left transition-all hover:border-primary/40 hover:bg-primary/5"
+                  >
+                    <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600">
+                      <Link2 className="h-5 w-5" />
+                    </span>
+                    <span className="flex-1">
+                      <span className="block text-sm font-bold text-foreground">Punya undangan?</span>
+                      <span className="block text-xs text-muted-foreground mt-0.5">Tempel tautan atau kode undangan dari email Anda.</span>
+                    </span>
+                    <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
+                  </button>
+                </div>
+              </Slide>
+            )}
+
+            {/* JOIN — paste invite link/token */}
+            {mode === 'join' && (
+              <Slide key="join">
+                <button onClick={() => setMode('choice')} className="mb-4 -ml-1 flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground">
+                  <ChevronLeft className="h-3.5 w-3.5" /> Kembali
+                </button>
+                <StepHead icon={Link2} title="Gabung ke ruang kerja" desc="Tempel tautan undangan lengkap (mis. ruangbaru.my.id/invite/abc123) atau cukup kodenya." />
+                <Input
+                  autoFocus
+                  value={joinInput}
+                  onChange={(e) => setJoinInput(e.target.value)}
+                  placeholder="Tautan atau kode undangan"
+                  className="h-11"
+                  onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+                />
+                <Button onClick={handleJoin} disabled={joining || !joinInput.trim()} className="mt-6 w-full h-11 gap-2">
+                  {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Gabung
+                </Button>
+              </Slide>
+            )}
+
             {/* STEP 1 */}
-            {step === 0 && (
+            {mode === 'create' && step === 0 && (
               <Slide key="s1">
-                <StepHead icon={Sparkles} title={`Halo ${profile?.full_name?.split(' ')[0] || 'teman'}! 👋`} desc="Mari buat ruang kerja pertama untuk tim Anda. Bisa diubah nanti." />
-                <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nama Ruang Kerja</label>
-                <Input autoFocus value={wsName} onChange={(e) => setWsName(e.target.value)} placeholder="cth. Agency HQ, Tim Marketing" className="mt-1.5 h-11"
-                  onKeyDown={(e) => e.key === 'Enter' && createWorkspace()} />
-                <Button onClick={createWorkspace} disabled={busy || !wsName.trim()} className="mt-6 w-full h-11 gap-2">
+                <StepHead icon={Sparkles} title="Halo! Siapa nama Anda? 👋" desc="Dan apa nama ruang kerja tim Anda? Keduanya bisa diubah lagi nanti." />
+                <div className="space-y-4">
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nama Anda</label>
+                    <Input autoFocus value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="cth. Budi Santoso" className="mt-1.5 h-11" />
+                  </div>
+                  <div>
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nama Ruang Kerja</label>
+                    <Input value={wsName} onChange={(e) => setWsName(e.target.value)} placeholder="cth. Agency HQ, Tim Marketing" className="mt-1.5 h-11"
+                      onKeyDown={(e) => e.key === 'Enter' && createWorkspace()} />
+                  </div>
+                </div>
+                <Button onClick={createWorkspace} disabled={busy || !wsName.trim() || !fullName.trim()} className="mt-6 w-full h-11 gap-2">
                   {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Lanjut
                 </Button>
               </Slide>
@@ -201,11 +315,8 @@ export default function WelcomeWizard() {
             {step === 2 && (
               <Slide key="s3">
                 <StepHead icon={FolderKanban} title="Buat proyek pertama" desc="Proyek adalah wadah untuk tugas-tugas terkait." />
-                <div className="flex gap-2">
-                  <Input value={projIcon} onChange={(e) => setProjIcon(e.target.value)} className="h-11 w-14 text-center text-lg" />
-                  <Input autoFocus value={projName} onChange={(e) => setProjName(e.target.value)} placeholder="cth. Peluncuran Website" className="h-11 flex-1"
-                    onKeyDown={(e) => e.key === 'Enter' && createProject()} />
-                </div>
+                <Input autoFocus value={projName} onChange={(e) => setProjName(e.target.value)} placeholder="cth. Peluncuran Website" className="h-11"
+                  onKeyDown={(e) => e.key === 'Enter' && createProject()} />
                 <div className="mt-6 flex gap-2">
                   <Button variant="ghost" onClick={() => setStep(1)} disabled={busy} className="gap-1.5"><ArrowLeft className="h-4 w-4" /></Button>
                   <Button onClick={createProject} disabled={busy || !projName.trim()} className="flex-1 gap-2">
@@ -238,7 +349,7 @@ export default function WelcomeWizard() {
                     className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl gradient-brand text-white shadow-lg shadow-primary/30">
                     <PartyPopper className="h-8 w-8" />
                   </motion.div>
-                  <h2 className="mt-5 font-display text-2xl font-extrabold">Semua siap! 🎉</h2>
+                  <h2 className="mt-5 font-display text-2xl font-semibold">Semua siap! 🎉</h2>
                   <p className="mt-2 text-sm text-muted-foreground">Ruang kerja Anda sudah dikonfigurasi. Berikut yang bisa Anda lakukan selanjutnya:</p>
                   <div className="mt-6 space-y-2 text-left">
                     {[
@@ -264,6 +375,14 @@ export default function WelcomeWizard() {
   );
 }
 
+function translateInviteError(message: string): string {
+  if (message.includes('expired')) return 'Tautan undangan ini sudah kedaluwarsa. Minta undangan baru dari tim Anda.';
+  if (message.includes('already accepted')) return 'Undangan ini sudah pernah digunakan.';
+  if (message.includes('different email')) return 'Undangan ini dikirim ke alamat email yang berbeda.';
+  if (message.includes('not found') || !message) return 'Tautan atau kode undangan tidak ditemukan. Periksa kembali.';
+  return message;
+}
+
 function Slide({ children }: { children: React.ReactNode }) {
   return (
     <motion.div initial={{ opacity: 0, x: 24 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -24 }} transition={{ duration: 0.25 }}>
@@ -276,7 +395,7 @@ function StepHead({ icon: Icon, title, desc }: { icon: typeof Users; title: stri
   return (
     <div className="mb-6">
       <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-5 w-5" /></div>
-      <h2 className="mt-4 font-display text-xl font-extrabold tracking-tight">{title}</h2>
+      <h2 className="mt-4 font-display text-xl font-semibold tracking-tight">{title}</h2>
       <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">{desc}</p>
     </div>
   );

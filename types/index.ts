@@ -6,7 +6,12 @@ export type WorkspacePlan = 'free' | 'pro' | 'business' | 'enterprise';
 export type WorkspaceRole = 'owner' | 'admin' | 'member' | 'viewer';
 export type ProjectRole = 'lead' | 'member' | 'viewer';
 export type ProjectStatus = 'active' | 'archived' | 'completed';
-export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'cancelled';
+// Kanban columns are per-workspace and admin-editable (see TaskStatusDef /
+// task_statuses table) — the key is an arbitrary workspace-scoped string,
+// no longer a fixed set. 'backlog' | 'todo' | ... | 'cancelled' are just
+// the seeded defaults, not the only valid values.
+export type TaskStatus = string;
+export type TaskFieldType = 'text' | 'number' | 'date' | 'select';
 export type TaskPriority = 'no_priority' | 'urgent' | 'high' | 'medium' | 'low';
 export type NotificationType =
   | 'task_assigned'
@@ -120,6 +125,38 @@ export interface TaskComment {
   created_at: string;
   updated_at: string;
   user?: Profile;
+}
+
+// A single Kanban column, admin-defined per workspace (task_statuses table).
+export interface TaskStatusDef {
+  id: string;
+  workspace_id: string;
+  key: string;
+  name: string;
+  color: string;
+  position: number;
+  is_done: boolean;
+  created_at: string;
+}
+
+// An admin-defined custom field (task_custom_fields table).
+export interface TaskCustomFieldDef {
+  id: string;
+  workspace_id: string;
+  name: string;
+  field_type: TaskFieldType;
+  options: string[]; // only meaningful when field_type === 'select'
+  position: number;
+  created_at: string;
+}
+
+// The value of one custom field on one task (task_custom_field_values table).
+export interface TaskCustomFieldValue {
+  id: string;
+  task_id: string;
+  field_id: string;
+  value: string | number | null;
+  updated_at: string;
 }
 
 export interface TaskAttachment {

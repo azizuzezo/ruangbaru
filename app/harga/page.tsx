@@ -10,8 +10,6 @@ import { SiteFooter } from '@/components/landing/SiteFooter';
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
-const FONT = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-const DFONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
 
 function FadeIn({ children, delay = 0, className = '' }: {
   children: React.ReactNode; delay?: number; className?: string;
@@ -52,7 +50,7 @@ const PLANS = [
     price: 'Rp 99.000',
     per: '/ bulan',
     highlight: true,
-    tagline: 'Untuk tim yang sedang berkembang',
+    tagline: 'Untuk tim yang sudah kepentok limit Gratis',
     features: [
       'Anggota tidak terbatas',
       'Proyek tidak terbatas',
@@ -87,7 +85,7 @@ const PLANS = [
 
 export default function HargaPage() {
   return (
-    <div className="min-h-screen bg-white antialiased" style={{ fontFamily: FONT }}>
+    <div className="min-h-screen bg-white antialiased">
       <MarketingHeader />
 
       {/* Hero */}
@@ -95,16 +93,12 @@ export default function HargaPage() {
         <div className="mx-auto max-w-3xl text-center">
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: E }}>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-neutral-200 bg-white px-3 py-1 text-xs font-semibold text-neutral-600 shadow-sm mb-5">
-              <Tag className="h-3.5 w-3.5" style={{ color: BLUE }} />
-              Harga Transparan
-            </span>
-            <h1 className="text-4xl font-extrabold tracking-tight text-neutral-900 sm:text-5xl"
-              style={{ fontFamily: DFONT }}>
-              Harga yang jujur sejak awal
+            <h1 className="text-[clamp(1.9rem,3.6vw,2.75rem)] font-semibold tracking-tight text-neutral-900" style={{ lineHeight: 1.2 }}>
+              Harga yang tidak butuh formulir "hubungi sales" cuma buat lihat angka.
             </h1>
             <p className="mt-4 text-lg text-neutral-600 max-w-xl mx-auto">
-              Tidak ada biaya tersembunyi. Plan Gratis tersedia tanpa batas waktu. Bayar lebih hanya jika tim Anda tumbuh.
+              Tiga plan, angkanya ada di halaman ini. Plan Gratis tidak punya
+              tanggal habis — Anda bayar lebih hanya kalau memang butuh lebih.
             </p>
           </motion.div>
         </div>
@@ -133,8 +127,7 @@ export default function HargaPage() {
                     <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">{plan.name}</p>
                     <p className="mt-1 text-sm text-neutral-500">{plan.tagline}</p>
                     <div className="mt-4 flex items-baseline gap-1.5">
-                      <span className="text-4xl font-black tracking-tight text-neutral-900"
-                        style={{ fontFamily: DFONT }}>
+                      <span className="text-4xl font-bold tracking-tight text-neutral-900">
                         {plan.price}
                       </span>
                       <span className="text-sm text-neutral-500">{plan.per}</span>
@@ -179,8 +172,8 @@ export default function HargaPage() {
       <section className="border-t border-neutral-100 bg-[#F9FAFB] px-4 py-16 sm:px-6">
         <div className="mx-auto max-w-4xl">
           <FadeIn className="mb-10 text-center">
-            <h2 className="text-2xl font-extrabold text-neutral-900" style={{ fontFamily: DFONT }}>
-              Perbandingan lengkap
+            <h2 className="text-[clamp(1.3rem,2.2vw,1.7rem)] font-semibold text-neutral-900">
+              Baris per baris, biar tidak ada yang kelewat
             </h2>
           </FadeIn>
           <FadeIn delay={0.1}>
@@ -229,11 +222,13 @@ export default function HargaPage() {
         <div className="mx-auto max-w-2xl">
           <FadeIn>
             <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-center">
-              <p className="text-sm font-semibold uppercase tracking-wider text-neutral-400 mb-3">Transparan sejak awal</p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-neutral-400 mb-3">Kenapa harganya bisa berubah nanti</p>
               <p className="text-neutral-600 leading-7">
-                Harga Pro sebesar <strong>Rp 99.000/bulan</strong> adalah harga awal yang dapat berubah.
-                Kami berkomitmen untuk selalu memberikan notifikasi minimal 30 hari sebelum ada perubahan harga.
-                Tim yang bergabung di fase awal akan mendapat <strong>harga spesial</strong>.
+                Rp 99.000/bulan untuk Pro adalah harga tahap awal — kami belum
+                tahu pasti berapa biaya server saat pengguna bertambah banyak.
+                Kalau naik, kami kabari minimal 30 hari sebelumnya, dan tim
+                yang gabung sekarang <strong>tetap di harga ini</strong>, bukan
+                ikut harga baru.
               </p>
             </div>
           </FadeIn>
@@ -244,10 +239,10 @@ export default function HargaPage() {
       <section className="border-t border-neutral-100 bg-[#F9FAFB] px-4 py-20 sm:px-6">
         <div className="mx-auto max-w-2xl text-center">
           <FadeIn>
-            <h2 className="text-3xl font-extrabold text-neutral-900" style={{ fontFamily: DFONT }}>
-              Mulai dengan plan Gratis
+            <h2 className="text-[clamp(1.5rem,2.6vw,2.15rem)] font-semibold text-neutral-900">
+              Coba plan Gratis dulu — upgrade cuma kalau memang perlu.
             </h2>
-            <p className="mt-3 text-neutral-600">Tidak perlu kartu kredit. Upgrade kapan saja jika tim Anda tumbuh.</p>
+            <p className="mt-3 text-neutral-600">Tidak perlu kartu kredit untuk mulai.</p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/register">
                 <motion.button

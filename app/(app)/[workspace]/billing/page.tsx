@@ -49,7 +49,7 @@ export default function BillingPage() {
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
-        <h1 className="font-display text-2xl font-extrabold text-foreground tracking-tight sm:text-3xl">
+        <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight sm:text-3xl">
           Rencana Langganan & Tagihan
         </h1>
         <p className="text-xs text-muted-foreground mt-1">
@@ -63,7 +63,7 @@ export default function BillingPage() {
           <CardHeader className="pb-3 border-b border-border">
             <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-primary" /> Paket Saat Ini:{' '}
-              <span className="capitalize text-primary font-black">{plan}</span>
+              <span className="capitalize text-primary font-semibold">{plan}</span>
             </CardTitle>
             <CardDescription className="text-[11px]">Rincian pemakaian kuota ruang kerja Anda.</CardDescription>
           </CardHeader>

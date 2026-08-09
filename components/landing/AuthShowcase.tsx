@@ -7,8 +7,6 @@ import { Logo } from '@/components/brand/Logo';
 
 const TEAL = '#10B29F';
 const YELLOW = '#FDB31A';
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-const FONT_BODY = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
 const ACTIVITY = [
@@ -50,7 +48,7 @@ export function AuthShowcase() {
   return (
     <div
       className="relative flex h-full flex-col justify-between overflow-hidden p-10 xl:p-12"
-      style={{ background: 'linear-gradient(155deg, #0D59B4 0%, #106CD8 45%, #0A4590 100%)', fontFamily: FONT_BODY }}
+      style={{ background: 'linear-gradient(155deg, #0D59B4 0%, #106CD8 45%, #0A4590 100%)' }}
     >
       {/* Ambient glows */}
       <div aria-hidden className="pointer-events-none absolute -right-20 -top-20 h-72 w-72 rounded-full opacity-30 blur-3xl" style={{ background: TEAL }} />
@@ -68,11 +66,11 @@ export function AuthShowcase() {
       {/* Top — logo + headline */}
       <div className="relative">
         <Logo variant="icon" height={44} priority />
-        <h2 className="mt-8 max-w-sm text-3xl font-black leading-tight tracking-tight text-white" style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}>
-          Tempat tim Anda bekerja, bersama.
+        <h2 className="mt-8 max-w-sm text-3xl font-semibold leading-tight tracking-tight text-white" style={{ letterSpacing: '-0.015em' }}>
+          Papan kerja yang sama, dilihat semua orang.
         </h2>
         <p className="mt-3 max-w-sm text-sm leading-6 text-blue-100">
-          Proyek, tugas, dan kolaborasi tim — semuanya tersinkron secara real-time.
+          Geser kartu, centang tugas, lihat siapa yang online — semuanya nyata, bukan mockup.
         </p>
       </div>
 

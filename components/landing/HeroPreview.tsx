@@ -10,7 +10,6 @@ import { openCommandPalette } from '@/components/landing/CommandPalette';
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
 const YELLOW = '#FDB31A';
-const FONT_BODY = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
 type ColKey = 'todo' | 'doing' | 'done';
@@ -115,10 +114,7 @@ export function HeroPreview() {
   const totalCards = board.todo.length + board.doing.length + board.done.length;
 
   return (
-    <div
-      className="relative w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-neutral-300/40"
-      style={{ fontFamily: FONT_BODY }}
-    >
+    <div className="relative w-full overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-2xl shadow-neutral-300/40">
       {/* App top bar */}
       <div className="flex items-center gap-3 border-b border-neutral-100 px-4 py-3">
         <div className="flex gap-1.5">

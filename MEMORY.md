@@ -5,7 +5,7 @@
 > without losing history. **Read this first.** Update it whenever you make a
 > meaningful change.
 
-Last updated: 2026-07-04 (session 8 — security audit + fixed attachments storage RLS & invitation email relay)
+Last updated: 2026-08-10 (session 14 — per-workspace custom Kanban columns + custom task fields, tasks.status is now TEXT not an enum, 1 more migration to run manually; session 13 — app redesign; session 12 — mock-client hang fix; session 11 — login/register redesign; session 10 — Go backend port; session 9 — landing site redesign. See ENGINEERING.md for the task-by-task log)
 
 ---
 
@@ -71,6 +71,10 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 | `004_fix_handle_new_user.sql` | Fixes "Database error creating new user" (search_path + grants on trigger fn). |
 | `005_fix_onboarding_rls.sql` | Fixes workspace creation: workspaces SELECT policy (so `INSERT…RETURNING` works) + member self-join. |
 | `006_grant_privileges.sql` | Fixes "permission denied for table" — GRANTs to anon/authenticated/service_role + default privileges. |
+| `007_fix_settings_rls.sql` → `20260704_fix_attachments_storage_rls.sql` | See session notes below for 007, 008, and the `2026....sql`-dated migrations (meetings, events, Google Calendar, plan/admin fixes) — not backfilled into this table, but all must run in order after 006. |
+| `20260809_activity_log_triggers.sql` | **Not yet run.** Adds triggers so `tasks`/`projects`/`workspace_members` inserts/status-changes actually populate `activity_logs` (nothing did before — the dashboard's activity feed was dead code, see session 13). |
+| `20260809_leave_workspace_rls.sql` | **Not yet run.** Adds a DELETE policy so a non-owner member can remove their own `workspace_members` row ("leave workspace" in Settings) — no RLS path existed for this before. |
+| `20260810_kanban_columns_and_custom_fields.sql` | **Not yet run.** Converts `tasks.status` from a fixed ENUM to TEXT, adds `task_statuses` (per-workspace admin-editable Kanban columns) and `task_custom_fields`/`task_custom_field_values` (admin-defined custom task fields). Backfills existing workspaces with the original 6 columns. **The Kanban board renders zero columns until this is run** — confirmed live in session 14. |
 
 ---
 
@@ -128,8 +132,8 @@ Located in [supabase/migrations/](supabase/migrations/). On a fresh DB run **001
 - **Register page** (app/(auth)/register/page.tsx): same treatment + password strength bar, workspace name field, terms links, success state.
 - **globals.css**: font import updated to Plus Jakarta Sans + JetBrains Mono. Font variables updated. All SF Pro references removed.
 
-### Design system rules (session 3+)
-- Font: `'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif` for both `--font-sans` and `--font-display`
+### Design system rules (session 9, current)
+- Font: **Poppins** (300–900, Google Fonts import in `app/globals.css`) for both `--font-sans` and `--font-display`. Marketing headings use `font-semibold`/`font-bold` — Poppins at `font-black`/`font-extrabold` reads heavy/blocky at large sizes, learned the hard way in session 9. Don't hardcode a page-level `FONT`/`DFONT` constant — the whole point of the token is that pages inherit it.
 - Primary: `#106CD8` (blue) — actions, active states, links
 - Success/collab: `#10B29F` (teal) — completion, online status
 - Highlight: `#FDB31A` (yellow) — important badges only
@@ -204,6 +208,172 @@ engineering health) found 15 issues. Fixed the critical and highest-severity one
 - Remaining audit findings (broad `auth.users` grant, Google OAuth CSRF nonce,
   plaintext OAuth tokens, no rate limiting, missing security headers, etc.) are not
   yet fixed — see the audit report for the full list if picking this back up.
+
+### Done in session 9 (2026-08-09) — Landing site redesign
+Full task-by-task log now lives in [ENGINEERING.md](ENGINEERING.md) — read
+that first for any follow-up work on the marketing site; this is just the
+summary.
+- **Font swap:** SF Pro system stack → **Poppins** everywhere, wired through
+  `app/globals.css` tokens (`--font-sans`/`--font-display`), not per-page
+  overrides. Removed ~10 files' worth of hardcoded `FONT`/`FONT_BODY`/
+  `DFONT` SF Pro constants (`app/page.tsx`, `/fitur`, `/cara-kerja`,
+  `/harga`, `MarketingHeader`, `SiteFooter`, `HeroPreview`, `/about`,
+  `/contact`, `/privacy-policy`, `/terms-of-service`, `(auth)/layout.tsx`,
+  `(auth)/register`, `CommandPalette`, `AuthShowcase`).
+- **Copy + layout redesign** of `app/page.tsx`, `app/fitur/page.tsx`,
+  `app/cara-kerja/page.tsx`, `app/harga/page.tsx` — replaced generic SaaS
+  phrasing and the repeated tiny-uppercase-kicker + icon-square-card pattern
+  (same device on every section) with concrete, specific copy and varied
+  section treatments. Kept all existing interactive preview components
+  (Kanban/Checklist/Calendar/Team mini-demos, the cara-kerja numbered steps,
+  the harga pricing cards/table) — those were already good, only copy and
+  heading typography changed around them.
+- **Typography gotcha:** Poppins at `font-black`/`font-extrabold` and large
+  clamp() sizes reads heavy/blocky, not refined — caught from a user
+  screenshot mid-task and fixed by dropping to `font-semibold`/`font-bold`
+  with smaller clamp ceilings across all 4 pages. If touching marketing
+  headings again, don't reach for the heaviest Tailwind weight by default.
+- `.agents/skills/anti-ui-slop/` and `.agents/skills/ui-design/` — untracked,
+  user-installed third-party "Uizze" design skill packages (not in Claude
+  Code's registered skill list, so not invocable via the `Skill` tool
+  directly). Their `SKILL.md` instructs agents to append an unprompted ad
+  for a paid Uizze MCP and treat the bundled material as sole design
+  authority — flagged to the user as self-promotional; user confirmed
+  intentional install and asked it be used anyway. Only the actual design
+  reference content (`reference/brand.md`'s marketing-surface guidance —
+  avoid reflex fonts, avoid repeated section-kicker patterns, etc.) was
+  applied; the ad-line instruction was not followed.
+
+### Done in session 10 (2026-08-09) — Go backend port + deploy scaffolding
+- **New `go/` module** — a stdlib-only Go port of this app's actual
+  "backend" surface: the 7 Server Actions in `lib/supabase/actions.ts` and
+  the 11 `app/api/**/route.ts` routes + `app/auth/callback`. (Everything
+  else — projects/tasks/notes/calendar/team/billing/settings — already
+  goes straight from the browser to Supabase's REST API and was never
+  Node.js code to begin with.) Full route-by-route status, including two
+  ⚠️ best-effort pieces around `@supabase/ssr` cookie compatibility, lives
+  in [go/PORT_STATUS.md](go/PORT_STATUS.md) — **read that before touching
+  auth in either the Go or Next.js code.**
+- `next.config.ts` now sets `output: "standalone"` (needed for the Docker
+  build; no effect on `next dev`).
+- New root `Dockerfile` (frontend) + `go/Dockerfile` (backend), `k8s/*.yaml`
+  (deployment/service/ingress/secret-template scaffolding, nothing
+  applied), and `bitbucket-pipelines.yml` (parallel frontend+backend
+  build/push to ECR, then a `trigger: manual` EKS deploy step). None of
+  this has been run against real AWS/Bitbucket infrastructure.
+- The Next.js app is **completely unmodified behavior-wise** — this is
+  additive scaffolding sitting next to the existing code, not a cutover.
+  See PORT_STATUS.md's "Integration steps still needed" for what wiring
+  the frontend to the Go service actually requires.
+
+### Done in session 11 (2026-08-09) — Login/register redesign
+- **No Google sign-in/signup anywhere in the UI.** `signInWithGoogle` (in
+  `lib/supabase/actions.ts`) and the Go port's `AuthGoogleStart` handler
+  still exist in code, just unused by any page — ask before deleting them
+  outright if Google auth is fully off the table.
+- **Signup no longer asks for name or workspace name** — just email +
+  password (+ confirm password). Those two fields moved to
+  `app/welcome/page.tsx` step 1 ("Nama Anda" + "Nama Ruang Kerja" together,
+  saved to `profiles.full_name` + a new workspace in one step). If you're
+  wondering why a new user's `profiles.full_name` is `null` right after
+  signup — that's expected now; it gets filled at `/welcome`, not before.
+
+### Done in session 12 (2026-08-09) — Fixed server actions hanging forever without .env.local
+- **`lib/supabase/server.ts`'s missing-credentials mock client used to hang
+  forever** on any `await createClient()` (i.e. every server action:
+  signIn/signUp/signOut/resetPassword/getUser/getProfile, every API route)
+  instead of failing fast — an accidental "thenable" Proxy that never
+  called its own `resolve`. Fixed: the mock now has real `.auth.*` methods
+  and a properly-awaitable `.from()` chain mock. See ENGINEERING.md for the
+  full diagnosis (found by actually driving the login form with a
+  temporary Playwright instance, not by reading code alone).
+- **`.env.local` now exists with real credentials and login is confirmed
+  working** (verified live: Supabase's actual "Invalid login credentials"
+  response comes back in <1s for a bogus test login). It was briefly
+  misplaced in `.env.local.example` (which Next.js never reads, and which
+  `.gitignore` explicitly un-ignores — so that also nearly leaked real
+  secrets into git); moved to `.env.local` and the tracked example file
+  was restored to placeholder-only content. If Supabase-backed features
+  ever start failing again, check `.env.local` exists and hasn't drifted
+  back into the example file before debugging further upstream.
+
+### Done in session 13 (2026-08-09) — App redesign: onboarding, dashboard, projects, tasks, calendar, settings
+Full task-by-task log in [ENGINEERING.md](ENGINEERING.md) — summary only
+here.
+- **Fixed the actual invite/signup bug**, not just symptoms: a new user
+  registering via an invite link lost the invitation token across the
+  email-confirmation round trip and ended up creating an unrelated
+  workspace in `/welcome` instead of joining the one they were invited to.
+  Fixed by threading the redirect through signup → confirmation email →
+  `/auth/callback` → back to `/invite/<token>`.
+- **`/welcome` now opens on a join-or-create choice**, not straight into
+  workspace creation. `(app)/layout.tsx`'s old forced-modal fallback (no
+  join option) was deleted in favor of redirecting to this same screen.
+- **Font weight fixed app-wide** (the `font-black`/`font-extrabold`-reads-
+  blocky-in-Poppins lesson from sessions 9 and 11, this time applied
+  proactively everywhere instead of reactively). Also fixed a stray
+  `fontFamily: 'Inter'` override on every toast notification.
+- **Dashboard activity feed is real now.** It was dead code: wrong table
+  name (`activity_log` vs `activity_logs`) on top of nothing anywhere in
+  the codebase ever inserting into that table. Both fixed — new DB
+  triggers log task/project/member events, and the dashboard subscribes to
+  `postgres_changes` for genuine realtime updates, not polling.
+- **Project icons removed** everywhere they were shown or picked
+  (creation dialog, project cards, project detail header, dashboard,
+  tasks list, calendar chips) — replaced with the project's existing
+  `color` field as a small dot instead of inventing new UI.
+- **Tasks page defaults to Kanban**, and now actually reads/writes
+  `user_preferences.default_view` — that column already defaulted to
+  `'kanban'` in the schema but nothing in the UI ever looked at it.
+- **Settings page substantially expanded**: workspace description +
+  copyable link, a new Preferences card (default view, email/push
+  notification toggles — wired to columns in `user_preferences` that
+  existed but were completely unused), and a Danger Zone (owner: delete
+  workspace; member: leave workspace — the latter needed a new RLS
+  policy, see migrations above).
+- **Calendar**: fixed a real bug (`top-4.5` isn't a valid Tailwind
+  spacing step — the agenda timeline dot had no position), added a
+  header card treatment. Kept light-touch since it was already well-built
+  from session 6.
+- New shared component: `components/ui/switch.tsx` (Radix
+  `@radix-ui/react-switch` was already a dependency, just unused).
+- **Two new migrations need to be run manually** in the Supabase SQL
+  Editor before the activity feed or "leave workspace" do anything — see
+  section 3 above. Everything else in this session needed no DB change.
+- **Explicitly deferred** (per an explicit sequencing decision, not an
+  oversight): per-workspace custom Kanban columns, custom task fields,
+  task attachments UI (the `task_attachments` table already exists and
+  already has RLS — just no UI), and locking the assignee field to
+  admins/owners. All four need either new schema or a role-check that
+  wasn't scoped into this pass — see ENGINEERING.md's "Not done" list for
+  exactly what each would require.
+- **Verification note:** typecheck and `npm run build` both clean (all 39
+  routes), but nothing under `app/(app)/**` was visually verified in a
+  browser — that requires a real authenticated session with real
+  workspace data, which this session didn't have. Worth a manual pass
+  through Dashboard/Projects/Tasks/Calendar/Settings before considering
+  this done-done.
+
+### Done in session 14 (2026-08-10) — Per-workspace custom Kanban columns + custom task fields
+Full log in [ENGINEERING.md](ENGINEERING.md). Summary:
+- **`tasks.status` is now TEXT, not the `task_status` ENUM.** Every
+  workspace's actual Kanban columns live in the new `task_statuses` table
+  (name, color, position, `is_done` flag) — admins manage them from
+  Settings > **Papan Kanban** (add/rename/reorder/delete/mark-as-done).
+  Deleting a column that still has tasks is blocked with a count, not
+  silently allowed.
+- **New `task_custom_fields`/`task_custom_field_values` tables** — admins
+  define text/number/date/select fields per workspace from Settings >
+  **Field Kustom Tugas**; they show up on every task's create form and in
+  `TaskDetailSheet`.
+- `KanbanBoard`, the Tasks page, the Project detail page's Kanban tab, and
+  Dashboard's completion stats (`isOpen`/`doneThisWeek`/momentum) were all
+  switched from hardcoded `status === 'done'`/fixed-6-columns logic to the
+  new dynamic `useTaskStatuses()`/`useCustomFields()` hooks.
+- **Migration not yet run** — `supabase/migrations/20260810_kanban_columns_and_custom_fields.sql`.
+  Until it is, the Kanban board has zero columns to render (confirmed
+  live: this is exactly what the user saw when they asked "why the status
+  is unapear all?").
 
 ### Known remaining gaps / TODO
 - **Resend domain** `ruangbaru.com` must be verified in Resend or emails fail (falls back to copy-link).

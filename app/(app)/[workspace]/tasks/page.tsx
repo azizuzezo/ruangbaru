@@ -18,28 +18,40 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { KanbanBoard } from '@/components/tasks/KanbanBoard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
+import { useCustomFields } from '@/lib/hooks/useCustomFields';
 
 export default function TasksPage() {
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setTaskDetailOpen } = useUIStore();
-  
+  const { statuses, doneKeys, defaultKey } = useTaskStatuses(currentWorkspace?.id);
+  const { fields: customFields } = useCustomFields(currentWorkspace?.id);
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [view, setView] = useState<'list' | 'board'>('list');
-  
+  // Kanban is the default view (matches user_preferences.default_view's own
+  // DB default) — a per-user override to 'list' is read below if one exists.
+  const [view, setView] = useState<'list' | 'board'>('board');
+
   // Create task modal form state
   const [createOpen, setCreateOpen] = useState(false);
   const [title, setTitle] = useState('');
   const [projectId, setProjectId] = useState('');
-  const [status, setStatus] = useState<TaskStatus>('backlog');
+  const [status, setStatus] = useState<TaskStatus>('');
   const [priority, setPriority] = useState<TaskPriority>('no_priority');
   const [dueDate, setDueDate] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [description, setDescription] = useState('');
   const [members, setMembers] = useState<any[]>([]);
   const [creating, setCreating] = useState(false);
+  const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+
+  // Once the workspace's columns load, default the create-form's status to
+  // the first column (matches whatever an admin has set up, not a
+  // hardcoded 'backlog').
+  useEffect(() => { if (!status && defaultKey) setStatus(defaultKey); }, [defaultKey, status]);
 
   const supabase = createClient();
 
@@ -71,7 +83,7 @@ export default function TasksPage() {
       // Fetch workspace tasks
       const { data: tasksData } = await supabase
         .from('tasks')
-        .select('*, assignee:assignee_id(full_name, avatar_url), project:projects(name, icon)')
+        .select('*, assignee:assignee_id(full_name, avatar_url), project:projects(name, color)')
         .eq('workspace_id', currentWorkspace.id)
         .order('created_at', { ascending: false });
 
@@ -86,6 +98,32 @@ export default function TasksPage() {
   useEffect(() => {
     loadTasksAndProjects();
   }, [currentWorkspace]);
+
+  // Respect a saved per-user view preference if one exists; otherwise the
+  // 'board' state above (matching user_preferences.default_view's own
+  // default of 'kanban') stands.
+  useEffect(() => {
+    if (!currentUser) return;
+    supabase
+      .from('user_preferences')
+      .select('default_view')
+      .eq('user_id', currentUser.id)
+      .maybeSingle()
+      .then(({ data }: { data: { default_view: string } | null }) => {
+        if (data?.default_view === 'list') setView('list');
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentUser]);
+
+  // Switching views also saves it as the user's preference for next time.
+  const changeView = (next: 'list' | 'board') => {
+    setView(next);
+    if (!currentUser) return;
+    supabase
+      .from('user_preferences')
+      .upsert({ user_id: currentUser.id, default_view: next === 'board' ? 'kanban' : 'list' }, { onConflict: 'user_id' })
+      .then(() => {});
+  };
 
   // Create Task handler
   const handleCreateTask = async (e: React.FormEvent) => {
@@ -108,10 +146,18 @@ export default function TasksPage() {
           description: description.trim() ? { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: description.trim() }] }] } : null,
           description_text: description.trim() || null,
         })
-        .select('*, assignee:assignee_id(full_name, avatar_url), project:projects(name, icon)')
+        .select('*, assignee:assignee_id(full_name, avatar_url), project:projects(name, color)')
         .single();
 
       if (error) throw error;
+
+      // Save any custom field values that were filled in.
+      const valueRows = Object.entries(fieldValues)
+        .filter(([, v]) => v.trim() !== '')
+        .map(([fieldId, v]) => ({ task_id: data.id, field_id: fieldId, value: v }));
+      if (valueRows.length) {
+        await supabase.from('task_custom_field_values').insert(valueRows);
+      }
 
       // Send notification to assignee if assigned to someone else
       if (assigneeId && assigneeId !== currentUser.id) {
@@ -131,10 +177,11 @@ export default function TasksPage() {
       setCreateOpen(false);
       setTitle('');
       setDueDate('');
-      setStatus('backlog');
+      setStatus(defaultKey);
       setPriority('no_priority');
       setAssigneeId('');
       setDescription('');
+      setFieldValues({});
     } catch (err: any) {
       toast.error(err.message || 'Gagal membuat tugas');
     } finally {
@@ -150,7 +197,7 @@ export default function TasksPage() {
       .update({
         status,
         position,
-        completed_at: status === 'done' ? new Date().toISOString() : null,
+        completed_at: doneKeys.has(status) ? new Date().toISOString() : null,
       })
       .eq('id', taskId);
     if (error) toast.error('Gagal memindahkan tugas');
@@ -165,7 +212,7 @@ export default function TasksPage() {
       {/* Header action bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="font-display text-2xl font-extrabold text-foreground tracking-tight sm:text-3xl">
+          <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight sm:text-3xl">
             Tugas Tim & Anggota
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
@@ -211,7 +258,7 @@ export default function TasksPage() {
                   >
                     {projects.map((p) => (
                       <option key={p.id} value={p.id}>
-                        {p.icon} {p.name}
+                        {p.name}
                       </option>
                     ))}
                   </select>
@@ -234,15 +281,12 @@ export default function TasksPage() {
                   <label className="text-xs font-semibold text-muted-foreground uppercase">Status</label>
                   <select
                     value={status}
-                    onChange={(e) => setStatus(e.target.value as any)}
+                    onChange={(e) => setStatus(e.target.value)}
                     className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="backlog">Backlog</option>
-                    <option value="todo">Todo</option>
-                    <option value="in_progress">In Progress</option>
-                    <option value="in_review">In Review</option>
-                    <option value="done">Done</option>
-                    <option value="cancelled">Cancelled</option>
+                    {statuses.map((s) => (
+                      <option key={s.key} value={s.key}>{s.name}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -292,6 +336,37 @@ export default function TasksPage() {
                 />
               </div>
 
+              {/* Custom fields — admin-defined per workspace, Pengaturan > Field Kustom */}
+              {customFields.length > 0 && (
+                <div className="space-y-3 border-t border-border/60 pt-3">
+                  {customFields.map((f) => (
+                    <div key={f.id} className="space-y-1.5">
+                      <label className="text-xs font-semibold text-muted-foreground uppercase">{f.name}</label>
+                      {f.field_type === 'select' ? (
+                        <select
+                          value={fieldValues[f.id] || ''}
+                          onChange={(e) => setFieldValues((v) => ({ ...v, [f.id]: e.target.value }))}
+                          className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
+                        >
+                          <option value="">Pilih...</option>
+                          {f.options.map((opt) => (
+                            <option key={opt} value={opt}>{opt}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <Input
+                          type={f.field_type === 'number' ? 'number' : f.field_type === 'date' ? 'date' : 'text'}
+                          value={fieldValues[f.id] || ''}
+                          onChange={(e) => setFieldValues((v) => ({ ...v, [f.id]: e.target.value }))}
+                          disabled={creating}
+                          className="h-10 text-xs"
+                        />
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <Button type="submit" className="w-full h-10 mt-2 text-xs font-bold" style={{ background: '#106CD8' }} disabled={creating || !title.trim()}>
                 {creating ? (
                   <>
@@ -323,7 +398,7 @@ export default function TasksPage() {
         </div>
         <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5">
           <button
-            onClick={() => setView('list')}
+            onClick={() => changeView('list')}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors',
               view === 'list' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
@@ -332,7 +407,7 @@ export default function TasksPage() {
             <ListTodo className="h-3.5 w-3.5" /> Daftar
           </button>
           <button
-            onClick={() => setView('board')}
+            onClick={() => changeView('board')}
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors',
               view === 'board' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
@@ -353,6 +428,7 @@ export default function TasksPage() {
       ) : view === 'board' ? (
         <KanbanBoard
           tasks={filteredTasks}
+          columns={statuses}
           onTaskClick={(id) => setTaskDetailOpen(true, id)}
           onMove={handleMove}
         />
@@ -378,9 +454,7 @@ export default function TasksPage() {
                 className="flex items-center justify-between p-4 hover:bg-muted/30 transition-colors cursor-pointer"
               >
                 <div className="flex items-center gap-3 min-w-0">
-                  <span className="text-base text-muted-foreground shrink-0">
-                    {task.project?.icon || '📁'}
-                  </span>
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: task.project?.color || '#106CD8' }} />
                   <div className="min-w-0">
                     <p className="text-xs font-bold text-foreground truncate">{task.title}</p>
                     <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5 font-medium">
@@ -399,14 +473,17 @@ export default function TasksPage() {
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
-                  <span className={cn(
-                    "text-[9px] px-1.5 py-0.5 rounded font-bold uppercase",
-                    task.status === 'todo' && "bg-sky-500/10 text-sky-600",
-                    task.status === 'in_progress' && "bg-amber-500/10 text-amber-600",
-                    task.status === 'done' && "bg-emerald-500/10 text-emerald-600",
-                  )}>
-                    {task.status}
-                  </span>
+                  {(() => {
+                    const s = statuses.find((x) => x.key === task.status);
+                    return (
+                      <span
+                        className="text-[9px] px-1.5 py-0.5 rounded font-bold uppercase"
+                        style={{ background: `${s?.color || '#6B7280'}1A`, color: s?.color || '#6B7280' }}
+                      >
+                        {s?.name || task.status}
+                      </span>
+                    );
+                  })()}
 
                   {task.assignee?.avatar_url && (
                     <img 

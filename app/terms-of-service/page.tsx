@@ -5,9 +5,6 @@ import { FileText } from 'lucide-react';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { SiteFooter } from '@/components/landing/SiteFooter';
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-const FONT_BODY = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-
 const BLUE = '#106CD8';
 const YEAR = new Date().getFullYear();
 
@@ -86,7 +83,7 @@ const SECTIONS: { h: string; p: string[] }[] = [
 
 export default function TermsOfServicePage() {
   return (
-    <div className="min-h-screen bg-white antialiased" style={{ fontFamily: FONT_BODY }}>
+    <div className="min-h-screen bg-white antialiased">
       <MarketingHeader />
       <main>
         <section className="mx-auto max-w-3xl px-4 py-16 sm:px-6">
@@ -100,8 +97,8 @@ export default function TermsOfServicePage() {
               Ketentuan Layanan
             </div>
             <h1
-              className="mt-3 text-3xl font-black tracking-tight text-neutral-950 sm:text-4xl"
-              style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}
+              className="mt-3 text-3xl font-semibold tracking-tight text-neutral-950 sm:text-4xl"
+              style={{ letterSpacing: '-0.02em' }}
             >
               Ketentuan Layanan
             </h1>
@@ -122,8 +119,8 @@ export default function TermsOfServicePage() {
                 transition={{ duration: 0.4, delay: Math.min(i, 3) * 0.03 }}
               >
                 <h2
-                  className="text-xl font-black tracking-tight text-neutral-950"
-                  style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}
+                  className="text-xl font-semibold tracking-tight text-neutral-950"
+                  style={{ letterSpacing: '-0.02em' }}
                 >
                   {s.h}
                 </h2>

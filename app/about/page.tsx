@@ -6,9 +6,6 @@ import { ArrowRight, Heart, Building2, MessageSquare } from 'lucide-react';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { SiteFooter } from '@/components/landing/SiteFooter';
 
-const FONT = "'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-const FONT_BODY = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
-
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
 
@@ -38,7 +35,7 @@ const SECTIONS = [
 
 export default function AboutPage() {
   return (
-    <div className="min-h-screen bg-white antialiased" style={{ fontFamily: FONT_BODY }}>
+    <div className="min-h-screen bg-white antialiased">
       <MarketingHeader />
       <main>
         {/* Hero */}
@@ -52,8 +49,8 @@ export default function AboutPage() {
               Tentang RuangBaru
             </p>
             <h1
-              className="mt-3 text-3xl font-black tracking-tight text-neutral-950 sm:text-4xl"
-              style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}
+              className="mt-3 text-3xl font-semibold tracking-tight text-neutral-950 sm:text-4xl"
+              style={{ letterSpacing: '-0.02em' }}
             >
               Satu ruang kerja untuk tim Indonesia
             </h1>
@@ -77,8 +74,8 @@ export default function AboutPage() {
                 transition={{ duration: 0.45, delay: i * 0.04 }}
               >
                 <h2
-                  className="text-xl font-black tracking-tight text-neutral-950 sm:text-2xl"
-                  style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}
+                  className="text-xl font-semibold tracking-tight text-neutral-950 sm:text-2xl"
+                  style={{ letterSpacing: '-0.02em' }}
                 >
                   {s.h}
                 </h2>
@@ -108,8 +105,8 @@ export default function AboutPage() {
               Tentang Duacincin
             </div>
             <h2
-              className="mt-4 text-xl font-black tracking-tight text-neutral-950 sm:text-2xl"
-              style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}
+              className="mt-4 text-xl font-semibold tracking-tight text-neutral-950 sm:text-2xl"
+              style={{ letterSpacing: '-0.02em' }}
             >
               RuangBaru dibuat oleh Duacincin
             </h2>
@@ -150,8 +147,8 @@ export default function AboutPage() {
               <Heart className="h-5 w-5" />
             </div>
             <h2
-              className="mt-5 text-2xl font-black tracking-tight text-neutral-950 sm:text-3xl"
-              style={{ fontFamily: FONT, letterSpacing: '-0.02em' }}
+              className="mt-5 text-2xl font-semibold tracking-tight text-neutral-950 sm:text-3xl"
+              style={{ letterSpacing: '-0.02em' }}
             >
               Coba RuangBaru bersama tim Anda
             </h2>

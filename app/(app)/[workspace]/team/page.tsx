@@ -198,7 +198,7 @@ export default function TeamPage() {
       {/* Header action bar */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="font-display text-2xl font-extrabold text-foreground tracking-tight sm:text-3xl">
+          <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight sm:text-3xl">
             Anggota Tim Workspace
           </h1>
           <p className="text-xs text-muted-foreground mt-1">

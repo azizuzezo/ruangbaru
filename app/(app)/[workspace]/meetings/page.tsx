@@ -125,7 +125,7 @@ export default function MeetingsPage() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: E }}
         className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">Rapat</h1>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Rapat</h1>
           <p className="mt-1 text-xs text-muted-foreground">Rapat video langsung di dalam RuangBaru — tanpa tautan eksternal.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -347,7 +347,7 @@ function MeetingsUpgradeWall({ plan, wsSlug }: { plan: string; wsSlug: string })
             <Lock className="h-7 w-7 text-primary" />
           </div>
           <div className="space-y-1.5">
-            <h2 className="font-display text-xl font-extrabold tracking-tight text-foreground">
+            <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
               Fitur Rapat — Enterprise Only
             </h2>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">

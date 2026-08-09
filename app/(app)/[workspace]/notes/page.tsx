@@ -242,7 +242,7 @@ export default function NotesPage() {
                 value={editorTitle}
                 onChange={(e) => setEditorTitle(e.target.value)}
                 placeholder="Judul Catatan..."
-                className="w-full bg-transparent border-0 text-2xl font-display font-extrabold tracking-tight focus:outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground/40"
+                className="w-full bg-transparent border-0 text-2xl font-display font-semibold tracking-tight focus:outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground/40"
               />
               <RichTextEditor
                 key={selectedNote.id}

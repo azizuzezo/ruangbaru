@@ -10,7 +10,6 @@ import { CommandPalette, useCommandPalette } from '@/components/landing/CommandP
 import { ChatWidget } from '@/components/landing/ChatWidget';
 
 const BLUE = '#106CD8';
-const FONT_BODY = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
 
 const NAV_LINKS = [
   { label: 'Fitur', href: '/fitur' },
@@ -32,7 +31,7 @@ export function MarketingHeader() {
     <>
       <header
         className="sticky top-0 z-50 border-b border-neutral-100 bg-white/85"
-        style={{ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', fontFamily: FONT_BODY }}
+        style={{ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
       >
         <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-4 sm:px-6">
           <Link href="/" className="flex items-center transition-transform hover:scale-[1.03]" aria-label="RuangBaru — beranda">

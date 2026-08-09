@@ -39,9 +39,13 @@ export async function signUp(formData: FormData) {
   const password = formData.get('password') as string;
   const fullName = formData.get('full_name') as string;
   const workspaceName = formData.get('workspace_name') as string | null;
+  // Set when registering via an invitation link (e.g. "/invite/<token>") so
+  // the post-confirmation redirect lands the user directly in that
+  // workspace instead of the generic onboarding wizard.
+  const next = formData.get('next') as string | null;
 
   const origin = await getOrigin();
-  const redirectTo = `${origin}/auth/callback`;
+  const redirectTo = `${origin}/auth/callback${next ? `?next=${encodeURIComponent(next)}` : ''}`;
   const userData = {
     full_name: fullName,
     ...(workspaceName ? { workspace_name: workspaceName } : {}),

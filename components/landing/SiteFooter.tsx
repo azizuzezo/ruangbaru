@@ -32,7 +32,6 @@ function LinkedinIcon() {
 }
 
 const BLUE = '#106CD8';
-const FONT_BODY = "'SF Pro Text', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', Arial, sans-serif";
 
 const COLUMNS = [
   {
@@ -73,14 +72,14 @@ export function SiteFooter() {
   };
 
   return (
-    <footer className="border-t border-neutral-100 bg-neutral-50/60" style={{ fontFamily: FONT_BODY }}>
+    <footer className="border-t border-neutral-100 bg-neutral-50/60">
       <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6">
         <div className="grid gap-10 lg:grid-cols-[1.4fr_1fr_1fr_1.6fr]">
           {/* Brand + social */}
           <div>
             <Logo variant="wordmark" height={26} />
             <p className="mt-4 max-w-[240px] text-sm leading-6 text-neutral-500">
-              Satu workspace untuk proyek, tugas, dan tim — dibuat untuk cara kerja tim Indonesia.
+              Papan kerja untuk proyek, tugas, dan jadwal tim — dipakai sehari-hari, bukan cuma waktu demo.
             </p>
             <p className="mt-4 text-sm text-neutral-500">
               Butuh bantuan?{' '}
@@ -128,7 +127,7 @@ export function SiteFooter() {
           <div>
             <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Newsletter</h3>
             <p className="mt-4 text-sm leading-6 text-neutral-500">
-              Tips produktivitas tim dan kabar fitur baru — sesekali, tanpa spam.
+              Kabar fitur baru saat memang ada — kami tidak punya cukup hal untuk dikirim mingguan.
             </p>
             <form onSubmit={submit} className="mt-4">
               {sent ? (

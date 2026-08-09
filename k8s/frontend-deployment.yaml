@@ -1,0 +1,60 @@
+# RuangBaru Next.js frontend — EKS deployment.
+# Scaffolding only: nothing here has been applied against a real cluster.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ruangbaru-frontend
+  labels:
+    app: ruangbaru-frontend
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: ruangbaru-frontend
+  template:
+    metadata:
+      labels:
+        app: ruangbaru-frontend
+    spec:
+      containers:
+        - name: ruangbaru-frontend
+          image: REPLACE_WITH_ECR_IMAGE_URI:REPLACE_WITH_TAG
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - secretRef:
+                name: ruangbaru-frontend-secrets
+          env:
+            - name: PORT
+              value: "3000"
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 20
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ruangbaru-frontend
+spec:
+  selector:
+    app: ruangbaru-frontend
+  ports:
+    - port: 80
+      targetPort: 3000
+  type: ClusterIP
