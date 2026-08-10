@@ -5,7 +5,7 @@
 > without losing history. **Read this first.** Update it whenever you make a
 > meaningful change.
 
-Last updated: 2026-08-10 (session 21 — per-workspace API keys + public REST API + docs page, fixed a middleware bug redirecting /api/v1/* to /login; session 20 — loading-state audit across 13 async actions with zero click feedback; session 19 — admin-configurable default assignee; session 18 — task-level collaborators; session 17 — auto-backlog tasks, @mentions, task attachments, Team/Settings permission lockdown, workspace slug editing + ownership transfer, project collaborators, drag-and-drop cursor-offset fix; session 16 — full bilingual ID/EN support via header toggle, no URL routing, covers marketing + auth + entire authenticated app; session 15 — merged main back to the SaaS app and deployed to Vercel production; session 14 — custom Kanban columns + custom fields; session 13 — app redesign; session 12 — mock-client hang fix; session 11 — login/register redesign; session 10 — Go backend port; session 9 — landing site redesign. See ENGINEERING.md for the task-by-task log)
+Last updated: 2026-08-10 (session 23 — sanitized every error notification/response so raw backend/DB error text never reaches the client; session 22 — admin panel can now delete workspaces and user accounts (moderation/violations); session 21 — per-workspace API keys + public REST API + docs page, fixed a middleware bug redirecting /api/v1/* to /login; session 20 — loading-state audit across 13 async actions with zero click feedback; session 19 — admin-configurable default assignee; session 18 — task-level collaborators; session 17 — auto-backlog tasks, @mentions, task attachments, Team/Settings permission lockdown, workspace slug editing + ownership transfer, project collaborators, drag-and-drop cursor-offset fix; session 16 — full bilingual ID/EN support via header toggle, no URL routing, covers marketing + auth + entire authenticated app; session 15 — merged main back to the SaaS app and deployed to Vercel production; session 14 — custom Kanban columns + custom fields; session 13 — app redesign; session 12 — mock-client hang fix; session 11 — login/register redesign; session 10 — Go backend port; session 9 — landing site redesign. See ENGINEERING.md for the task-by-task log)
 
 ---
 
@@ -535,6 +535,81 @@ would have broken every browser-based API client). Fixed by excluding all
 should never redirect to a login page. Full detail in ENGINEERING.md.
 `tsc`/`build` clean; live-tested against the dev server (401s without a
 key, 204 + CORS headers on OPTIONS after the fix, docs page screenshotted).
+
+### Done in session 22 (2026-08-10) — Admin panel: delete workspace / delete user account
+For moderation of violations. `app/admin/page.tsx` now has a tab switcher
+(Workspaces / Pengguna); every workspace row and every user row has a
+destructive delete button, gated behind a type-to-confirm dialog (must type
+the exact workspace slug or user email to arm the "Hapus Permanen" button —
+no accidental one-click deletes).
+- **`POST /api/admin/delete-workspace`** (`{ workspaceId }`) — service-role
+  hard delete of the `workspaces` row. Cascades (existing FKs, no new
+  migration) wipe projects/tasks/notes/members/etc. scoped to it.
+- **`GET /api/admin/users`** — lists all `profiles` with their owned
+  workspaces (`workspaces!owner_id`) and workspace-membership count, for the
+  new Users tab.
+- **`POST /api/admin/delete-user`** (`{ userId }`) — service-role
+  `admin.auth.admin.deleteUser(userId, false)` (hard delete, not soft-delete).
+  `profiles.id → auth.users(id) ON DELETE CASCADE` and
+  `workspaces.owner_id → profiles(id) ON DELETE CASCADE` mean deleting a user
+  also deletes their profile **and any workspace they own** (plus everything
+  in it) — the confirm dialog surfaces an explicit warning with the owned-
+  workspace count before arming the button. Blocks deleting your own account
+  and any of the two hardcoded `ADMIN_EMAILS` (server-side in the route, and
+  the button is hidden/disabled in the UI too).
+- All three routes reuse the existing `ADMIN_EMAILS` allowlist + service-role
+  `createAdminClient()` pattern from `update-plan`/`workspaces` — no schema
+  changes, no new migration needed.
+- `tsc`/`build` clean. Not yet exercised against a real Supabase project in
+  a browser (needs an authenticated admin session) — logic was verified by
+  reading the FK cascade chain in `001_initial_schema.sql`, not by clicking
+  through it live.
+
+### Done in session 23 (2026-08-10) — Sanitized backend error exposure in all notifications
+Every `catch` block across the app that showed a caught exception's raw
+`.message` in a toast — or every API route that echoed it back in a JSON
+`{ error: ... }` body — could leak internal details (Postgres constraint/
+table names, RLS denial text, Resend error strings) straight to the user or
+to any `/api/v1/*` API-key caller. Swept the whole client + server surface
+and replaced all of it with one shared generic message.
+- **New `common.errorContactSupport`** i18n key (`lib/i18n/dict/common.ts`,
+  id: "Terjadi kesalahan. Silakan hubungi dukungan kami.", en: "An error
+  occurred. Please contact support."). Pages call a second `useT('common')`
+  hook (`tc`) alongside their existing namespace hook to reach it — first use
+  of the multi-namespace pattern in this codebase; every other file still
+  uses a single `useT()` call.
+- **Client-side**: ~35 `toast.error(err.message || t('...'))` call sites
+  across `app/admin`, `app/(app)/[workspace]/{team,tasks,settings,projects,
+  projects/[projectId],notes}`, `app/welcome`, `app/invite/[token]`,
+  `components/tasks/TaskDetailSheet.tsx`, `components/calendar/EventDialog.tsx`,
+  `components/settings/{KanbanColumnsSettings,CustomFieldsSettings}.tsx` now
+  always show `tc('errorContactSupport')` — the caught error's `.message` is
+  dropped entirely, never rendered. Two helper functions that pattern-matched
+  known RPC error strings to friendly text (`translateError` in
+  `invite/[token]/page.tsx`, `translateInviteError` in `welcome/page.tsx`, both
+  for the `accept_invitation` RPC) kept their specific mappings (expired/
+  already-accepted/wrong-email/not-found) but now take an explicit `fallback`
+  param instead of falling through to the raw message on an unrecognized one.
+- **Server-side**: every `app/api/**` route that did
+  `NextResponse.json({ error: err.message }, { status: 500 })` (or the CORS
+  `corsJson` equivalent in the public `/api/v1/*` routes) now logs the real
+  error via `console.error` and returns a fixed `'Internal server error.
+  Please contact support.'` string instead — `admin/{workspaces,update-plan,
+  delete-workspace,delete-user,users}`, `v1/{tasks,tasks/[id],projects}`,
+  `support/ticket`. `api/invitations/send` also stopped returning
+  `errors: [...]` (raw Resend rejection messages) in its response body —
+  just `{ sent, failed }` counts now; failures still logged server-side.
+- **Deliberately left untouched — these are curated, user-safe Supabase Auth
+  messages, not backend/DB leaks**: `lib/supabase/actions.ts` (signIn/signUp/
+  resetPassword/signInWithGoogle all return `error.message` from
+  `supabase.auth.*` calls — e.g. "Invalid login credentials" — consumed by
+  `login`/`register`/`forgot-password`/`welcome`'s server-action forms), and
+  `app/(auth)/reset-password/page.tsx`'s `supabase.auth.updateUser()` error
+  (e.g. "New password should be different from the old password"). Genericizing
+  these would actively hurt UX (a user needs to know *why* login failed) without
+  closing any real leak, since Supabase Auth already curates them.
+- `tsc`/`build` clean. Not click-tested live (would need to actually trigger
+  a DB error, e.g. a duplicate-slug workspace rename, to see the toast).
 
 ### Known remaining gaps / TODO
 - **Resend domain** `ruangbaru.com` must be verified in Resend or emails fail (falls back to copy-link).

@@ -31,6 +31,7 @@ export function TaskDetailSheet() {
   const { statuses, doneKeys } = useTaskStatuses(currentWorkspace?.id);
   const { fields: customFields } = useCustomFields(currentWorkspace?.id);
   const t = useT('tasks');
+  const tc = useT('common');
 
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(false);
@@ -214,7 +215,7 @@ export function TaskDetailSheet() {
       // Trigger a window event or update parent list indirectly
       window.dispatchEvent(new Event('task-updated'));
     } catch (err: any) {
-      toast.error(err.message || t('saveErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setSaving(false);
     }
@@ -266,7 +267,7 @@ export function TaskDetailSheet() {
       setCommentKey((k) => k + 1); // reset composer
       toast.success(t('commentSuccessToast'));
     } catch (err: any) {
-      toast.error(err.message || t('commentErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setPostingComment(false);
     }
@@ -306,7 +307,7 @@ export function TaskDetailSheet() {
       setAttachments((prev) => [...prev, data as TaskAttachment]);
       toast.success(t('attachmentUploadSuccessToast'));
     } catch (err: any) {
-      toast.error(err.message || t('attachmentUploadErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setUploading(false);
     }
@@ -338,7 +339,7 @@ export function TaskDetailSheet() {
       setAttachments((prev) => prev.filter((a) => a.id !== attachment.id));
       toast.success(t('attachmentDeleteSuccessToast'));
     } catch (err: any) {
-      toast.error(err.message || t('attachmentDeleteErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setDeletingAttachmentId(null);
     }
@@ -374,7 +375,7 @@ export function TaskDetailSheet() {
 
       toast.success(t('collaboratorAddedToast'));
     } catch (err: any) {
-      toast.error(err.message || t('collaboratorAddErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setAddingCollabId(null);
     }
@@ -389,7 +390,7 @@ export function TaskDetailSheet() {
       setCollaborators((prev) => prev.filter((c) => c.id !== collab.id));
       toast.success(t('collaboratorRemovedToast'));
     } catch (err: any) {
-      toast.error(err.message || t('collaboratorRemoveErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setRemovingCollabId(null);
     }

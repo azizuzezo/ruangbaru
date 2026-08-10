@@ -100,11 +100,11 @@ export async function POST(request: Request) {
   );
 
   const sent = results.filter((r) => r.status === 'fulfilled').length;
-  const errors = results
-    .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
-    .map((r) => r.reason?.message || String(r.reason));
+  const failures = results.filter((r): r is PromiseRejectedResult => r.status === 'rejected');
 
-  if (errors.length > 0) console.error('[invitations/send] Resend errors:', errors);
+  if (failures.length > 0) {
+    console.error('[invitations/send] Resend errors:', failures.map((r) => r.reason));
+  }
 
-  return NextResponse.json({ sent, failed: errors.length, errors });
+  return NextResponse.json({ sent, failed: failures.length });
 }

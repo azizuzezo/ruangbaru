@@ -19,6 +19,7 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
   onChanged: () => void;
 }) {
   const t = useT('settings');
+  const tc = useT('common');
   const supabase = createClient();
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -39,7 +40,7 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
       setNewName('');
       onChanged();
     } catch (err: any) {
-      toast.error(err.message?.includes('duplicate') ? t('kanbanDuplicateColumnName') : (err.message || t('kanbanAddColumnFailed')));
+      toast.error(err.message?.includes('duplicate') ? t('kanbanDuplicateColumnName') : tc('errorContactSupport'));
     } finally {
       setAdding(false);
     }
@@ -62,7 +63,7 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
       toast.success(t('kanbanColumnDeleted'));
       onChanged();
     } catch (err: any) {
-      toast.error(err.message || t('kanbanDeleteColumnFailed'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setBusyId(null);
     }
@@ -75,7 +76,7 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
       if (error) throw error;
       onChanged();
     } catch (err: any) {
-      toast.error(err.message || t('kanbanSaveFailed'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setBusyId(null);
     }

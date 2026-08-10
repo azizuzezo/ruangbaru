@@ -26,7 +26,10 @@ export async function GET(request: Request) {
   if (status) query = query.eq('status', status);
 
   const { data, error } = await query;
-  if (error) return corsJson({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[GET /api/v1/tasks]', error);
+    return corsJson({ error: 'Internal server error. Please contact support.' }, { status: 500 });
+  }
   return corsJson({ data });
 }
 
@@ -72,6 +75,9 @@ export async function POST(request: Request) {
     .select('id, project_id, title, description_text, status, priority, assignee_id, due_date, created_at, updated_at')
     .single();
 
-  if (error) return corsJson({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[POST /api/v1/tasks]', error);
+    return corsJson({ error: 'Internal server error. Please contact support.' }, { status: 500 });
+  }
   return corsJson({ data }, { status: 201 });
 }

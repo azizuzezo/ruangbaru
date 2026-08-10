@@ -29,6 +29,7 @@ const DEFAULT_PREFS: Prefs = { default_view: 'kanban', email_notifications: true
 
 export default function SettingsPage() {
   const t = useT('settings');
+  const tc = useT('common');
   const router = useRouter();
   const { currentWorkspace, currentUser, setCurrentWorkspace, setCurrentUser, workspaces, setWorkspaces } = useWorkspaceStore();
   const isOwner = !!currentWorkspace && !!currentUser && currentWorkspace.owner_id === currentUser.id;
@@ -110,7 +111,7 @@ export default function SettingsPage() {
       setCurrentUser(data);
       toast.success(t('avatarUpdated'));
     } catch (err: any) {
-      toast.error(err.message || t('avatarUploadFailed'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setUploadingAvatar(false);
     }
@@ -186,7 +187,7 @@ export default function SettingsPage() {
         .upsert({ user_id: currentUser.id, ...next }, { onConflict: 'user_id' });
       if (error) throw error;
     } catch (err: any) {
-      toast.error(err.message || t('prefsSaveFailed'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setSavingPref(null);
     }
@@ -222,7 +223,7 @@ export default function SettingsPage() {
         router.replace(`/${data.slug}/settings`);
       }
     } catch (err: any) {
-      toast.error(err.message || t('workspaceSaveFailed'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setSavingWs(false);
     }
@@ -244,7 +245,7 @@ export default function SettingsPage() {
       setTransferOpen(false);
       setTransferTargetId('');
     } catch (err: any) {
-      toast.error(err.message || t('transferOwnershipError'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setTransferring(false);
     }
@@ -275,7 +276,7 @@ export default function SettingsPage() {
       setNewKeyName('');
       setRevealedKey(key);
     } catch (err: any) {
-      toast.error(err.message || t('apiKeyGenerateError'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setGeneratingKey(false);
     }
@@ -294,7 +295,7 @@ export default function SettingsPage() {
       setApiKeys((prev) => prev.map((k) => (k.id === id ? (data as ApiKey) : k)));
       toast.success(t('apiKeyRevokedToast'));
     } catch (err: any) {
-      toast.error(err.message || t('apiKeyRevokeError'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setRevokingKeyId(null);
     }
@@ -325,7 +326,7 @@ export default function SettingsPage() {
       toast.success(t('profileUpdateSuccess'));
       setCurrentUser(data);
     } catch (err: any) {
-      toast.error(err.message || t('profileUpdateFailed'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setSavingProfile(false);
     }
@@ -361,7 +362,7 @@ export default function SettingsPage() {
       setConfirmOpen(false);
       router.replace(remaining[0] ? `/${remaining[0].slug}/dashboard` : '/welcome');
     } catch (err: any) {
-      toast.error(err.message || t('dangerActionFailed'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setConfirmBusy(false);
     }

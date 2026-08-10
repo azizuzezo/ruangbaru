@@ -23,6 +23,7 @@ const STEP_KEYS = ['stepWorkspace', 'stepInviteTeam', 'stepProject', 'stepTask',
 
 export default function WelcomeWizard() {
   const t = useT('auth');
+  const tc = useT('common');
   const STEPS = STEP_KEYS.map((k) => t(k));
   const router = useRouter();
   const supabase = createClient();
@@ -102,7 +103,7 @@ export default function WelcomeWizard() {
       setWorkspaces([ws as Workspace]);
       setCurrentWorkspace(ws as Workspace);
       setStep(1);
-    } catch (e: any) { toast.error(e.message || t('createWorkspaceError')); }
+    } catch (e: any) { toast.error(tc('errorContactSupport')); }
     finally { setBusy(false); }
   };
 
@@ -128,7 +129,7 @@ export default function WelcomeWizard() {
         toast.success(t('invitesSentToast').replace('{count}', String(emails.length)));
       }
       setStep(2);
-    } catch (e: any) { toast.error(e.message || t('sendInvitesError')); }
+    } catch (e: any) { toast.error(tc('errorContactSupport')); }
     finally { setBusy(false); }
   };
 
@@ -143,7 +144,7 @@ export default function WelcomeWizard() {
       if (error) throw error;
       setProject(data as Project);
       setStep(3);
-    } catch (e: any) { toast.error(e.message || t('createProjectError')); }
+    } catch (e: any) { toast.error(tc('errorContactSupport')); }
     finally { setBusy(false); }
   };
 
@@ -159,7 +160,7 @@ export default function WelcomeWizard() {
         if (error) throw error;
       }
       setStep(4);
-    } catch (e: any) { toast.error(e.message || t('createTaskError')); }
+    } catch (e: any) { toast.error(tc('errorContactSupport')); }
     finally { setBusy(false); }
   };
 
@@ -178,7 +179,7 @@ export default function WelcomeWizard() {
       toast.success(t('joinSuccessToast'));
       router.replace(ws?.slug ? `/${ws.slug}/dashboard` : '/dashboard');
     } catch (e: any) {
-      toast.error(translateInviteError(e?.message || '', t));
+      toast.error(translateInviteError(e?.message || '', t, tc('errorContactSupport')));
     } finally {
       setJoining(false);
     }
@@ -387,12 +388,12 @@ export default function WelcomeWizard() {
   );
 }
 
-function translateInviteError(message: string, t: (key: string) => string): string {
+function translateInviteError(message: string, t: (key: string) => string, fallback: string): string {
   if (message.includes('expired')) return t('inviteExpiredError');
   if (message.includes('already accepted')) return t('inviteAlreadyAcceptedError');
   if (message.includes('different email')) return t('inviteDifferentEmailError');
   if (message.includes('not found') || !message) return t('inviteNotFoundError');
-  return message;
+  return fallback;
 }
 
 function Slide({ children }: { children: React.ReactNode }) {

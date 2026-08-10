@@ -18,6 +18,7 @@ import { useT } from '@/lib/i18n/useT';
 
 export default function ProjectsPage() {
   const t = useT('projects');
+  const tc = useT('common');
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -90,7 +91,7 @@ export default function ProjectsPage() {
       setDescription('');
       setColor('#106CD8');
     } catch (err: any) {
-      toast.error(err.message || t('createErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setCreating(false);
     }
@@ -106,7 +107,7 @@ export default function ProjectsPage() {
       setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, status: next as Project['status'] } : p)));
       toast.success(next === 'archived' ? t('archiveSuccessToast') : t('restoreSuccessToast'));
     } catch (err: any) {
-      toast.error(err.message || t('updateErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setBusyProjectId(null);
     }
@@ -125,7 +126,7 @@ export default function ProjectsPage() {
       toast.success(t('deleteSuccessToast'));
       setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (err: any) {
-      toast.error(err.message || t('deleteErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setBusyProjectId(null);
     }

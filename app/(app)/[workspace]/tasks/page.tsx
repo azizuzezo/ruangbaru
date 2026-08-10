@@ -29,6 +29,7 @@ export default function TasksPage() {
   const { statuses, doneKeys, defaultKey } = useTaskStatuses(currentWorkspace?.id);
   const { fields: customFields } = useCustomFields(currentWorkspace?.id);
   const t = useT('tasks');
+  const tc = useT('common');
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -221,7 +222,7 @@ export default function TasksPage() {
       setDescKey((k) => k + 1);
       setFieldValues({});
     } catch (err: any) {
-      toast.error(err.message || t('createErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setCreating(false);
     }

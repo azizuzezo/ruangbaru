@@ -67,6 +67,7 @@ export function EventDialog({
 }) {
   const supabase = createClient();
   const t = useT('calendar');
+  const tc = useT('common');
   const isEdit = !!event;
 
   // Tabs: 'event' | 'task'
@@ -300,7 +301,7 @@ export function EventDialog({
       onOpenChange(false);
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || t('saveTaskFailedToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setSaving(false);
     }

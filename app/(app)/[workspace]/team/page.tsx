@@ -20,6 +20,7 @@ import { useT } from '@/lib/i18n/useT';
 
 export default function TeamPage() {
   const t = useT('team');
+  const tc = useT('common');
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([]);
@@ -124,7 +125,7 @@ export default function TeamPage() {
       setEmail('');
       setRole('member');
     } catch (err: any) {
-      toast.error(err.message || t('teamInviteSendError'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setInviting(false);
     }
@@ -147,7 +148,7 @@ export default function TeamPage() {
       toast.success(t('teamRoleUpdateSuccess'));
       setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, role: newRole } : m));
     } catch (err: any) {
-      toast.error(err.message || t('teamRoleUpdateError'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setRoleChangingId(null);
     }
@@ -173,7 +174,7 @@ export default function TeamPage() {
       toast.success(t('teamRemoveMemberSuccess'));
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
     } catch (err: any) {
-      toast.error(err.message || t('teamRemoveMemberError'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setRemovingId(null);
     }
@@ -208,7 +209,7 @@ export default function TeamPage() {
       toast.success(t('teamInviteCancelSuccess'));
       setInvitations((prev) => prev.filter((i) => i.id !== inviteId));
     } catch (err: any) {
-      toast.error(err.message || t('teamInviteCancelError'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setCancelingId(null);
     }

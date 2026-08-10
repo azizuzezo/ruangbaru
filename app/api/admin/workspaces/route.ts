@@ -29,6 +29,7 @@ export async function GET() {
 
     return NextResponse.json({ workspaces });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[GET /api/admin/workspaces]', err);
+    return NextResponse.json({ error: 'Internal server error. Please contact support.' }, { status: 500 });
   }
 }

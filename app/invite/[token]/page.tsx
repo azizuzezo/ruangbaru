@@ -22,6 +22,7 @@ export default function InviteAcceptPage({ params }: { params: Promise<{ token: 
   const router = useRouter();
   const supabase = createClient();
   const t = useT('auth');
+  const tc = useT('common');
   const [state, setState] = useState<State>({ kind: 'loading' });
 
   useEffect(() => {
@@ -34,7 +35,7 @@ export default function InviteAcceptPage({ params }: { params: Promise<{ token: 
       setState({ kind: 'accepting' });
       const { data, error } = await supabase.rpc('accept_invitation', { invite_token: token });
       if (error) {
-        setState({ kind: 'error', message: translateError(error.message, t) });
+        setState({ kind: 'error', message: translateError(error.message, t, tc('errorContactSupport')) });
         return;
       }
       setState({ kind: 'done' });
@@ -100,10 +101,10 @@ export default function InviteAcceptPage({ params }: { params: Promise<{ token: 
   );
 }
 
-function translateError(message: string, t: (key: string) => string): string {
+function translateError(message: string, t: (key: string) => string, fallback: string): string {
   if (message.includes('expired')) return t('tokenInviteExpiredError');
   if (message.includes('already accepted')) return t('inviteAlreadyAcceptedError');
   if (message.includes('different email')) return t('inviteDifferentEmailError');
   if (message.includes('not found')) return t('inviteNotFoundShortError');
-  return message;
+  return fallback;
 }

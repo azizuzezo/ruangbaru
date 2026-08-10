@@ -31,6 +31,7 @@ interface ProjectDetailPageProps {
 
 export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const t = useT('projects');
+  const tc = useT('common');
   const resolvedParams = use(params);
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setTaskDetailOpen } = useUIStore();
@@ -155,7 +156,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
       toast.success(t('collaboratorAddedToast'));
     } catch (err: any) {
-      toast.error(err.message || t('collaboratorAddErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setAddingCollabId(null);
     }
@@ -170,7 +171,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
       setCollaborators((prev) => prev.filter((c) => c.id !== member.id));
       toast.success(t('collaboratorRemovedToast'));
     } catch (err: any) {
-      toast.error(err.message || t('collaboratorRemoveErrorToast'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setRemovingCollabId(null);
     }

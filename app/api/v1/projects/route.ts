@@ -17,7 +17,10 @@ export async function GET(request: Request) {
     .eq('workspace_id', ctx.workspaceId)
     .order('created_at', { ascending: false });
 
-  if (error) return corsJson({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[GET /api/v1/projects]', error);
+    return corsJson({ error: 'Internal server error. Please contact support.' }, { status: 500 });
+  }
   return corsJson({ data });
 }
 
@@ -44,6 +47,9 @@ export async function POST(request: Request) {
     .select('id, name, description, color, icon, status, created_at, updated_at')
     .single();
 
-  if (error) return corsJson({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[POST /api/v1/projects]', error);
+    return corsJson({ error: 'Internal server error. Please contact support.' }, { status: 500 });
+  }
   return corsJson({ data }, { status: 201 });
 }

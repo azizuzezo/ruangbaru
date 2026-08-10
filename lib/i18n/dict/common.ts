@@ -8,6 +8,7 @@ export const commonDict = {
     navLogin: 'Masuk',
     navSignup: 'Coba Gratis',
     homeAriaLabel: 'RuangBaru — beranda',
+    errorContactSupport: 'Terjadi kesalahan. Silakan hubungi dukungan kami.',
   },
   en: {
     navFitur: 'Features',
@@ -18,5 +19,6 @@ export const commonDict = {
     navLogin: 'Log in',
     navSignup: 'Try Free',
     homeAriaLabel: 'RuangBaru — home',
+    errorContactSupport: 'An error occurred. Please contact support.',
   },
 };

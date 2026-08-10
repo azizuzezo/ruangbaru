@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, workspace: data });
   } catch (err: any) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error('[POST /api/admin/update-plan]', err);
+    return NextResponse.json({ error: 'Internal server error. Please contact support.' }, { status: 500 });
   }
 }

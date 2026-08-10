@@ -18,6 +18,7 @@ import { useT } from '@/lib/i18n/useT';
 
 export default function NotesPage() {
   const t = useT('notes');
+  const tc = useT('common');
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -98,7 +99,7 @@ export default function NotesPage() {
       setNotes((prev) => [data as Note, ...prev]);
       handleSelectNote(data as Note);
     } catch (err: any) {
-      toast.error(err.message || t('notesCreateError'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setCreating(false);
     }
@@ -127,7 +128,7 @@ export default function NotesPage() {
       setNotes((prev) => prev.map((n) => (n.id === selectedNote.id ? (data as Note) : n)));
       setSelectedNote(data as Note);
     } catch (err: any) {
-      toast.error(err.message || t('notesSaveError'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setSaving(false);
     }
@@ -151,7 +152,7 @@ export default function NotesPage() {
         }
       }
     } catch (err: any) {
-      toast.error(err.message || t('notesDeleteError'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setDeletingNoteId(null);
     }

@@ -20,6 +20,7 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
   onChanged: () => void;
 }) {
   const t = useT('settings');
+  const tc = useT('common');
   const TYPE_LABELS: Record<TaskFieldType, string> = {
     text: t(TYPE_LABEL_KEYS.text), number: t(TYPE_LABEL_KEYS.number), date: t(TYPE_LABEL_KEYS.date), select: t(TYPE_LABEL_KEYS.select),
   };
@@ -50,7 +51,7 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
       setName(''); setOptions(''); setType('text');
       onChanged();
     } catch (err: any) {
-      toast.error(err.message || t('customFieldAddFailed'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setAdding(false);
     }
@@ -64,7 +65,7 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
       toast.success(t('customFieldDeleted'));
       onChanged();
     } catch (err: any) {
-      toast.error(err.message || t('customFieldDeleteFailed'));
+      toast.error(tc('errorContactSupport'));
     } finally {
       setBusyId(null);
     }

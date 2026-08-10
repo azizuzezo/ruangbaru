@@ -15,7 +15,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
   const admin = createAdminClient();
   const { data, error } = await admin.from('tasks').select(SELECT).eq('id', id).eq('workspace_id', ctx.workspaceId).maybeSingle();
-  if (error) return corsJson({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[GET /api/v1/tasks/:id]', error);
+    return corsJson({ error: 'Internal server error. Please contact support.' }, { status: 500 });
+  }
   if (!data) return corsJson({ error: 'Task not found' }, { status: 404 });
   return corsJson({ data });
 }
@@ -51,7 +54,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     .select(SELECT)
     .maybeSingle();
 
-  if (error) return corsJson({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[PATCH /api/v1/tasks/:id]', error);
+    return corsJson({ error: 'Internal server error. Please contact support.' }, { status: 500 });
+  }
   if (!data) return corsJson({ error: 'Task not found' }, { status: 404 });
   return corsJson({ data });
 }
@@ -69,7 +75,10 @@ export async function DELETE(request: Request, { params }: { params: Promise<{ i
     .eq('id', id)
     .eq('workspace_id', ctx.workspaceId);
 
-  if (error) return corsJson({ error: error.message }, { status: 500 });
+  if (error) {
+    console.error('[DELETE /api/v1/tasks/:id]', error);
+    return corsJson({ error: 'Internal server error. Please contact support.' }, { status: 500 });
+  }
   if (!count) return corsJson({ error: 'Task not found' }, { status: 404 });
   return corsJson({ data: { deleted: true } });
 }

@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
   } catch (error: any) {
     console.error('[support/ticket] Error processing ticket:', error);
     return NextResponse.json(
-      { error: error.message || 'Gagal mengirim tiket.' },
+      { error: 'Terjadi kesalahan. Silakan hubungi dukungan kami.' },
       { status: 500 }
     );
   }
