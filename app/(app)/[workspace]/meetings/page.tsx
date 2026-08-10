@@ -152,7 +152,7 @@ export default function MeetingsPage() {
       {/* Upcoming */}
       <Section title={t('meetingsSectionUpcoming')} tone="text-primary">
         {upcoming.length === 0 ? (
-          <EmptyState onStart={startInstant} onSchedule={() => setScheduleOpen(true)} />
+          <EmptyState onStart={startInstant} onSchedule={() => setScheduleOpen(true)} starting={starting} />
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {upcoming.map((m) => <MeetingCard key={m.id} meeting={m} wsSlug={wsSlug} />)}
@@ -238,7 +238,7 @@ function MeetingCard({ meeting, wsSlug, live, ended }: { meeting: Meeting; wsSlu
   );
 }
 
-function EmptyState({ onStart, onSchedule }: { onStart: () => void; onSchedule: () => void }) {
+function EmptyState({ onStart, onSchedule, starting }: { onStart: () => void; onSchedule: () => void; starting: boolean }) {
   const t = useT('meetings');
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/50 px-6 py-12 text-center">
@@ -246,8 +246,10 @@ function EmptyState({ onStart, onSchedule }: { onStart: () => void; onSchedule: 
       <p className="mt-4 text-sm font-bold text-foreground">{t('meetingsEmptyTitle')}</p>
       <p className="mt-1 max-w-sm text-xs text-muted-foreground">{t('meetingsEmptyDesc')}</p>
       <div className="mt-5 flex gap-2">
-        <Button size="sm" variant="outline" className="gap-1.5" onClick={onSchedule}><CalendarClock className="h-4 w-4" /> {t('meetingsScheduleButton')}</Button>
-        <Button size="sm" variant="gradient" className="gap-1.5" onClick={onStart}><Video className="h-4 w-4" /> {t('meetingsStartNowButton')}</Button>
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={onSchedule} disabled={starting}><CalendarClock className="h-4 w-4" /> {t('meetingsScheduleButton')}</Button>
+        <Button size="sm" variant="gradient" className="gap-1.5" onClick={onStart} disabled={starting}>
+          {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />} {t('meetingsStartNowButton')}
+        </Button>
       </div>
     </div>
   );

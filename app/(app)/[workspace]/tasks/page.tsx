@@ -2,9 +2,9 @@
 
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useUIStore } from '@/lib/stores/ui-store';
-import { useState, useEffect } from 'react';
-import { 
-  CheckSquare, Search, Plus, Filter, LayoutGrid, 
+import { useState, useEffect, useRef } from 'react';
+import {
+  CheckSquare, Search, Plus, Filter, LayoutGrid,
   ListTodo, Loader2, ArrowUpDown, ChevronRight, Calendar
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
@@ -13,7 +13,7 @@ import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Task, Project, TaskStatus, TaskPriority } from '@/types';
-import { cn } from '@/lib/utils';
+import { cn, extractMentionIds } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { KanbanBoard } from '@/components/tasks/KanbanBoard';
 import { EmptyState } from '@/components/ui/empty-state';
@@ -21,6 +21,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 import { useCustomFields } from '@/lib/hooks/useCustomFields';
 import { useT } from '@/lib/i18n/useT';
+import { RichTextEditor, type RichTextValue } from '@/components/editor/RichTextEditor';
 
 export default function TasksPage() {
   const { currentWorkspace, currentUser } = useWorkspaceStore();
@@ -45,15 +46,27 @@ export default function TasksPage() {
   const [priority, setPriority] = useState<TaskPriority>('no_priority');
   const [dueDate, setDueDate] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
-  const [description, setDescription] = useState('');
+  const descriptionRef = useRef<RichTextValue>({ json: null, text: '' });
+  const [descKey, setDescKey] = useState(0); // bump to reset the description composer after creating
   const [members, setMembers] = useState<any[]>([]);
   const [creating, setCreating] = useState(false);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+
+  const mentionUsers = members
+    .filter((m) => m.profile)
+    .map((m) => ({ id: m.user_id as string, label: (m.profile?.full_name || m.profile?.email) as string }));
 
   // Once the workspace's columns load, default the create-form's status to
   // the first column (matches whatever an admin has set up, not a
   // hardcoded 'backlog').
   useEffect(() => { if (!status && defaultKey) setStatus(defaultKey); }, [defaultKey, status]);
+
+  // Admin-configured default assignee (Settings > Workspace) pre-fills the
+  // create form — still changeable per task, just not blank by default.
+  useEffect(() => {
+    if (!assigneeId && currentWorkspace?.default_assignee_id) setAssigneeId(currentWorkspace.default_assignee_id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentWorkspace]);
 
   const supabase = createClient();
 
@@ -145,8 +158,8 @@ export default function TasksPage() {
           due_date: dueDate || null,
           assignee_id: assigneeId || null,
           created_by: currentUser.id,
-          description: description.trim() ? { type: 'doc', content: [{ type: 'paragraph', content: [{ type: 'text', text: description.trim() }] }] } : null,
-          description_text: description.trim() || null,
+          description: descriptionRef.current.json,
+          description_text: descriptionRef.current.text || null,
         })
         .select('*, assignee:assignee_id(full_name, avatar_url), project:projects(name, color)')
         .single();
@@ -176,6 +189,26 @@ export default function TasksPage() {
         });
       }
 
+      // Notify anyone @mentioned in the description (the assignee already
+      // got their own notification above, so skip a duplicate for them).
+      const mentionIds = extractMentionIds(descriptionRef.current.json)
+        .filter((id) => id !== currentUser.id && id !== assigneeId);
+      if (mentionIds.length) {
+        await supabase.from('notifications').insert(
+          mentionIds.map((userId) => ({
+            user_id: userId,
+            type: 'mention',
+            title: t('mentionNotificationTitle'),
+            body: t('mentionNotificationBody')
+              .replace('{name}', currentUser.full_name || currentUser.email)
+              .replace('{title}', title),
+            link: `/${currentWorkspace.slug}/tasks`,
+            actor_id: currentUser.id,
+            workspace_id: currentWorkspace.id,
+          }))
+        );
+      }
+
       toast.success(t('createSuccessToast'));
       setTasks((prev) => [data as Task, ...prev]);
       setCreateOpen(false);
@@ -183,8 +216,9 @@ export default function TasksPage() {
       setDueDate('');
       setStatus(defaultKey);
       setPriority('no_priority');
-      setAssigneeId('');
-      setDescription('');
+      setAssigneeId(currentWorkspace?.default_assignee_id || '');
+      descriptionRef.current = { json: null, text: '' };
+      setDescKey((k) => k + 1);
       setFieldValues({});
     } catch (err: any) {
       toast.error(err.message || t('createErrorToast'));
@@ -319,13 +353,15 @@ export default function TasksPage() {
               {/* Description */}
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase">{t('descriptionLabel')}</label>
-                <textarea
+                <RichTextEditor
+                  key={`create-desc-${descKey}`}
+                  content={null}
                   placeholder={t('descriptionPlaceholder')}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  disabled={creating}
-                  rows={3}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-xs text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
+                  editable={!creating}
+                  showToolbar={false}
+                  onChange={(value) => { descriptionRef.current = value; }}
+                  mentionUsers={mentionUsers}
+                  className="rounded-lg border border-input text-xs"
                 />
               </div>
 

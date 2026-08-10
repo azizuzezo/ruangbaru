@@ -23,6 +23,8 @@ export default function NotesPage() {
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [deletingNoteId, setDeletingNoteId] = useState<string | null>(null);
 
   // Editor states
   const [editorTitle, setEditorTitle] = useState('');
@@ -75,6 +77,7 @@ export default function NotesPage() {
   // Create note handler
   const handleCreateNote = async () => {
     if (!currentWorkspace || !currentUser) return;
+    setCreating(true);
     try {
       const { data, error } = await supabase
         .from('notes')
@@ -96,6 +99,8 @@ export default function NotesPage() {
       handleSelectNote(data as Note);
     } catch (err: any) {
       toast.error(err.message || t('notesCreateError'));
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -130,6 +135,7 @@ export default function NotesPage() {
 
   // Delete note
   const handleDeleteNote = async (id: string) => {
+    setDeletingNoteId(id);
     try {
       const { error } = await supabase.from('notes').delete().eq('id', id);
       if (error) throw error;
@@ -146,6 +152,8 @@ export default function NotesPage() {
       }
     } catch (err: any) {
       toast.error(err.message || t('notesDeleteError'));
+    } finally {
+      setDeletingNoteId(null);
     }
   };
 
@@ -160,8 +168,8 @@ export default function NotesPage() {
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold text-foreground uppercase tracking-wider">{t('notesListTitle')}</span>
-            <Button size="icon-sm" variant="outline-brand" onClick={handleCreateNote}>
-              <Plus className="h-4 w-4" />
+            <Button size="icon-sm" variant="outline-brand" onClick={handleCreateNote} disabled={creating}>
+              {creating ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
             </Button>
           </div>
           <div className="relative">
@@ -208,9 +216,16 @@ export default function NotesPage() {
                     e.stopPropagation();
                     handleDeleteNote(note.id);
                   }}
-                  className="opacity-0 group-hover:opacity-100 p-0.5 hover:bg-destructive/10 hover:text-destructive rounded transition-all text-muted-foreground"
+                  disabled={deletingNoteId === note.id}
+                  className={`p-0.5 hover:bg-destructive/10 hover:text-destructive rounded transition-all text-muted-foreground ${
+                    deletingNoteId === note.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
+                  }`}
                 >
-                  <Trash2 className="h-3.5 w-3.5" />
+                  {deletingNoteId === note.id ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Trash2 className="h-3.5 w-3.5" />
+                  )}
                 </button>
               </div>
             ))

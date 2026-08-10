@@ -1,7 +1,7 @@
 import Mention from '@tiptap/extension-mention';
 import { ReactRenderer } from '@tiptap/react';
 import tippy, { type Instance as TippyInstance } from 'tippy.js';
-import { MentionList, type MentionItem, type MentionListRef } from './MentionList';
+import { MentionList, type MentionItem, type MentionListRef, type MentionListProps } from './MentionList';
 
 /**
  * Builds a configured Mention extension instance. `usersRef` is read live on
@@ -19,7 +19,7 @@ export function createMentionExtension(usersRef: { current: MentionItem[] }, noR
           .filter((u) => u.label.toLowerCase().includes(query.toLowerCase()))
           .slice(0, 8),
       render: () => {
-        let component: ReactRenderer<MentionListRef, typeof MentionList>;
+        let component: ReactRenderer<MentionListRef, MentionListProps>;
         let popup: TippyInstance[];
 
         return {

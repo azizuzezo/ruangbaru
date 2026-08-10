@@ -30,6 +30,9 @@ export default function ProjectsPage() {
   const [color, setColor] = useState('#106CD8');
   const [creating, setCreating] = useState(false);
 
+  // id of the project currently being archived/restored or deleted.
+  const [busyProjectId, setBusyProjectId] = useState<string | null>(null);
+
   const COLOR_OPTIONS = ['#106CD8','#10B29F','#FDB31A','#EF4444','#8B5CF6','#F97316'];
 
 
@@ -96,6 +99,7 @@ export default function ProjectsPage() {
   // Archive / unarchive project handler
   const handleArchiveProject = async (id: string, currentStatus: string) => {
     const next = currentStatus === 'archived' ? 'active' : 'archived';
+    setBusyProjectId(id);
     try {
       const { error } = await supabase.from('projects').update({ status: next }).eq('id', id);
       if (error) throw error;
@@ -103,11 +107,14 @@ export default function ProjectsPage() {
       toast.success(next === 'archived' ? t('archiveSuccessToast') : t('restoreSuccessToast'));
     } catch (err: any) {
       toast.error(err.message || t('updateErrorToast'));
+    } finally {
+      setBusyProjectId(null);
     }
   };
 
   // Delete project handler
   const handleDeleteProject = async (id: string) => {
+    setBusyProjectId(id);
     try {
       const { error } = await supabase
         .from('projects')
@@ -119,6 +126,8 @@ export default function ProjectsPage() {
       setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (err: any) {
       toast.error(err.message || t('deleteErrorToast'));
+    } finally {
+      setBusyProjectId(null);
     }
   };
 
@@ -271,8 +280,15 @@ export default function ProjectsPage() {
 
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <button className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded transition-opacity text-muted-foreground hover:text-foreground">
-                        <MoreVertical className="h-4 w-4" />
+                      <button
+                        disabled={busyProjectId === project.id}
+                        className="opacity-0 group-hover:opacity-100 p-1 hover:bg-accent rounded transition-opacity text-muted-foreground hover:text-foreground disabled:opacity-100"
+                      >
+                        {busyProjectId === project.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <MoreVertical className="h-4 w-4" />
+                        )}
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-40">

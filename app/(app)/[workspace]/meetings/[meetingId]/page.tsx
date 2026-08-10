@@ -39,6 +39,7 @@ export default function MeetingRoomPage() {
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [token, setToken] = useState('');
   const [serverUrl, setServerUrl] = useState('');
+  const [ending, setEnding] = useState(false);
   const joinedRef = useRef(false);
 
   const backHref = `/${params.workspace}/meetings`;
@@ -95,6 +96,7 @@ export default function MeetingRoomPage() {
 
   const handleEnd = async () => {
     if (!meeting) return;
+    setEnding(true);
     try {
       const res = await fetch('/api/meetings/end', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -164,7 +166,7 @@ export default function MeetingRoomPage() {
 
   // ── Live room ─────────────────────────────────────────────────────────────
   return (
-    <RoomShell title={meeting?.title} backHref={backHref} onLeave={handleLeave} onCopy={copyLink} onEnd={isHost ? handleEnd : undefined}>
+    <RoomShell title={meeting?.title} backHref={backHref} onLeave={handleLeave} onCopy={copyLink} onEnd={isHost ? handleEnd : undefined} ending={ending}>
       <div
         className="h-full w-full overflow-hidden"
         style={{ '--lk-accent-bg': '#106CD8', '--lk-accent-fg': '#ffffff' } as React.CSSProperties}
@@ -496,7 +498,7 @@ function VideoTile({ track, isPinned, onPinToggle }: { track: any; isPinned: boo
   );
 }
 
-function RoomShell({ title, backHref, onLeave, onCopy, onEnd, children }: { title?: string; backHref: string; onLeave?: () => void; onCopy?: () => void; onEnd?: () => void; children: React.ReactNode }) {
+function RoomShell({ title, backHref, onLeave, onCopy, onEnd, ending, children }: { title?: string; backHref: string; onLeave?: () => void; onCopy?: () => void; onEnd?: () => void; ending?: boolean; children: React.ReactNode }) {
   const t = useT('meetings');
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-neutral-950">
@@ -518,11 +520,11 @@ function RoomShell({ title, backHref, onLeave, onCopy, onEnd, children }: { titl
             </Button>
           )}
           {onLeave && (
-            <Button size="sm" variant={onEnd ? 'outline' : 'destructive'} onClick={onLeave} className="gap-1.5">{t('meetingRoomLeaveButton')}</Button>
+            <Button size="sm" variant={onEnd ? 'outline' : 'destructive'} onClick={onLeave} disabled={ending} className="gap-1.5">{t('meetingRoomLeaveButton')}</Button>
           )}
           {onEnd && (
-            <Button size="sm" variant="destructive" onClick={onEnd} className="gap-1.5">
-              <PhoneOff className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t('meetingRoomEndButton')}</span>
+            <Button size="sm" variant="destructive" onClick={onEnd} disabled={ending} className="gap-1.5">
+              {ending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <PhoneOff className="h-3.5 w-3.5" />} <span className="hidden sm:inline">{t('meetingRoomEndButton')}</span>
             </Button>
           )}
         </div>

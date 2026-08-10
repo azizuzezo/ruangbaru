@@ -16,8 +16,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { cn, getInitials } from '@/lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
-import type { CalendarEvent, EventRecurrence, Workspace, Profile, Task, Project, TaskStatus, TaskPriority } from '@/types';
+import type { CalendarEvent, EventRecurrence, Workspace, Profile, Task, Project, TaskPriority } from '@/types';
 import { useT } from '@/lib/i18n/useT';
+import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 
 export type DialogMember = {
   user_id: string;
@@ -88,7 +89,9 @@ export function EventDialog({
   // --- Task form states ---
   const [taskTitle, setTaskTitle] = useState('');
   const [projectId, setProjectId] = useState('');
-  const [taskStatus, setTaskStatus] = useState<TaskStatus>('backlog');
+  // No status field here — every new task starts in this workspace's first
+  // column (Backlog by default) automatically, matching the main Tasks page.
+  const { defaultKey: taskDefaultStatus } = useTaskStatuses(workspace?.id);
   const [taskPriority, setTaskPriority] = useState<TaskPriority>('no_priority');
   const [taskDueDate, setTaskDueDate] = useState('');
   const [taskDescription, setTaskDescription] = useState('');
@@ -152,12 +155,14 @@ export function EventDialog({
 
       // Task defaults
       setTaskTitle('');
-      setTaskStatus('todo');
       setTaskPriority('no_priority');
       setTaskDueDate(initialDate ? format(new Date(initialDate), 'yyyy-MM-dd') : '');
       setTaskDescription('');
-      setTaskAssigneeId('');
+      // Admin-configured default assignee (Settings > Workspace) — still
+      // changeable per task, just not blank by default.
+      setTaskAssigneeId(workspace?.default_assignee_id || '');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, event, initialDate]);
 
   const toggleInvite = (id: string) => setInvitees((p) => (p.includes(id) ? p.filter((x) => x !== id) : [...p, id]));
@@ -263,7 +268,7 @@ export function EventDialog({
           workspace_id: workspace.id,
           project_id: projectId,
           title: taskTitle.trim(),
-          status: taskStatus,
+          status: taskDefaultStatus,
           priority: taskPriority,
           due_date: taskDueDate || null,
           assignee_id: taskAssigneeId || null,
@@ -614,36 +619,19 @@ export function EventDialog({
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-neutral-700">{t('statusLabel')}</Label>
-                        <select
-                          value={taskStatus}
-                          onChange={(e) => setTaskStatus(e.target.value as TaskStatus)}
-                          className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 outline-none focus:border-neutral-400"
-                        >
-                          <option value="backlog">{t('statusBacklog')}</option>
-                          <option value="todo">{t('statusTodo')}</option>
-                          <option value="in_progress">{t('statusInProgress')}</option>
-                          <option value="in_review">{t('statusInReview')}</option>
-                          <option value="done">{t('statusDone')}</option>
-                        </select>
-                      </div>
-
-                      <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-neutral-700">{t('priorityLabel')}</Label>
-                        <select
-                          value={taskPriority}
-                          onChange={(e) => setTaskPriority(e.target.value as TaskPriority)}
-                          className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 outline-none focus:border-neutral-400"
-                        >
-                          <option value="no_priority">{t('priorityNone')}</option>
-                          <option value="low">{t('priorityLow')}</option>
-                          <option value="medium">{t('priorityMedium')}</option>
-                          <option value="high">{t('priorityHigh')}</option>
-                          <option value="urgent">{t('priorityUrgent')}</option>
-                        </select>
-                      </div>
+                    <div className="space-y-1.5">
+                      <Label className="text-xs font-semibold text-neutral-700">{t('priorityLabel')}</Label>
+                      <select
+                        value={taskPriority}
+                        onChange={(e) => setTaskPriority(e.target.value as TaskPriority)}
+                        className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 outline-none focus:border-neutral-400"
+                      >
+                        <option value="no_priority">{t('priorityNone')}</option>
+                        <option value="low">{t('priorityLow')}</option>
+                        <option value="medium">{t('priorityMedium')}</option>
+                        <option value="high">{t('priorityHigh')}</option>
+                        <option value="urgent">{t('priorityUrgent')}</option>
+                      </select>
                     </div>
 
                     {/* Assignee */}

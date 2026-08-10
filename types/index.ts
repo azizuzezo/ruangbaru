@@ -20,7 +20,8 @@ export type NotificationType =
   | 'task_overdue'
   | 'project_invite'
   | 'workspace_invite'
-  | 'mention';
+  | 'mention'
+  | 'task_collaborator';
 
 // =============================================================================
 // Database row types (match Supabase schema)
@@ -44,6 +45,7 @@ export interface Workspace {
   logo_url: string | null;
   plan: WorkspacePlan;
   owner_id: string;
+  default_assignee_id: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -86,6 +88,15 @@ export interface Project {
   member_count?: number;
   task_count?: number;
   completed_task_count?: number;
+}
+
+export interface ProjectMember {
+  id: string;
+  project_id: string;
+  user_id: string;
+  role: ProjectRole;
+  joined_at: string;
+  profile?: Profile;
 }
 
 export interface Task {
@@ -169,6 +180,15 @@ export interface TaskAttachment {
   mime_type: string | null;
   created_at: string;
   uploader?: Profile;
+}
+
+export interface TaskCollaborator {
+  id: string;
+  task_id: string;
+  user_id: string;
+  added_by: string | null;
+  created_at: string;
+  profile?: Profile;
 }
 
 export interface Note {
@@ -310,4 +330,16 @@ export interface PaginatedResponse<T> {
   count: number;
   page: number;
   pageSize: number;
+}
+
+export interface ApiKey {
+  id: string;
+  workspace_id: string;
+  name: string;
+  key_hash: string;
+  key_prefix: string;
+  created_by: string | null;
+  last_used_at: string | null;
+  revoked_at: string | null;
+  created_at: string;
 }

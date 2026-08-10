@@ -17,6 +17,7 @@ import {
 import type { Workspace, Profile, Project } from '@/types';
 import { useT } from '@/lib/i18n/useT';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 
 const STEP_KEYS = ['stepWorkspace', 'stepInviteTeam', 'stepProject', 'stepTask', 'stepDone'] as const;
 
@@ -48,6 +49,9 @@ export default function WelcomeWizard() {
   const [projName, setProjName] = useState('');
   const [project, setProject] = useState<Project | null>(null);
   const [taskTitle, setTaskTitle] = useState('');
+  // The wizard's demo task starts in this new workspace's first column
+  // (Backlog, seeded automatically for every new workspace) — no picker.
+  const { defaultKey: taskDefaultStatus } = useTaskStatuses(workspace?.id);
 
   useEffect(() => {
     (async () => {
@@ -150,7 +154,7 @@ export default function WelcomeWizard() {
     try {
       if (taskTitle.trim()) {
         const { error } = await supabase.from('tasks').insert({
-          workspace_id: workspace.id, project_id: project.id, title: taskTitle, status: 'todo', priority: 'medium', created_by: profile.id,
+          workspace_id: workspace.id, project_id: project.id, title: taskTitle, status: taskDefaultStatus, priority: 'medium', created_by: profile.id,
         });
         if (error) throw error;
       }

@@ -13,7 +13,7 @@ import {
 } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import {
-  ChevronLeft, ChevronRight, Plus, Video, CalendarDays, RefreshCw, X, Sparkles, Check,
+  ChevronLeft, ChevronRight, Plus, Video, CalendarDays, RefreshCw, X, Sparkles, Check, Loader2,
 } from 'lucide-react';
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useUIStore } from '@/lib/stores/ui-store';
@@ -121,6 +121,7 @@ export default function CalendarPage() {
   const [activeDrag, setActiveDrag] = useState<Occurrence | null>(null);
   const [googleConn, setGoogleConn] = useState<{ google_email: string | null } | null>(null);
   const [syncing, setSyncing] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   const wsSlug = currentWorkspace?.slug || 'dashboard';
@@ -201,9 +202,14 @@ export default function CalendarPage() {
 
   const disconnectGoogle = async () => {
     if (!currentWorkspace || !currentUser) return;
-    await supabase.from('google_calendar_connections').delete().eq('user_id', currentUser.id).eq('workspace_id', currentWorkspace.id);
-    setGoogleConn(null);
-    toast.success(t('googleDisconnectedToast'));
+    setDisconnecting(true);
+    try {
+      await supabase.from('google_calendar_connections').delete().eq('user_id', currentUser.id).eq('workspace_id', currentWorkspace.id);
+      setGoogleConn(null);
+      toast.success(t('googleDisconnectedToast'));
+    } finally {
+      setDisconnecting(false);
+    }
   };
 
   const handlePrevMonth = () => {
@@ -337,10 +343,11 @@ export default function CalendarPage() {
               </Button>
               <button
                 onClick={disconnectGoogle}
+                disabled={disconnecting}
                 aria-label={t('disconnectGoogleAriaLabel')}
-                className="rounded-lg p-1 text-emerald-700/60 hover:bg-emerald-500/10 hover:text-emerald-800"
+                className="rounded-lg p-1 text-emerald-700/60 hover:bg-emerald-500/10 hover:text-emerald-800 disabled:opacity-50"
               >
-                <X className="h-3.5 w-3.5" />
+                {disconnecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <X className="h-3.5 w-3.5" />}
               </button>
             </div>
           ) : (

@@ -3,22 +3,24 @@
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useUIStore } from '@/lib/stores/ui-store';
 import { useState, useEffect, use } from 'react';
-import { 
-  Folder, Calendar, CheckSquare, Layers, Users, 
+import {
+  Folder, Calendar, CheckSquare, Layers, Users,
   ArrowLeft, Plus, Loader2, Sparkles, Kanban, ListTodo,
-  CalendarDays, History, Play
+  CalendarDays, History, Play, X, UserPlus
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import type { Project, Task, Profile, TaskStatus } from '@/types';
+import type { Project, Task, Profile, TaskStatus, ProjectMember } from '@/types';
 import Link from 'next/link';
-import { cn } from '@/lib/utils';
+import { cn, getInitials } from '@/lib/utils';
 import { KanbanBoard } from '@/components/tasks/KanbanBoard';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 import { useT } from '@/lib/i18n/useT';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 interface ProjectDetailPageProps {
   params: Promise<{
@@ -30,14 +32,22 @@ interface ProjectDetailPageProps {
 export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   const t = useT('projects');
   const resolvedParams = use(params);
-  const { currentWorkspace } = useWorkspaceStore();
+  const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setTaskDetailOpen } = useUIStore();
   const { statuses, doneKeys } = useTaskStatuses(currentWorkspace?.id);
 
   const [project, setProject] = useState<Project | null>(null);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [members, setMembers] = useState<Profile[]>([]);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
+
+  // Project collaborators (project_members) — a subset of workspace members
+  // explicitly added to this project, distinct from the full workspace roster.
+  const [collaborators, setCollaborators] = useState<ProjectMember[]>([]);
+  const [addCollabOpen, setAddCollabOpen] = useState(false);
+  const [addingCollabId, setAddingCollabId] = useState<string | null>(null);
+  const [removingCollabId, setRemovingCollabId] = useState<string | null>(null);
 
   const supabase = createClient();
   const activeWsSlug = currentWorkspace?.slug || 'dashboard';
@@ -69,14 +79,24 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
 
         setTasks((tasksData as Task[]) || []);
 
-        // 3. Fetch project members (mock/default profiles for simplicity or load from workspace)
+        // 3. Fetch the full workspace roster — used both for isAdmin and as
+        // the pool of people who can be added as project collaborators.
         const { data: workspaceMembers } = await supabase
           .from('workspace_members')
-          .select('profiles(*)')
+          .select('user_id, role, profile:profiles(*)')
           .eq('workspace_id', workspaceId);
 
-        const profileData = workspaceMembers?.map((m: any) => m.profiles).filter(Boolean) as Profile[];
-        setMembers(profileData || []);
+        const wm = (workspaceMembers as any[]) || [];
+        setMembers(wm.map((m) => m.profile).filter(Boolean) as Profile[]);
+        const myRole = wm.find((m) => m.user_id === currentUser?.id)?.role;
+        setIsAdmin(myRole === 'admin' || myRole === 'owner');
+
+        // 4. Fetch this project's collaborators.
+        const { data: pm } = await supabase
+          .from('project_members')
+          .select('*, profile:profiles(*)')
+          .eq('project_id', resolvedParams.projectId);
+        setCollaborators((pm as ProjectMember[]) || []);
       } catch (err: any) {
         console.error('Error loading project details:', err);
         toast.error(t('detailLoadErrorToast'));
@@ -88,6 +108,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
     if (resolvedParams.projectId) {
       loadProjectDetails();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedParams.projectId, currentWorkspace]);
 
   // Persist a Kanban drag (optimistic state already applied inside the board).
@@ -103,6 +124,59 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
       .eq('id', taskId);
     if (error) toast.error(t('detailMoveErrorToast'));
   };
+
+  // Add a workspace member as a project collaborator + notify them.
+  const handleAddCollaborator = async (userId: string) => {
+    if (!project || !currentWorkspace || !currentUser) return;
+    setAddingCollabId(userId);
+    try {
+      const { data, error } = await supabase
+        .from('project_members')
+        .insert({ project_id: project.id, user_id: userId, role: 'member' })
+        .select('*, profile:profiles(*)')
+        .single();
+      if (error) throw error;
+
+      setCollaborators((prev) => [...prev, data as ProjectMember]);
+
+      if (userId !== currentUser.id) {
+        await supabase.from('notifications').insert({
+          user_id: userId,
+          type: 'project_invite',
+          title: t('collaboratorNotificationTitle'),
+          body: t('collaboratorNotificationBody')
+            .replace('{name}', currentUser.full_name || currentUser.email)
+            .replace('{project}', project.name),
+          link: `/${currentWorkspace.slug}/projects/${project.id}`,
+          actor_id: currentUser.id,
+          workspace_id: currentWorkspace.id,
+        });
+      }
+
+      toast.success(t('collaboratorAddedToast'));
+    } catch (err: any) {
+      toast.error(err.message || t('collaboratorAddErrorToast'));
+    } finally {
+      setAddingCollabId(null);
+    }
+  };
+
+  // Remove a project collaborator.
+  const handleRemoveCollaborator = async (member: ProjectMember) => {
+    setRemovingCollabId(member.id);
+    try {
+      const { error } = await supabase.from('project_members').delete().eq('id', member.id);
+      if (error) throw error;
+      setCollaborators((prev) => prev.filter((c) => c.id !== member.id));
+      toast.success(t('collaboratorRemovedToast'));
+    } catch (err: any) {
+      toast.error(err.message || t('collaboratorRemoveErrorToast'));
+    } finally {
+      setRemovingCollabId(null);
+    }
+  };
+
+  const addableMembers = members.filter((m) => !collaborators.some((c) => c.user_id === m.id));
 
   if (loading) {
     return (
@@ -160,6 +234,50 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
             </Button>
           </Link>
         </div>
+      </div>
+
+      {/* Collaborators */}
+      <div className="flex items-center gap-2">
+        <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5">
+          <Users className="h-3.5 w-3.5" /> {t('collaboratorsLabel')}
+        </span>
+        <div className="flex items-center -space-x-2">
+          {collaborators.map((c) => (
+            <div key={c.id} className="group relative">
+              {removingCollabId === c.id ? (
+                <div className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-background bg-muted">
+                  <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <Avatar className="h-7 w-7 border-2 border-background">
+                  <AvatarImage src={c.profile?.avatar_url || ''} />
+                  <AvatarFallback className="text-[9px]">{getInitials(c.profile?.full_name)}</AvatarFallback>
+                </Avatar>
+              )}
+              {isAdmin && removingCollabId !== c.id && (
+                <button
+                  onClick={() => handleRemoveCollaborator(c)}
+                  title={t('collaboratorRemoveTooltip')}
+                  className="absolute -right-1 -top-1 hidden h-4 w-4 items-center justify-center rounded-full bg-destructive text-white group-hover:flex"
+                >
+                  <X className="h-2.5 w-2.5" />
+                </button>
+              )}
+            </div>
+          ))}
+        </div>
+        {collaborators.length === 0 && (
+          <span className="text-[11px] text-muted-foreground/70">{t('collaboratorsEmptyState')}</span>
+        )}
+        {isAdmin && (
+          <button
+            onClick={() => setAddCollabOpen(true)}
+            title={t('collaboratorAddButton')}
+            className="flex h-7 w-7 items-center justify-center rounded-full border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:text-primary"
+          >
+            <UserPlus className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -277,6 +395,47 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
           </Card>
         </TabsContent>
       </Tabs>
+
+      <Dialog open={addCollabOpen} onOpenChange={setAddCollabOpen}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <UserPlus className="h-5 w-5 text-primary" /> {t('collaboratorDialogTitle')}
+            </DialogTitle>
+            <DialogDescription>{t('collaboratorDialogDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-72 space-y-1 overflow-y-auto">
+            {addableMembers.length === 0 ? (
+              <p className="py-6 text-center text-xs text-muted-foreground">{t('collaboratorNoneToAdd')}</p>
+            ) : (
+              addableMembers.map((m) => (
+                <div key={m.id} className="flex items-center justify-between gap-3 rounded-lg p-2 hover:bg-muted/40">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={m.avatar_url || ''} />
+                      <AvatarFallback className="text-[9px]">{getInitials(m.full_name)}</AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0">
+                      <p className="truncate text-xs font-semibold text-foreground">{m.full_name || m.email}</p>
+                      <p className="truncate text-[10px] text-muted-foreground">{m.email}</p>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-7 shrink-0 gap-1 text-[11px]"
+                    disabled={addingCollabId === m.id}
+                    onClick={() => handleAddCollaborator(m.id)}
+                  >
+                    {addingCollabId === m.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Plus className="h-3 w-3" />}
+                    {t('collaboratorAddButton')}
+                  </Button>
+                </div>
+              ))
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

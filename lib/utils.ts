@@ -118,6 +118,19 @@ export function isOverdue(dueDate: string | null): boolean {
   return new Date(dueDate) < new Date() && !isToday(new Date(dueDate));
 }
 
+// Collect unique user ids tagged via @mention in a Tiptap JSON document.
+export function extractMentionIds(doc: Record<string, unknown> | null | undefined): string[] {
+  if (!doc) return [];
+  const ids = new Set<string>();
+  const walk = (node: any) => {
+    if (!node) return;
+    if (node.type === 'mention' && node.attrs?.id) ids.add(node.attrs.id);
+    if (Array.isArray(node.content)) node.content.forEach(walk);
+  };
+  walk(doc);
+  return Array.from(ids);
+}
+
 // Debounce
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,

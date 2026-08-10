@@ -14,6 +14,7 @@ import { meetingsDict } from './meetings';
 import { appLayoutDict } from './appLayout';
 import { landingDict } from './landing';
 import { tourDict } from './tour';
+import { apiDocsDict } from './apiDocs';
 
 type NamespaceDict = Record<string, string>;
 type LocaleDict = Record<string, NamespaceDict>;
@@ -42,6 +43,7 @@ export const dictionaries: Record<'id' | 'en', LocaleDict> = {
     appLayout: appLayoutDict.id,
     landing: landingDict.id,
     tour: tourDict.id,
+    apiDocs: apiDocsDict.id,
   },
   en: {
     common: commonDict.en,
@@ -60,5 +62,6 @@ export const dictionaries: Record<'id' | 'en', LocaleDict> = {
     appLayout: appLayoutDict.en,
     landing: landingDict.en,
     tour: tourDict.en,
+    apiDocs: apiDocsDict.en,
   },
 };

@@ -8,7 +8,7 @@ export interface MentionItem {
   label: string;
 }
 
-interface MentionListProps {
+export interface MentionListProps {
   items: MentionItem[];
   command: (item: MentionItem) => void;
   noResultsText: string;

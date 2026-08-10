@@ -46,6 +46,16 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
+  // API routes authenticate themselves (session cookie for same-origin
+  // fetches, or an API key for /api/v1/*) — never redirect them to /login.
+  // Without this, e.g. `/api/v1/tasks` gets caught by the `.includes('/tasks')`
+  // check below and 307-redirects instead of returning a JSON response,
+  // which breaks every external API client (and CORS preflight OPTIONS
+  // requests specifically, since a redirect has no CORS headers at all).
+  if (pathname.startsWith('/api/')) {
+    return supabaseResponse;
+  }
+
   // Redirect unauthenticated users away from protected routes
   const protectedRoutes = ['/dashboard', '/welcome', '/projects', '/tasks', '/calendar', '/notes', '/team', '/settings', '/billing'];
   const isProtectedRoute = protectedRoutes.some((route) => pathname.includes(route));

@@ -24,12 +24,21 @@ export default function TeamPage() {
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([]);
   const [loading, setLoading] = useState(true);
+  // Derived from the already-fetched roster — no extra round trip. Mirrors
+  // is_workspace_admin() server-side: 'owner' and 'admin' both qualify.
+  const myRole = members.find((m) => m.user_id === currentUser?.id)?.role;
+  const isAdmin = myRole === 'admin' || myRole === 'owner';
 
   // Invite form state
   const [inviteOpen, setInviteOpen] = useState(false);
   const [email, setEmail] = useState('');
   const [role, setRole] = useState<'admin' | 'member' | 'viewer'>('member');
   const [inviting, setInviting] = useState(false);
+
+  // Per-row busy states — id of the member/invite currently being acted on.
+  const [roleChangingId, setRoleChangingId] = useState<string | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
+  const [cancelingId, setCancelingId] = useState<string | null>(null);
 
   const supabase = createClient();
 
@@ -69,7 +78,7 @@ export default function TeamPage() {
   // Invite member handler
   const handleInvite = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email.trim() || !currentWorkspace || !currentUser) return;
+    if (!isAdmin || !email.trim() || !currentWorkspace || !currentUser) return;
     setInviting(true);
 
     try {
@@ -123,10 +132,12 @@ export default function TeamPage() {
 
   // Change member role handler
   const handleChangeRole = async (memberId: string, userId: string, newRole: 'admin' | 'member' | 'viewer') => {
+    if (!isAdmin) return;
     if (userId === currentUser?.id) {
       toast.error(t('teamChangeRoleSelfError'));
       return;
     }
+    setRoleChangingId(memberId);
     try {
       const { error } = await supabase
         .from('workspace_members')
@@ -137,16 +148,20 @@ export default function TeamPage() {
       setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, role: newRole } : m));
     } catch (err: any) {
       toast.error(err.message || t('teamRoleUpdateError'));
+    } finally {
+      setRoleChangingId(null);
     }
   };
 
   // Remove member handler
   const handleRemoveMember = async (memberId: string, userId: string) => {
+    if (!isAdmin) return;
     if (userId === currentUser?.id) {
       toast.error(t('teamRemoveSelfError'));
       return;
     }
 
+    setRemovingId(memberId);
     try {
       const { error } = await supabase
         .from('workspace_members')
@@ -159,6 +174,8 @@ export default function TeamPage() {
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
     } catch (err: any) {
       toast.error(err.message || t('teamRemoveMemberError'));
+    } finally {
+      setRemovingId(null);
     }
   };
 
@@ -178,6 +195,8 @@ export default function TeamPage() {
 
   // Cancel invitation handler
   const handleCancelInvite = async (inviteId: string) => {
+    if (!isAdmin) return;
+    setCancelingId(inviteId);
     try {
       const { error } = await supabase
         .from('workspace_invitations')
@@ -190,6 +209,8 @@ export default function TeamPage() {
       setInvitations((prev) => prev.filter((i) => i.id !== inviteId));
     } catch (err: any) {
       toast.error(err.message || t('teamInviteCancelError'));
+    } finally {
+      setCancelingId(null);
     }
   };
 
@@ -208,6 +229,7 @@ export default function TeamPage() {
           </p>
         </div>
 
+        {isAdmin && (
         <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
           <DialogTrigger asChild>
             <Button variant="gradient" size="sm" className="gap-1">
@@ -266,6 +288,7 @@ export default function TeamPage() {
             </form>
           </DialogContent>
         </Dialog>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -297,28 +320,36 @@ export default function TeamPage() {
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      {m.user_id === currentUser?.id ? (
+                      {/* Only an admin/owner can reassign roles or remove someone
+                          — and never the owner's own row (that's a transfer,
+                          handled separately in Settings, not a role edit). */}
+                      {!isAdmin || m.user_id === currentUser?.id || m.role === 'owner' ? (
                         <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded font-bold capitalize flex items-center gap-1">
                           <Award className="h-3 w-3" /> {m.role}
                         </span>
                       ) : (
-                        <select
-                          value={m.role}
-                          onChange={(e) => handleChangeRole(m.id, m.user_id, e.target.value as 'admin' | 'member' | 'viewer')}
-                          className="text-[10px] bg-primary/5 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-bold capitalize focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
-                        >
-                          <option value="admin">Admin</option>
-                          <option value="member">Member</option>
-                          <option value="viewer">Viewer</option>
-                        </select>
+                        <div className="flex items-center gap-1.5">
+                          <select
+                            value={m.role}
+                            onChange={(e) => handleChangeRole(m.id, m.user_id, e.target.value as 'admin' | 'member' | 'viewer')}
+                            disabled={roleChangingId === m.id}
+                            className="text-[10px] bg-primary/5 text-primary border border-primary/20 px-1.5 py-0.5 rounded font-bold capitalize focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer disabled:opacity-50"
+                          >
+                            <option value="admin">Admin</option>
+                            <option value="member">Member</option>
+                            <option value="viewer">Viewer</option>
+                          </select>
+                          {roleChangingId === m.id && <Loader2 className="h-3 w-3 animate-spin text-muted-foreground" />}
+                        </div>
                       )}
-                      {m.user_id !== currentUser?.id && (
+                      {isAdmin && m.user_id !== currentUser?.id && m.role !== 'owner' && (
                         <button
                           onClick={() => handleRemoveMember(m.id, m.user_id)}
-                          className="p-1.5 hover:bg-destructive/10 hover:text-destructive rounded transition-colors text-muted-foreground"
+                          disabled={removingId === m.id}
+                          className="p-1.5 hover:bg-destructive/10 hover:text-destructive rounded transition-colors text-muted-foreground disabled:opacity-50"
                           title={t('teamRemoveMemberTooltip')}
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          {removingId === m.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
                         </button>
                       )}
                     </div>
@@ -362,13 +393,16 @@ export default function TeamPage() {
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
-                      <button
-                        onClick={() => handleCancelInvite(i.id)}
-                        className="p-1 hover:bg-destructive/10 hover:text-destructive rounded text-muted-foreground transition-colors"
-                        title={t('teamCancelInviteTooltip')}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
+                      {isAdmin && (
+                        <button
+                          onClick={() => handleCancelInvite(i.id)}
+                          disabled={cancelingId === i.id}
+                          className="p-1 hover:bg-destructive/10 hover:text-destructive rounded text-muted-foreground transition-colors disabled:opacity-50"
+                          title={t('teamCancelInviteTooltip')}
+                        >
+                          {cancelingId === i.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                        </button>
+                      )}
                     </div>
                   </div>
                 ))

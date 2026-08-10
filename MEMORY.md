@@ -5,7 +5,7 @@
 > without losing history. **Read this first.** Update it whenever you make a
 > meaningful change.
 
-Last updated: 2026-08-10 (session 16 — full bilingual ID/EN support via header toggle, no URL routing, covers marketing + auth + entire authenticated app; session 15 — merged main back to the SaaS app and deployed to Vercel production; session 14 — custom Kanban columns + custom fields; session 13 — app redesign; session 12 — mock-client hang fix; session 11 — login/register redesign; session 10 — Go backend port; session 9 — landing site redesign. See ENGINEERING.md for the task-by-task log)
+Last updated: 2026-08-10 (session 21 — per-workspace API keys + public REST API + docs page, fixed a middleware bug redirecting /api/v1/* to /login; session 20 — loading-state audit across 13 async actions with zero click feedback; session 19 — admin-configurable default assignee; session 18 — task-level collaborators; session 17 — auto-backlog tasks, @mentions, task attachments, Team/Settings permission lockdown, workspace slug editing + ownership transfer, project collaborators, drag-and-drop cursor-offset fix; session 16 — full bilingual ID/EN support via header toggle, no URL routing, covers marketing + auth + entire authenticated app; session 15 — merged main back to the SaaS app and deployed to Vercel production; session 14 — custom Kanban columns + custom fields; session 13 — app redesign; session 12 — mock-client hang fix; session 11 — login/register redesign; session 10 — Go backend port; session 9 — landing site redesign. See ENGINEERING.md for the task-by-task log)
 
 ---
 
@@ -406,10 +406,19 @@ Full log in [ENGINEERING.md](ENGINEERING.md). Summary:
   set on Vercel — those features will show their "not configured"
   fallback behavior in production until real keys are added via
   `vercel env add <NAME> production`.
-- **The 3 pending migrations from sessions 13-14 still haven't been run**
+- **8 pending migrations (sessions 13-14, 17-19, 21) still haven't been run**
   against the live Supabase project — this deploy doesn't change that.
-  Kanban/custom fields, the activity feed, and "leave workspace" won't
-  work in production until they are.
+  Kanban/custom fields, the activity feed, "leave workspace", notification
+  inserts (assignment + @mention + collaborator), ownership transfer, task
+  collaborators, the default-assignee setting, and API keys won't work in
+  production until they are: `20260809_activity_log_triggers.sql`,
+  `20260809_leave_workspace_rls.sql`,
+  `20260810_kanban_columns_and_custom_fields.sql`,
+  `20260810_notifications_insert_rls.sql`,
+  `20260810_workspace_ownership_transfer.sql`,
+  `20260810_task_collaborators.sql`,
+  `20260810_workspace_default_assignee.sql`,
+  `20260811_api_keys.sql`.
 - **Correction, same session:** the deploy above was to the *wrong* Vercel
   account (a brand-new project auto-created under a different account
   than the real one) — the actual project lives under account
@@ -428,6 +437,104 @@ Full log in [ENGINEERING.md](ENGINEERING.md). Summary:
   `old-saas-4b3b764` both pushed to `github.com/azizuzezo/ruangbaru` (a
   `github` remote was added locally alongside the pre-existing `origin`,
   which still points at a local sibling checkout, not GitHub).
+
+### Done in session 16 (2026-08-10) — Full bilingual (ID/EN) support
+Header toggle (`components/i18n/LanguageSwitcher.tsx`), no `/en` URL
+routing — `lib/i18n/locale-context.tsx` (`LocaleProvider`/`useLocale`,
+localStorage-persisted) wired once in `app/providers.tsx`, so it covers
+marketing + auth + the entire authenticated app uniformly. `useT(namespace)`
+looks up flat-keyed dictionaries in `lib/i18n/dict/<namespace>.ts` (16
+namespaces), merged by `lib/i18n/dict/index.ts`. Built via 12 parallel
+agents, one per cohesive file group, each owning its own dict file — zero
+shared-file contention. Full detail in ENGINEERING.md's 2026-08-10 i18n
+entry. `tsc`/`build` clean; live-toggle-tested with Playwright.
+
+### Done in session 17 (2026-08-10) — Backlog default, @mentions, attachments, permission lockdown, ownership transfer, project collaborators, drag-and-drop fix
+Six asks, one session — full detail in ENGINEERING.md's matching entry:
+1. Every task-creation entry point (main dialog, calendar quick-add,
+   onboarding wizard) now silently defaults to the workspace's first Kanban
+   column instead of showing a status picker.
+2. `@mention` tagging in task description + comments
+   (`@tiptap/extension-mention` + `tippy.js`, `components/editor/`), with
+   mention notifications on save/comment.
+3. Task attachments: upload/list/download(signed URL)/delete UI in
+   `TaskDetailSheet.tsx` — the table + storage RLS existed since session 1
+   but had zero UI until now.
+4. **Real bug found & fixed:** `notifications` had RLS enabled but **no
+   INSERT policy ever existed** — every notify-the-other-person flow
+   (task assignment, now mentions) was silently failing. Fixed via
+   `20260810_notifications_insert_rls.sql`.
+5. Team/Settings pages let non-admins see (and click, then get a confusing
+   RLS error from) invite/role-change/remove-member/edit-workspace controls
+   they never had permission to use — RLS was already correct, the UI just
+   didn't hide anything. Gated all of it behind a roster-derived `isAdmin`.
+6. Workspace slug is now admin-editable (redirects on rename, since the
+   slug IS the `[workspace]` URL segment) and there's a new owner-only
+   "Transfer Ownership" flow — `20260810_workspace_ownership_transfer.sql`
+   adds a trigger closing a real gap (any admin could previously reassign
+   `owner_id` directly, bypassing the UI) plus a `transfer_workspace_ownership`
+   RPC for the atomic three-write handoff.
+7. Project collaborators (`project_members`) — table existed since session
+   1, zero UI until now. Added avatar-stack + add/remove UI on the project
+   detail page, admin-gated, with a `project_invite` notification on add.
+8. **Drag-and-drop cursor offset bug** ("~5cm gap"): root cause was
+   `PageTransition.tsx` animating `y`/`filter`, which Framer Motion leaves
+   as a permanent inline `transform`/`filter` at rest — a transformed or
+   filtered ancestor creates a new containing block for `position: fixed`,
+   which is exactly what dnd-kit's `DragOverlay` is. Fixed by reducing the
+   transition to opacity-only.
+
+**Not run against the live database:** `20260810_notifications_insert_rls.sql`
+and `20260810_workspace_ownership_transfer.sql` (same standing caveat as
+every migration below).
+
+### Done in session 18 (2026-08-10) — Task-level collaborators
+Same idea as project collaborators, one level down: any task can have
+extra people looped in beyond its single assignee, surfaced at the very
+top of `TaskDetailSheet.tsx` (avatar stack + "+" button, above title/
+status/priority — a deliberately low-friction spot). New table
+`task_collaborators` + new `notification_type` enum value
+`'task_collaborator'` (`20260810_task_collaborators.sql`). Unlike project
+collaborators (admin-only), **any workspace member can add one** — an
+everyday action, not a structural change. `tsc`/`build` clean.
+
+### Done in session 19 (2026-08-10) — Admin-configurable default assignee
+New `workspaces.default_assignee_id` column, settable by admins in
+Settings' Workspace card. Every create-task entry point (main dialog,
+calendar quick-add) now pre-fills its assignee field from it instead of
+starting blank — still changeable per task before submitting. `tsc`/`build`
+clean.
+
+### Done in session 20 (2026-08-10) — Loading-state audit
+User reported clicking something gave no loading feedback — too vague to
+act on directly, so an Explore agent swept every authenticated page/shared
+layout component for async handlers with **zero** loading indicator (not
+"looks off," genuinely nothing until the toast). Found and fixed 13 across
+8 files (Team, Projects list + detail, Notes, Calendar, Meetings list +
+room, TaskDetailSheet, Header) — each using whichever loading pattern
+(single boolean vs. per-row `xxxId` state) the file already used elsewhere,
+not a new shared abstraction. Full list in ENGINEERING.md. `tsc`/`build`
+clean.
+
+### Done in session 21 (2026-08-10) — Per-workspace API keys + public REST API + docs
+Any workspace admin can now generate an API key (Settings → "API Keys" —
+plaintext shown once, only a SHA-256 hash stored) to connect external
+tools to a new REST API under `/api/v1/`: `GET /workspace`, `GET/POST
+/projects`, `GET/POST /tasks`, `GET/PATCH/DELETE /tasks/:id`, all
+authenticated via `Authorization: Bearer <key>` and scoped to that key's
+workspace. New public standalone docs page at `/api-docs` (own header, not
+nested under the dashboard), bilingual, with per-endpoint curl/JSON
+examples. **Found and fixed a real bug while testing:** the session
+middleware's protected-route check used `pathname.includes(route)` against
+a list containing `/tasks`/`/projects` — so `/api/v1/tasks` and
+`/api/v1/projects` were being 307-redirected to `/login` for
+unauthenticated requests instead of returning JSON (and CORS preflight
+`OPTIONS` requests were getting a redirect with zero CORS headers, which
+would have broken every browser-based API client). Fixed by excluding all
+`/api/` paths from that check — API routes authenticate themselves, they
+should never redirect to a login page. Full detail in ENGINEERING.md.
+`tsc`/`build` clean; live-tested against the dev server (401s without a
+key, 204 + CORS headers on OPTIONS after the fix, docs page screenshotted).
 
 ### Known remaining gaps / TODO
 - **Resend domain** `ruangbaru.com` must be verified in Resend or emails fail (falls back to copy-link).

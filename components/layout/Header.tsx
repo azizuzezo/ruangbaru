@@ -7,7 +7,7 @@ import Link from 'next/link';
 import { cn, getInitials } from '@/lib/utils';
 import {
   Bell, Search, Sparkles, Layers,
-  ChevronRight, Calendar, Settings, FolderKanban, Users, LogOut, CreditCard
+  ChevronRight, Calendar, Settings, FolderKanban, Users, LogOut, CreditCard, Loader2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -38,6 +38,7 @@ export function Header() {
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [notifLoading, setNotifLoading] = useState(true);
+  const [markingAllRead, setMarkingAllRead] = useState(false);
 
   const supabase = createClient();
 
@@ -86,13 +87,18 @@ export function Header() {
   // Mark all as read handler
   const handleMarkAllRead = async () => {
     if (!currentUser) return;
-    await supabase
-      .from('notifications')
-      .update({ read: true })
-      .eq('user_id', currentUser.id);
-    
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
-    setUnreadCount(0);
+    setMarkingAllRead(true);
+    try {
+      await supabase
+        .from('notifications')
+        .update({ read: true })
+        .eq('user_id', currentUser.id);
+
+      setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+      setUnreadCount(0);
+    } finally {
+      setMarkingAllRead(false);
+    }
   };
 
   // Derive page breadcrumbs from path
@@ -179,8 +185,10 @@ export function Header() {
               {unreadCount > 0 && (
                 <button
                   onClick={handleMarkAllRead}
-                  className="text-[10px] font-semibold text-primary hover:underline"
+                  disabled={markingAllRead}
+                  className="flex items-center gap-1 text-[10px] font-semibold text-primary hover:underline disabled:opacity-50 disabled:no-underline"
                 >
+                  {markingAllRead && <Loader2 className="h-3 w-3 animate-spin" />}
                   {t('headerMarkAllRead')}
                 </button>
               )}

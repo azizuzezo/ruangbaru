@@ -6,13 +6,16 @@ import Placeholder from '@tiptap/extension-placeholder';
 import Image from '@tiptap/extension-image';
 import { TaskList } from '@tiptap/extension-task-list';
 import { TaskItem } from '@tiptap/extension-task-item';
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import {
   Bold, Italic, Underline as UnderlineIcon, Strikethrough, Code,
   Heading1, Heading2, Heading3, List, ListOrdered, ListChecks,
   Quote, Link2, Minus, Undo2, Redo2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { createMentionExtension } from './mentionExtension';
+import type { MentionItem } from './MentionList';
+import { useLocale } from '@/lib/i18n/locale-context';
 
 export interface RichTextValue {
   json: Record<string, unknown> | null;
@@ -29,6 +32,12 @@ interface RichTextEditorProps {
   onChange?: (value: RichTextValue) => void;
   /** Submit on Cmd/Ctrl+Enter — handy for comment composers. */
   onSubmit?: () => void;
+  /**
+   * Workspace members typing "@" can tag. Omit entirely to disable mentions
+   * (e.g. the Notes editor) — pass even an empty array while members are
+   * still loading to keep the feature enabled for that call site.
+   */
+  mentionUsers?: MentionItem[];
 }
 
 function ToolbarButton({
@@ -111,7 +120,16 @@ export function RichTextEditor({
   className,
   onChange,
   onSubmit,
+  mentionUsers,
 }: RichTextEditorProps) {
+  const { locale } = useLocale();
+
+  // Read live by the extension's `items()` on every keystroke, so a members
+  // list that finishes loading after the editor mounts still shows up —
+  // `extensions` below is only read once, at editor creation.
+  const mentionUsersRef = useRef<MentionItem[]>(mentionUsers ?? []);
+  mentionUsersRef.current = mentionUsers ?? [];
+
   const editor = useEditor({
     immediatelyRender: false, // required for Next.js SSR — avoids hydration mismatch
     editable,
@@ -129,6 +147,9 @@ export function RichTextEditor({
       Image,
       TaskList,
       TaskItem.configure({ nested: true }),
+      ...(mentionUsers
+        ? [createMentionExtension(mentionUsersRef, locale === 'id' ? 'Tidak ada anggota ditemukan' : 'No members found')]
+        : []),
     ],
     content: content ?? '',
     editorProps: {

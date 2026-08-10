@@ -5,7 +5,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   User, Layers, Save, Loader2, Camera, SlidersHorizontal, LayoutGrid, ListTodo,
-  Bell, Mail, ShieldAlert, LogOut, Trash2, Copy, Check,
+  Bell, Mail, ShieldAlert, LogOut, Trash2, Copy, Check, ArrowRightLeft, Pencil,
+  Code2, Plus, KeyRound, ExternalLink,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -14,12 +15,14 @@ import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
-import { cn, getInitials } from '@/lib/utils';
+import { cn, getInitials, slugify, formatRelativeTime } from '@/lib/utils';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 import { useCustomFields } from '@/lib/hooks/useCustomFields';
 import { KanbanColumnsSettings } from '@/components/settings/KanbanColumnsSettings';
 import { CustomFieldsSettings } from '@/components/settings/CustomFieldsSettings';
 import { useT } from '@/lib/i18n/useT';
+import type { WorkspaceMember, ApiKey } from '@/types';
+import { generateApiKey } from '@/lib/apiKeys';
 
 type Prefs = { default_view: 'kanban' | 'list'; email_notifications: boolean; push_notifications: boolean };
 const DEFAULT_PREFS: Prefs = { default_view: 'kanban', email_notifications: true, push_notifications: true };
@@ -33,11 +36,30 @@ export default function SettingsPage() {
   const { fields: customFields, reload: reloadFields } = useCustomFields(currentWorkspace?.id);
   const [isAdmin, setIsAdmin] = useState(false);
 
+  // Full roster — used for the admin/owner check below and for picking a
+  // transfer-ownership target further down.
+  const [members, setMembers] = useState<WorkspaceMember[]>([]);
+
   // Workspace Settings State
   const [wsName, setWsName] = useState('');
   const [wsDescription, setWsDescription] = useState('');
+  const [wsSlug, setWsSlug] = useState('');
+  const [wsDefaultAssigneeId, setWsDefaultAssigneeId] = useState('');
   const [savingWs, setSavingWs] = useState(false);
   const [slugCopied, setSlugCopied] = useState(false);
+
+  // Transfer ownership state
+  const [transferTargetId, setTransferTargetId] = useState('');
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferring, setTransferring] = useState(false);
+
+  // API keys state
+  const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
+  const [createKeyOpen, setCreateKeyOpen] = useState(false);
+  const [newKeyName, setNewKeyName] = useState('');
+  const [generatingKey, setGeneratingKey] = useState(false);
+  const [revealedKey, setRevealedKey] = useState<string | null>(null);
+  const [revokingKeyId, setRevokingKeyId] = useState<string | null>(null);
 
   // Profile Settings State
   const [profileName, setProfileName] = useState('');
@@ -98,6 +120,8 @@ export default function SettingsPage() {
     if (currentWorkspace) {
       setWsName(currentWorkspace.name);
       setWsDescription(currentWorkspace.description || '');
+      setWsSlug(currentWorkspace.slug);
+      setWsDefaultAssigneeId(currentWorkspace.default_assignee_id || '');
     }
     if (currentUser) {
       setProfileName(currentUser.full_name || '');
@@ -105,20 +129,36 @@ export default function SettingsPage() {
     }
   }, [currentWorkspace, currentUser]);
 
-  // Kanban columns / custom fields are admin-only — owner always qualifies,
-  // otherwise check this member's workspace role.
+  // Full roster — used below for the admin check and the ownership-transfer
+  // target picker. Kanban columns / custom fields, the workspace edit form,
+  // and team management are all admin-only — owner always qualifies,
+  // otherwise this member's workspace role decides.
   useEffect(() => {
-    if (isOwner) { setIsAdmin(true); return; }
-    if (!currentWorkspace || !currentUser) return;
+    if (!currentWorkspace) return;
     supabase
       .from('workspace_members')
-      .select('role')
+      .select('*, profile:profiles(*)')
       .eq('workspace_id', currentWorkspace.id)
-      .eq('user_id', currentUser.id)
-      .maybeSingle()
-      .then(({ data }: { data: { role: string } | null }) => setIsAdmin(data?.role === 'admin'));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentWorkspace, currentUser, isOwner]);
+      .then(({ data }: { data: WorkspaceMember[] | null }) => setMembers(data || []));
+  }, [currentWorkspace]);
+
+  useEffect(() => {
+    if (isOwner) { setIsAdmin(true); return; }
+    const myRole = members.find((m) => m.user_id === currentUser?.id)?.role;
+    setIsAdmin(myRole === 'admin' || myRole === 'owner');
+  }, [members, currentUser, isOwner]);
+
+  // API keys — RLS already scopes this to admins, but only fetch once we
+  // know we are one, so a member never even issues the (empty) request.
+  useEffect(() => {
+    if (!currentWorkspace || !isAdmin) return;
+    supabase
+      .from('api_keys')
+      .select('*')
+      .eq('workspace_id', currentWorkspace.id)
+      .order('created_at', { ascending: false })
+      .then(({ data }: { data: ApiKey[] | null }) => setApiKeys(data || []));
+  }, [currentWorkspace, isAdmin]);
 
   // Load saved preferences (falls back to the defaults above if the user
   // has never changed anything — no row exists yet in that case).
@@ -154,23 +194,119 @@ export default function SettingsPage() {
 
   const handleSaveWorkspace = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!wsName.trim() || !currentWorkspace) return;
+    if (!isAdmin || !wsName.trim() || !currentWorkspace) return;
+    const nextSlug = slugify(wsSlug.trim()) || currentWorkspace.slug;
     setSavingWs(true);
     try {
       const { data, error } = await supabase
         .from('workspaces')
-        .update({ name: wsName, description: wsDescription || null })
+        .update({
+          name: wsName,
+          description: wsDescription || null,
+          slug: nextSlug,
+          default_assignee_id: wsDefaultAssigneeId || null,
+        })
         .eq('id', currentWorkspace.id)
         .select()
         .single();
-      if (error) throw error;
+      if (error) {
+        if (error.code === '23505') throw new Error(t('workspaceSlugTaken'));
+        throw error;
+      }
       toast.success(t('workspaceSaveSuccess'));
       setCurrentWorkspace(data);
       setWorkspaces(workspaces.map((w) => (w.id === currentWorkspace.id ? data : w)));
+      setWsSlug(data.slug);
+      // The URL segment IS the slug — follow a rename so the page keeps working.
+      if (data.slug !== currentWorkspace.slug) {
+        router.replace(`/${data.slug}/settings`);
+      }
     } catch (err: any) {
       toast.error(err.message || t('workspaceSaveFailed'));
     } finally {
       setSavingWs(false);
+    }
+  };
+
+  const handleTransferOwnership = async () => {
+    if (!isOwner || !currentWorkspace || !transferTargetId) return;
+    setTransferring(true);
+    try {
+      const { error } = await supabase.rpc('transfer_workspace_ownership', {
+        ws_id: currentWorkspace.id,
+        new_owner_id: transferTargetId,
+      });
+      if (error) throw error;
+      const updated = { ...currentWorkspace, owner_id: transferTargetId };
+      setCurrentWorkspace(updated);
+      setWorkspaces(workspaces.map((w) => (w.id === currentWorkspace.id ? updated : w)));
+      toast.success(t('transferOwnershipSuccess'));
+      setTransferOpen(false);
+      setTransferTargetId('');
+    } catch (err: any) {
+      toast.error(err.message || t('transferOwnershipError'));
+    } finally {
+      setTransferring(false);
+    }
+  };
+
+  // Generate a new API key. The plaintext key only ever exists here in
+  // browser memory + the one-time reveal dialog — only its hash is stored.
+  const handleGenerateKey = async () => {
+    if (!currentWorkspace || !currentUser || !newKeyName.trim()) return;
+    setGeneratingKey(true);
+    try {
+      const { key, hash, prefix } = await generateApiKey();
+      const { data, error } = await supabase
+        .from('api_keys')
+        .insert({
+          workspace_id: currentWorkspace.id,
+          name: newKeyName.trim(),
+          key_hash: hash,
+          key_prefix: prefix,
+          created_by: currentUser.id,
+        })
+        .select()
+        .single();
+      if (error) throw error;
+
+      setApiKeys((prev) => [data as ApiKey, ...prev]);
+      setCreateKeyOpen(false);
+      setNewKeyName('');
+      setRevealedKey(key);
+    } catch (err: any) {
+      toast.error(err.message || t('apiKeyGenerateError'));
+    } finally {
+      setGeneratingKey(false);
+    }
+  };
+
+  const handleRevokeKey = async (id: string) => {
+    setRevokingKeyId(id);
+    try {
+      const { data, error } = await supabase
+        .from('api_keys')
+        .update({ revoked_at: new Date().toISOString() })
+        .eq('id', id)
+        .select()
+        .single();
+      if (error) throw error;
+      setApiKeys((prev) => prev.map((k) => (k.id === id ? (data as ApiKey) : k)));
+      toast.success(t('apiKeyRevokedToast'));
+    } catch (err: any) {
+      toast.error(err.message || t('apiKeyRevokeError'));
+    } finally {
+      setRevokingKeyId(null);
+    }
+  };
+
+  const copyRevealedKey = async () => {
+    if (!revealedKey) return;
+    try {
+      await navigator.clipboard.writeText(revealedKey);
+      toast.success(t('apiKeyCopiedToast'));
+    } catch {
+      // Clipboard permission denied — the key is still selectable/visible in the dialog.
     }
   };
 
@@ -252,6 +388,9 @@ export default function SettingsPage() {
             <CardDescription className="text-[11px]">{t('workspaceCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="p-6">
+            {!isAdmin && (
+              <p className="mb-4 text-[11px] text-muted-foreground">{t('workspaceReadOnlyNotice')}</p>
+            )}
             <form onSubmit={handleSaveWorkspace} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase">{t('workspaceNameLabel')}</label>
@@ -259,7 +398,7 @@ export default function SettingsPage() {
                   value={wsName}
                   onChange={(e) => setWsName(e.target.value)}
                   placeholder={t('workspaceNamePlaceholder')}
-                  disabled={savingWs}
+                  disabled={savingWs || !isAdmin}
                   required
                 />
               </div>
@@ -271,27 +410,66 @@ export default function SettingsPage() {
                   value={wsDescription}
                   onChange={(e) => setWsDescription(e.target.value)}
                   placeholder={t('workspaceDescriptionPlaceholder')}
-                  disabled={savingWs}
-                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none h-20"
+                  disabled={savingWs || !isAdmin}
+                  className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none h-20 disabled:opacity-70"
                 />
               </div>
               {currentWorkspace && (
                 <div className="space-y-1.5">
                   <label className="text-xs font-semibold text-muted-foreground uppercase">{t('workspaceLinkLabel')}</label>
-                  <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
-                    <span className="flex-1 truncate text-xs text-muted-foreground">
-                      {typeof window !== 'undefined' ? window.location.origin : ''}/{currentWorkspace.slug}
-                    </span>
-                    <button type="button" onClick={copySlug} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
-                      {slugCopied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
-                    </button>
-                  </div>
+                  {isAdmin ? (
+                    <>
+                      <div className="flex items-center gap-2 rounded-lg border border-input bg-background px-3 py-2">
+                        <span className="shrink-0 text-xs text-muted-foreground">
+                          {typeof window !== 'undefined' ? window.location.origin : ''}/
+                        </span>
+                        <input
+                          value={wsSlug}
+                          onChange={(e) => setWsSlug(slugify(e.target.value))}
+                          disabled={savingWs}
+                          className="flex-1 min-w-0 bg-transparent text-xs text-foreground outline-none"
+                        />
+                        <Pencil className="h-3 w-3 shrink-0 text-muted-foreground/60" />
+                      </div>
+                      <p className="text-[10px] text-muted-foreground">{t('workspaceLinkEditHint')}</p>
+                    </>
+                  ) : (
+                    <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                      <span className="flex-1 truncate text-xs text-muted-foreground">
+                        {typeof window !== 'undefined' ? window.location.origin : ''}/{currentWorkspace.slug}
+                      </span>
+                      <button type="button" onClick={copySlug} className="shrink-0 text-muted-foreground hover:text-foreground transition-colors">
+                        {slugCopied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
-              <Button type="submit" disabled={savingWs || !wsName.trim()} className="gap-1.5 h-9 text-xs">
-                {savingWs ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                <span>{t('saveChangesButton')}</span>
-              </Button>
+              {isAdmin && (
+                <div className="space-y-1.5">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">{t('defaultAssigneeLabel')}</label>
+                  <select
+                    value={wsDefaultAssigneeId}
+                    onChange={(e) => setWsDefaultAssigneeId(e.target.value)}
+                    disabled={savingWs}
+                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                  >
+                    <option value="">{t('defaultAssigneeNone')}</option>
+                    {members.map((m) => (
+                      <option key={m.user_id} value={m.user_id}>
+                        {m.profile?.full_name || m.profile?.email}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-muted-foreground">{t('defaultAssigneeHint')}</p>
+                </div>
+              )}
+              {isAdmin && (
+                <Button type="submit" disabled={savingWs || !wsName.trim()} className="gap-1.5 h-9 text-xs">
+                  {savingWs ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
+                  <span>{t('saveChangesButton')}</span>
+                </Button>
+              )}
             </form>
           </CardContent>
         </Card>
@@ -431,7 +609,96 @@ export default function SettingsPage() {
           </>
         )}
 
-        {/* 5. Danger zone */}
+        {/* 5. API keys — admin/owner only. Lets this workspace connect
+            external tools (Zapier-style automations, custom scripts) to
+            the REST API. */}
+        {currentWorkspace && isAdmin && (
+          <Card className="border border-border/80 bg-card/60 backdrop-blur-sm">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                <KeyRound className="h-4 w-4 text-primary" /> {t('apiKeysCardTitle')}
+              </CardTitle>
+              <CardDescription className="text-[11px]">{t('apiKeysCardDescription')}</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6 space-y-4">
+              <a
+                href="/api-docs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
+              >
+                <Code2 className="h-3.5 w-3.5" /> {t('apiKeysViewDocsLink')} <ExternalLink className="h-3 w-3" />
+              </a>
+
+              {apiKeys.length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t('apiKeysEmptyState')}</p>
+              ) : (
+                <div className="space-y-2">
+                  {apiKeys.map((k) => (
+                    <div key={k.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/40 px-3 py-2.5">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-xs font-semibold text-foreground">{k.name}</p>
+                          {k.revoked_at && (
+                            <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
+                              {t('apiKeyRevokedBadge')}
+                            </span>
+                          )}
+                        </div>
+                        <p className="mt-0.5 truncate font-mono text-[10px] text-muted-foreground">{k.key_prefix}••••••••</p>
+                        <p className="mt-0.5 text-[10px] text-muted-foreground">
+                          {k.last_used_at
+                            ? `${t('apiKeyLastUsedPrefix')} ${formatRelativeTime(k.last_used_at)}`
+                            : t('apiKeyNeverUsed')}
+                        </p>
+                      </div>
+                      {!k.revoked_at && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 shrink-0 gap-1 text-[11px] text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          disabled={revokingKeyId === k.id}
+                          onClick={() => handleRevokeKey(k.id)}
+                        >
+                          {revokingKeyId === k.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                          {t('apiKeyRevokeButton')}
+                        </Button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Button size="sm" variant="outline-brand" className="gap-1.5" onClick={() => setCreateKeyOpen(true)}>
+                <Plus className="h-3.5 w-3.5" /> {t('apiKeyGenerateButton')}
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 6. Transfer ownership — owner only. Kept separate from Danger Zone
+            since it isn't destructive, just a handoff. */}
+        {currentWorkspace && isOwner && (
+          <Card className="border border-border/80 bg-card/60 backdrop-blur-sm">
+            <CardHeader className="pb-3 border-b border-border">
+              <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
+                <ArrowRightLeft className="h-4 w-4 text-primary" /> {t('transferOwnershipCardTitle')}
+              </CardTitle>
+              <CardDescription className="text-[11px]">{t('transferOwnershipCardDescription')}</CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              {members.filter((m) => m.user_id !== currentUser?.id).length === 0 ? (
+                <p className="text-xs text-muted-foreground">{t('transferOwnershipNoMembers')}</p>
+              ) : (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => setTransferOpen(true)}>
+                  <ArrowRightLeft className="h-3.5 w-3.5" /> {t('transferOwnershipButton')}
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
+        {/* 7. Danger zone */}
         {currentWorkspace && (
           <Card className="border border-destructive/30 bg-destructive/[0.03]">
             <CardHeader className="pb-3 border-b border-destructive/20">
@@ -482,6 +749,94 @@ export default function SettingsPage() {
               {isOwner ? t('deletePermanentlyButton') : t('confirmLeaveButton')}
             </Button>
           </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={transferOpen} onOpenChange={(o) => !transferring && setTransferOpen(o)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ArrowRightLeft className="h-5 w-5 text-primary" />
+              {t('transferOwnershipDialogTitle')}
+            </DialogTitle>
+            <DialogDescription>{t('transferOwnershipDialogDescription')}</DialogDescription>
+          </DialogHeader>
+          <select
+            value={transferTargetId}
+            onChange={(e) => setTransferTargetId(e.target.value)}
+            className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            <option value="">{t('transferOwnershipSelectPlaceholder')}</option>
+            {members
+              .filter((m) => m.user_id !== currentUser?.id)
+              .map((m) => (
+                <option key={m.user_id} value={m.user_id}>
+                  {m.profile?.full_name || m.profile?.email}
+                </option>
+              ))}
+          </select>
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" disabled={transferring} onClick={() => setTransferOpen(false)}>
+              {t('cancelButton')}
+            </Button>
+            <Button className="flex-1 gap-1.5" disabled={transferring || !transferTargetId} onClick={handleTransferOwnership}>
+              {transferring ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ArrowRightLeft className="h-3.5 w-3.5" />}
+              {t('confirmTransferButton')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={createKeyOpen} onOpenChange={(o) => !generatingKey && setCreateKeyOpen(o)}>
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-primary" /> {t('apiKeyGenerateDialogTitle')}
+            </DialogTitle>
+            <DialogDescription>{t('apiKeyGenerateDialogDescription')}</DialogDescription>
+          </DialogHeader>
+          <Input
+            value={newKeyName}
+            onChange={(e) => setNewKeyName(e.target.value)}
+            placeholder={t('apiKeyNamePlaceholder')}
+            disabled={generatingKey}
+            autoFocus
+          />
+          <div className="flex gap-2 pt-2">
+            <Button variant="outline" className="flex-1" disabled={generatingKey} onClick={() => setCreateKeyOpen(false)}>
+              {t('cancelButton')}
+            </Button>
+            <Button className="flex-1 gap-1.5" disabled={generatingKey || !newKeyName.trim()} onClick={handleGenerateKey}>
+              {generatingKey ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
+              {t('apiKeyGenerateButton')}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!revealedKey} onOpenChange={(o) => !o && setRevealedKey(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-primary" /> {t('apiKeyRevealDialogTitle')}
+            </DialogTitle>
+            <DialogDescription>{t('apiKeyRevealDialogDescription')}</DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center gap-2 rounded-lg border border-input bg-muted/40 px-3 py-2.5">
+            <code className="flex-1 select-all break-all font-mono text-xs text-foreground">{revealedKey}</code>
+            <button
+              type="button"
+              onClick={copyRevealedKey}
+              title={t('apiKeyCopyTooltip')}
+              className="shrink-0 rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+            >
+              <Copy className="h-3.5 w-3.5" />
+            </button>
+          </div>
+          <p className="text-[11px] text-destructive">{t('apiKeyRevealWarning')}</p>
+          <Button className="w-full" onClick={() => setRevealedKey(null)}>
+            {t('apiKeyRevealDoneButton')}
+          </Button>
         </DialogContent>
       </Dialog>
     </div>
