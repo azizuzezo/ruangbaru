@@ -1,7 +1,6 @@
-import Link from 'next/link';
 import type { Metadata } from 'next';
-import { Logo } from '@/components/brand/Logo';
 import { AuthShowcase } from '@/components/landing/AuthShowcase';
+import { AuthTopBar, AuthFooterNote } from '@/components/auth/AuthLayoutChrome';
 import { NOINDEX } from '@/lib/seo';
 
 // Account/auth flows have no unique content for search engines and reset
@@ -21,14 +20,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         {/* ── Right panel — auth form ────────────────────────── */}
         <div className="flex flex-1 flex-col bg-white">
           {/* Top nav */}
-          <div className="flex items-center justify-between px-6 py-5 sm:px-10">
-            <Link href="/" className="flex items-center transition-transform hover:scale-[1.03]" aria-label="RuangBaru — beranda">
-              <Logo variant="wordmark" height={30} priority />
-            </Link>
-            <Link href="/" className="text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-800">
-              ← Kembali ke beranda
-            </Link>
-          </div>
+          <AuthTopBar />
 
           {/* Form content */}
           <div className="flex flex-1 items-center justify-center px-6 py-8">
@@ -39,9 +31,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
           {/* Bottom */}
           <div className="px-6 py-5 sm:px-10">
-            <p className="text-center text-xs text-neutral-400">
-              &copy; {new Date().getFullYear()} RuangBaru &mdash; ruangbaru.my.id
-            </p>
+            <AuthFooterNote />
           </div>
         </div>
 

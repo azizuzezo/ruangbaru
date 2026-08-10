@@ -11,6 +11,7 @@ import { Progress } from '@/components/ui/progress';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { WorkspacePlan } from '@/types';
+import { useT } from '@/lib/i18n/useT';
 
 // Plan quotas. Higher tiers are effectively unlimited (represented as null).
 const PLAN_LIMITS: Record<WorkspacePlan, { members: number | null; projects: number | null }> = {
@@ -21,6 +22,7 @@ const PLAN_LIMITS: Record<WorkspacePlan, { members: number | null; projects: num
 };
 
 export default function BillingPage() {
+  const t = useT('billing');
   const { currentWorkspace } = useWorkspaceStore();
   const supabase = createClient();
   const [usage, setUsage] = useState({ members: 0, projects: 0 });
@@ -44,16 +46,16 @@ export default function BillingPage() {
   }, [currentWorkspace]);
 
   const pct = (used: number, limit: number | null) => (limit === null ? 0 : Math.min(100, Math.round((used / limit) * 100)));
-  const label = (used: number, limit: number | null, unit: string) => (limit === null ? `${used} (Tak terbatas)` : `${used} / ${limit} ${unit}`);
+  const label = (used: number, limit: number | null, unit: string) => (limit === null ? `${used} ${t('unlimitedSuffix')}` : `${used} / ${limit} ${unit}`);
 
   return (
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight sm:text-3xl">
-          Rencana Langganan & Tagihan
+          {t('billingPageTitle')}
         </h1>
         <p className="text-xs text-muted-foreground mt-1">
-          Pantau penggunaan resource dan ubah paket langganan workspace tim Anda.
+          {t('billingPageSubtitle')}
         </p>
       </div>
 
@@ -62,10 +64,10 @@ export default function BillingPage() {
           <div className="absolute top-0 right-0 h-32 w-32 bg-primary/10 rounded-full blur-2xl -z-10" />
           <CardHeader className="pb-3 border-b border-border">
             <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
-              <CreditCard className="h-4 w-4 text-primary" /> Paket Saat Ini:{' '}
+              <CreditCard className="h-4 w-4 text-primary" /> {t('currentPlanLabel')}{' '}
               <span className="capitalize text-primary font-semibold">{plan}</span>
             </CardTitle>
-            <CardDescription className="text-[11px]">Rincian pemakaian kuota ruang kerja Anda.</CardDescription>
+            <CardDescription className="text-[11px]">{t('currentPlanCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-5">
             {loading ? (
@@ -77,15 +79,15 @@ export default function BillingPage() {
               <div className="space-y-4">
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs font-bold">
-                    <span>Anggota Tim</span>
-                    <span className="text-muted-foreground">{label(usage.members, limits.members, 'Anggota')}</span>
+                    <span>{t('teamMembersLabel')}</span>
+                    <span className="text-muted-foreground">{label(usage.members, limits.members, t('membersUnit'))}</span>
                   </div>
                   <Progress value={pct(usage.members, limits.members)} className="h-2" />
                 </div>
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs font-bold">
-                    <span>Proyek Aktif</span>
-                    <span className="text-muted-foreground">{label(usage.projects, limits.projects, 'Proyek')}</span>
+                    <span>{t('activeProjectsLabel')}</span>
+                    <span className="text-muted-foreground">{label(usage.projects, limits.projects, t('projectsUnit'))}</span>
                   </div>
                   <Progress value={pct(usage.projects, limits.projects)} className="h-2" />
                 </div>
@@ -94,21 +96,19 @@ export default function BillingPage() {
 
             <div className="pt-4 border-t border-border flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
               <div className="text-[10px] text-muted-foreground leading-relaxed max-w-md">
-                {plan === 'free'
-                  ? 'Workspace Anda terdaftar dalam paket gratis. Dapatkan anggota & proyek lebih banyak serta kapasitas berkas lebih besar dengan beralih ke Professional.'
-                  : 'Terima kasih telah menjadi pelanggan berbayar RuangBaru. Hubungi kami untuk perubahan paket.'}
+                {plan === 'free' ? t('freePlanUpsell') : t('paidPlanThanks')}
               </div>
               <Button
                 size="sm"
                 variant="gradient"
                 className="gap-1 text-xs whitespace-nowrap shrink-0"
                 onClick={() =>
-                  toast.info('Integrasi pembayaran segera hadir', {
-                    description: 'Hubungi tim kami di sales@ruangbaru.id untuk meningkatkan paket lebih awal.',
+                  toast.info(t('paymentComingSoonToast'), {
+                    description: t('paymentComingSoonDescription'),
                   })
                 }
               >
-                Tingkatkan Paket <ArrowUpRight className="h-3.5 w-3.5" />
+                {t('upgradeButton')} <ArrowUpRight className="h-3.5 w-3.5" />
               </Button>
             </div>
           </CardContent>
@@ -116,31 +116,43 @@ export default function BillingPage() {
 
         <Card className="border border-border/80 bg-card/40">
           <CardHeader className="pb-3 border-b border-border">
-            <CardTitle className="text-sm font-bold text-foreground">Paket Paling Sesuai Untuk Anda</CardTitle>
+            <CardTitle className="text-sm font-bold text-foreground">{t('bestPlanCardTitle')}</CardTitle>
           </CardHeader>
           <CardContent className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="border border-border rounded-xl p-5 space-y-4 bg-background/50">
-                <h3 className="font-display font-bold text-sm text-foreground">Paket Professional</h3>
-                <p className="text-xs text-muted-foreground">Rp99.000 / user / bulan</p>
+                <h3 className="font-display font-bold text-sm text-foreground">{t('professionalPlanTitle')}</h3>
+                <p className="text-xs text-muted-foreground">{t('professionalPlanPrice')}</p>
                 <ul className="space-y-2 pt-2 border-t border-border/50">
-                  {['Workspace tak terbatas', 'Tugas tak terbatas', 'Penyimpanan berkas 20 GB', 'Undangan anggota/klien', 'Dukungan prioritas'].map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {[
+                    'professionalFeatureWorkspaces',
+                    'professionalFeatureTasks',
+                    'professionalFeatureStorage',
+                    'professionalFeatureInvites',
+                    'professionalFeatureSupport',
+                  ].map((key) => (
+                    <li key={key} className="flex items-center gap-2 text-xs text-muted-foreground">
                       <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
-                      <span>{f}</span>
+                      <span>{t(key)}</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
               <div className="border border-border rounded-xl p-5 space-y-4 bg-background/50">
-                <h3 className="font-display font-bold text-sm text-foreground">Paket Business</h3>
-                <p className="text-xs text-muted-foreground">Rp199.000 / user / bulan</p>
+                <h3 className="font-display font-bold text-sm text-foreground">{t('businessPlanTitle')}</h3>
+                <p className="text-xs text-muted-foreground">{t('businessPlanPrice')}</p>
                 <ul className="space-y-2 pt-2 border-t border-border/50">
-                  {['Semua fitur Professional', 'Dedicated Account Manager', 'Keamanan SSO / SAML', 'Uptime SLA 99.9%', 'Prioritas bantuan teknis'].map((f) => (
-                    <li key={f} className="flex items-center gap-2 text-xs text-muted-foreground">
+                  {[
+                    'businessFeatureAllPro',
+                    'businessFeatureAccountManager',
+                    'businessFeatureSSO',
+                    'businessFeatureSLA',
+                    'businessFeatureTechSupport',
+                  ].map((key) => (
+                    <li key={key} className="flex items-center gap-2 text-xs text-muted-foreground">
                       <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
-                      <span>{f}</span>
+                      <span>{t(key)}</span>
                     </li>
                   ))}
                 </ul>
@@ -154,24 +166,24 @@ export default function BillingPage() {
                   <Crown className="h-4 w-4" />
                 </div>
                 <div>
-                  <h3 className="font-display font-bold text-sm text-amber-900">Paket Enterprise</h3>
-                  <p className="text-[11px] text-amber-700">Harga custom · Hubungi sales kami</p>
+                  <h3 className="font-display font-bold text-sm text-amber-900">{t('enterprisePlanTitle')}</h3>
+                  <p className="text-[11px] text-amber-700">{t('enterprisePlanPriceLine')}</p>
                 </div>
               </div>
               <p className="text-xs text-amber-800 leading-relaxed">
-                Dirancang untuk tim besar dengan kebutuhan kolaborasi penuh. Semua fitur Business ditambah:
+                {t('enterpriseIntro')}
               </p>
               <ul className="space-y-2 pt-1 border-t border-amber-200">
                 {[
-                  { icon: Video, text: 'Rapat video langsung — tanpa Zoom atau Meet, langsung di dalam RuangBaru' },
-                  { icon: CheckCircle2, text: 'Jadwalkan & rekam rapat, undang anggota tim langsung dari workspace' },
-                  { icon: CheckCircle2, text: 'Akses tugas & catatan selama rapat berlangsung (real-time)' },
-                  { icon: CheckCircle2, text: 'Anggota tak terbatas + penyimpanan tak terbatas' },
-                  { icon: CheckCircle2, text: 'Onboarding khusus & dukungan 24/7' },
-                ].map(({ icon: Icon, text }) => (
-                  <li key={text} className="flex items-start gap-2 text-xs text-amber-800">
+                  { icon: Video, key: 'enterpriseFeatureVideoMeetings' },
+                  { icon: CheckCircle2, key: 'enterpriseFeatureScheduleRecord' },
+                  { icon: CheckCircle2, key: 'enterpriseFeatureRealtimeAccess' },
+                  { icon: CheckCircle2, key: 'enterpriseFeatureUnlimited' },
+                  { icon: CheckCircle2, key: 'enterpriseFeatureOnboarding' },
+                ].map(({ icon: Icon, key }) => (
+                  <li key={key} className="flex items-start gap-2 text-xs text-amber-800">
                     <Icon className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
-                    <span>{text}</span>
+                    <span>{t(key)}</span>
                   </li>
                 ))}
               </ul>
@@ -179,13 +191,13 @@ export default function BillingPage() {
                 size="sm"
                 className="w-full sm:w-auto gap-1.5 bg-amber-600 hover:bg-amber-700 text-white mt-1"
                 onClick={() =>
-                  toast.info('Hubungi kami untuk Enterprise', {
-                    description: 'Kirim email ke sales@ruangbaru.id untuk mendapatkan penawaran khusus.',
+                  toast.info(t('enterpriseContactToastTitle'), {
+                    description: t('enterpriseContactToastDescription'),
                     duration: 6000,
                   })
                 }
               >
-                <Crown className="h-3.5 w-3.5" /> Tanya Harga Enterprise
+                <Crown className="h-3.5 w-3.5" /> {t('enterpriseCTAButton')}
               </Button>
             </div>
           </CardContent>

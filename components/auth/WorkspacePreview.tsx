@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Check, Bell, Plus, FolderKanban, Users } from 'lucide-react';
+import { useT } from '@/lib/i18n/useT';
 
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 const BLUE = '#106CD8';
@@ -10,17 +11,18 @@ const TEAL = '#10B29F';
 const YELLOW = '#FDB31A';
 
 const TASK_CARDS = [
-  { title: 'Desain halaman landing', tag: 'Sedang Berjalan', tagBg: 'rgba(255,255,255,0.2)', tagColor: '#fff', dot: TEAL, delay: 0 },
-  { title: 'Review kontrak vendor', tag: 'Menunggu Review', tagBg: 'rgba(253,179,26,0.2)', tagColor: YELLOW, dot: YELLOW, delay: 0.18 },
-  { title: 'Setup workspace tim', tag: 'Selesai', tagBg: 'rgba(16,178,159,0.2)', tagColor: TEAL, dot: TEAL, delay: 0.36, done: true },
+  { titleKey: 'previewTaskDesign', tagKey: 'previewTagInProgress', tagBg: 'rgba(255,255,255,0.2)', tagColor: '#fff', dot: TEAL, delay: 0 },
+  { titleKey: 'previewTaskReview', tagKey: 'previewTagPendingReview', tagBg: 'rgba(253,179,26,0.2)', tagColor: YELLOW, dot: YELLOW, delay: 0.18 },
+  { titleKey: 'previewTaskSetup', tagKey: 'previewTagDone', tagBg: 'rgba(16,178,159,0.2)', tagColor: TEAL, dot: TEAL, delay: 0.36, done: true },
 ];
 
 const NOTIFS = [
-  { text: 'Budi menyelesaikan tugas review', time: '3m', color: TEAL, letter: 'B' },
-  { text: 'Rini mengomentari dokumen brief', time: '8m', color: YELLOW, letter: 'R' },
+  { textKey: 'previewNotifBudi', time: '3m', color: TEAL, letter: 'B' },
+  { textKey: 'previewNotifRini', time: '8m', color: YELLOW, letter: 'R' },
 ];
 
 export function WorkspacePreview() {
+  const t = useT('auth');
   const [mouseX, setMouseX] = useState(0);
   const [mouseY, setMouseY] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,7 +71,7 @@ export function WorkspacePreview() {
           <a href="/" className="text-sm font-semibold transition-colors" style={{ color: 'rgba(255,255,255,0.45)' }}
             onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.85)')}
             onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}>
-            ← Kembali ke beranda
+            {t('previewBackToHome')}
           </a>
         </div>
 
@@ -79,11 +81,11 @@ export function WorkspacePreview() {
           <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, ease: E }}>
             <h2 className="text-3xl font-semibold tracking-tight leading-[1.18] text-white">
-              Kelola proyek dan tim<br />
-              <span style={{ color: 'rgba(255,255,255,0.7)' }}>dalam satu tempat.</span>
+              {t('previewHeadlineLine1')}<br />
+              <span style={{ color: 'rgba(255,255,255,0.7)' }}>{t('previewHeadlineLine2')}</span>
             </h2>
             <p className="mt-3 text-sm leading-relaxed" style={{ color: 'rgba(255,255,255,0.55)' }}>
-              Workspace untuk proyek, tugas, catatan, dan anggota tim — tanpa perlu berpindah aplikasi.
+              {t('previewSubtext')}
             </p>
           </motion.div>
 
@@ -93,11 +95,11 @@ export function WorkspacePreview() {
             <div className="flex items-center gap-2 mb-2">
               <FolderKanban className="h-3.5 w-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
               <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                Proyek Aktif
+                {t('previewActiveProjectsLabel')}
               </span>
             </div>
             {TASK_CARDS.map((card, i) => (
-              <motion.div key={card.title}
+              <motion.div key={card.titleKey}
                 initial={{ opacity: 0, x: -14 }}
                 animate={{ opacity: 1, x: 0, scale: activeTask === i ? 1.02 : 1 }}
                 transition={{ duration: 0.4, delay: 0.3 + card.delay, ease: E }}
@@ -114,12 +116,12 @@ export function WorkspacePreview() {
                     </div>
                     <p className="text-sm font-medium leading-tight"
                       style={{ color: card.done ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.9)', textDecoration: card.done ? 'line-through' : 'none' }}>
-                      {card.title}
+                      {t(card.titleKey)}
                     </p>
                   </div>
                   <span className="shrink-0 rounded-md px-2 py-0.5 text-[9px] font-bold"
                     style={{ background: card.tagBg, color: card.tagColor }}>
-                    {card.tag}
+                    {t(card.tagKey)}
                   </span>
                 </div>
                 <div className="mt-2 flex items-center gap-2">
@@ -139,10 +141,10 @@ export function WorkspacePreview() {
             <div className="flex items-center gap-2 mb-3">
               <Users className="h-3.5 w-3.5" style={{ color: 'rgba(255,255,255,0.4)' }} />
               <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                Anggota Online
+                {t('previewOnlineMembersLabel')}
               </span>
               <span className="ml-auto flex items-center gap-1 text-[9px] font-semibold" style={{ color: TEAL }}>
-                <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: TEAL }} />3 aktif
+                <span className="h-1.5 w-1.5 rounded-full animate-pulse" style={{ background: TEAL }} />{t('previewActiveCountLabel')}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -170,14 +172,14 @@ export function WorkspacePreview() {
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, delay: 0.7, ease: E }} className="space-y-2">
             {NOTIFS.map((n, i) => (
-              <motion.div key={n.text}
+              <motion.div key={n.textKey}
                 initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.8 + i * 0.12, ease: E }}
                 className="flex items-center gap-2.5 rounded-xl border border-white/10 bg-white/7 px-3 py-2.5">
                 <Bell className="h-3 w-3 shrink-0" style={{ color: 'rgba(255,255,255,0.35)' }} />
                 <span className="h-5 w-5 rounded-full flex items-center justify-center text-[7px] font-bold text-white shrink-0"
                   style={{ background: n.color }}>{n.letter}</span>
-                <span className="flex-1 text-[10px]" style={{ color: 'rgba(255,255,255,0.65)' }}>{n.text}</span>
+                <span className="flex-1 text-[10px]" style={{ color: 'rgba(255,255,255,0.65)' }}>{t(n.textKey)}</span>
                 <span className="text-[9px]" style={{ color: 'rgba(255,255,255,0.3)' }}>{n.time}</span>
               </motion.div>
             ))}
@@ -189,13 +191,13 @@ export function WorkspacePreview() {
           transition={{ duration: 0.5, delay: 0.9, ease: E }}
           className="grid grid-cols-3 gap-3">
           {[
-            { v: '5 menit', l: 'Setup workspace' },
-            { v: 'Gratis', l: 'Untuk 5 anggota' },
-            { v: '4 fitur', l: 'Kanban, Catatan, dst.' },
+            { vKey: 'previewStatSetupValue', lKey: 'previewStatSetupLabel' },
+            { vKey: 'previewStatFreeValue', lKey: 'previewStatMembersLabel' },
+            { vKey: 'previewStatFeaturesValue', lKey: 'previewStatFeaturesLabel' },
           ].map(s => (
-            <div key={s.l} className="rounded-xl border border-white/10 bg-white/8 p-3 text-center">
-              <p className="text-base font-semibold text-white">{s.v}</p>
-              <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{s.l}</p>
+            <div key={s.lKey} className="rounded-xl border border-white/10 bg-white/8 p-3 text-center">
+              <p className="text-base font-semibold text-white">{t(s.vKey)}</p>
+              <p className="text-[9px] mt-0.5" style={{ color: 'rgba(255,255,255,0.4)' }}>{t(s.lKey)}</p>
             </div>
           ))}
         </motion.div>

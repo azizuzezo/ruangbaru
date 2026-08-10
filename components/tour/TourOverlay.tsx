@@ -5,6 +5,28 @@ import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { X, ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { TOUR_STEPS } from './steps';
 import { useTour } from './TourProvider';
+import { useT } from '@/lib/i18n/useT';
+
+// Maps each step's static `id` (from steps.ts) to the PascalCase segment
+// used in the translation keys below, e.g. 'nav-projects' -> 'NavProjects'
+// -> tourStepNavProjectsTitle / ...What / ...Why / ...When / ...Tip.
+const STEP_KEY_SEGMENT: Record<string, string> = {
+  welcome: 'Welcome',
+  pulse: 'Pulse',
+  focus: 'Focus',
+  timeline: 'Timeline',
+  activity: 'Activity',
+  momentum: 'Momentum',
+  'nav-projects': 'NavProjects',
+  'nav-tasks': 'NavTasks',
+  'nav-calendar': 'NavCalendar',
+  'nav-notes': 'NavNotes',
+  'nav-team': 'NavTeam',
+  'nav-settings': 'NavSettings',
+  search: 'Search',
+  notifications: 'Notifications',
+  finish: 'Finish',
+};
 
 const BLUE = '#106CD8';
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
@@ -21,6 +43,7 @@ type Pos = { left: number; top: number; maxH: number };
 export function TourOverlay() {
   const { active, index, total, next, prev, skip } = useTour();
   const reduce = useReducedMotion();
+  const t = useT('tour');
   const ttRef = useRef<HTMLDivElement>(null);
   const rectRef = useRef<Rect | null>(null);
   const [rect, setRect] = useState<Rect | null>(null);
@@ -28,6 +51,12 @@ export function TourOverlay() {
 
   const step = TOUR_STEPS[index];
   const isLast = index === total - 1;
+  const stepKey = step ? (STEP_KEY_SEGMENT[step.id] ?? step.id) : '';
+  const stepTitle = step ? t(`tourStep${stepKey}Title`) : '';
+  const stepWhat = step ? t(`tourStep${stepKey}What`) : '';
+  const stepWhy = step?.why ? t(`tourStep${stepKey}Why`) : undefined;
+  const stepWhen = step?.when ? t(`tourStep${stepKey}When`) : undefined;
+  const stepTip = step?.tip ? t(`tourStep${stepKey}Tip`) : undefined;
 
   // ── Compute the best tooltip position given the element rect ──────────────
   const computePos = useCallback((r: Rect | null) => {
@@ -208,20 +237,20 @@ export function TourOverlay() {
             >
               <div className="flex items-start justify-between gap-3">
                 <p className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Langkah {index + 1} dari {total}
+                  {t('tourProgressLabel').replace('{current}', String(index + 1)).replace('{total}', String(total))}
                 </p>
-                <button onClick={skip} className="-mr-1 -mt-1 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" aria-label="Lewati tur">
+                <button onClick={skip} className="-mr-1 -mt-1 rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground" aria-label={t('tourSkipTour')}>
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
-              <h3 className="mt-1.5 text-lg font-bold tracking-tight text-foreground">{step.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{step.what}</p>
+              <h3 className="mt-1.5 text-lg font-bold tracking-tight text-foreground">{stepTitle}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{stepWhat}</p>
 
               <div className="mt-3 space-y-2">
-                {step.why && <LabeledLine label="Kenapa" text={step.why} color="#106CD8" />}
-                {step.when && <LabeledLine label="Kapan" text={step.when} color="#10B29F" />}
-                {step.tip && <LabeledLine label="Tips" text={step.tip} color="#FDB31A" />}
+                {stepWhy && <LabeledLine label={t('tourLabelWhy')} text={stepWhy} color="#106CD8" />}
+                {stepWhen && <LabeledLine label={t('tourLabelWhen')} text={stepWhen} color="#10B29F" />}
+                {stepTip && <LabeledLine label={t('tourLabelTip')} text={stepTip} color="#FDB31A" />}
               </div>
             </motion.div>
           </AnimatePresence>
@@ -236,15 +265,15 @@ export function TourOverlay() {
 
           {/* Controls */}
           <div className="mt-4 flex items-center justify-between">
-            <button onClick={skip} className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">Lewati tur</button>
+            <button onClick={skip} className="text-xs font-medium text-muted-foreground transition-colors hover:text-foreground">{t('tourSkipTour')}</button>
             <div className="flex items-center gap-2">
               {index > 0 && (
                 <button onClick={prev} className="inline-flex items-center gap-1 rounded-lg border border-border px-3 py-1.5 text-xs font-semibold text-foreground transition-colors hover:bg-accent">
-                  <ArrowLeft className="h-3.5 w-3.5" /> Kembali
+                  <ArrowLeft className="h-3.5 w-3.5" /> {t('tourBackButton')}
                 </button>
               )}
               <button onClick={next} className="inline-flex items-center gap-1 rounded-lg px-3.5 py-1.5 text-xs font-semibold text-white shadow-sm transition-opacity hover:opacity-90" style={{ background: BLUE }}>
-                {isLast ? (<><Check className="h-3.5 w-3.5" /> Selesai</>) : (<>Lanjut <ArrowRight className="h-3.5 w-3.5" /></>)}
+                {isLast ? (<><Check className="h-3.5 w-3.5" /> {t('tourFinishButton')}</>) : (<>{t('tourNextButton')} <ArrowRight className="h-3.5 w-3.5" /></>)}
               </button>
             </div>
           </div>

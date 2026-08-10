@@ -27,8 +27,11 @@ import {
 import type { Notification } from '@/types';
 import { formatRelativeTime } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useT } from '@/lib/i18n/useT';
 
 export function Header() {
+  const t = useT('appLayout');
   const pathname = usePathname();
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setCommandPaletteOpen, notificationPanelOpen, setNotificationPanelOpen, setIsLoggingOut } = useUIStore();
@@ -95,29 +98,29 @@ export function Header() {
   // Derive page breadcrumbs from path
   const getBreadcrumbs = () => {
     const parts = pathname.split('/').filter(Boolean);
-    if (parts.length <= 1) return [{ label: 'Dashboard', icon: Layers }];
+    if (parts.length <= 1) return [{ label: t('breadcrumbDashboard'), icon: Layers }];
 
     // Skip the workspace slug (parts[0])
     const pathLabel = parts[1];
     switch (pathLabel) {
       case 'dashboard':
-        return [{ label: 'Dashboard', icon: Layers }];
+        return [{ label: t('breadcrumbDashboard'), icon: Layers }];
       case 'projects':
-        return [{ label: 'Proyek', icon: FolderKanban }];
+        return [{ label: t('breadcrumbProjects'), icon: FolderKanban }];
       case 'tasks':
-        return [{ label: 'Tugas', icon: FolderKanban }];
+        return [{ label: t('breadcrumbTasks'), icon: FolderKanban }];
       case 'calendar':
-        return [{ label: 'Kalender', icon: Calendar }];
+        return [{ label: t('breadcrumbCalendar'), icon: Calendar }];
       case 'notes':
-        return [{ label: 'Catatan', icon: Layers }];
+        return [{ label: t('breadcrumbNotes'), icon: Layers }];
       case 'team':
-        return [{ label: 'Tim', icon: Users }];
+        return [{ label: t('breadcrumbTeam'), icon: Users }];
       case 'settings':
-        return [{ label: 'Pengaturan', icon: Settings }];
+        return [{ label: t('breadcrumbSettings'), icon: Settings }];
       case 'billing':
-        return [{ label: 'Tagihan', icon: Settings }];
+        return [{ label: t('breadcrumbBilling'), icon: Settings }];
       default:
-        return [{ label: 'Workspace', icon: Layers }];
+        return [{ label: t('breadcrumbDefault'), icon: Layers }];
     }
   };
 
@@ -128,7 +131,7 @@ export function Header() {
       {/* Left: Breadcrumbs */}
       <div className="flex items-center gap-1.5 text-sm">
         <span className="font-semibold text-muted-foreground hover:text-foreground transition-colors cursor-pointer text-xs">
-          {currentWorkspace?.name || 'Workspace'}
+          {currentWorkspace?.name || t('headerWorkspaceFallback')}
         </span>
         <ChevronRight className="h-3.5 w-3.5 text-muted-foreground/60" />
         {breadcrumbs.map((b, idx) => (
@@ -147,7 +150,7 @@ export function Header() {
           className="hidden sm:flex items-center gap-2 h-9 w-48 lg:w-64 border border-input rounded-lg bg-background px-3 py-2 text-xs text-muted-foreground hover:border-ring/50 transition-colors"
         >
           <Search className="h-3.5 w-3.5" />
-          <span className="text-left flex-1">Cari...</span>
+          <span className="text-left flex-1">{t('headerSearchPlaceholder')}</span>
           <kbd className="pointer-events-none inline-flex h-5 select-none items-center gap-0.5 rounded border bg-muted px-1.5 font-mono text-[9px] font-medium opacity-100">
             <span className="text-[10px]">⌘</span>K
           </kbd>
@@ -172,13 +175,13 @@ export function Header() {
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-80 p-0 rounded-2xl overflow-hidden shadow-2xl">
             <div className="flex items-center justify-between p-4 bg-muted/40 border-b border-border">
-              <span className="text-xs font-bold text-foreground">Notifikasi</span>
+              <span className="text-xs font-bold text-foreground">{t('headerNotificationsTitle')}</span>
               {unreadCount > 0 && (
-                <button 
+                <button
                   onClick={handleMarkAllRead}
                   className="text-[10px] font-semibold text-primary hover:underline"
                 >
-                  Tandai semua dibaca
+                  {t('headerMarkAllRead')}
                 </button>
               )}
             </div>
@@ -195,7 +198,7 @@ export function Header() {
                 </div>
               ) : notifications.length === 0 ? (
                 <div className="p-8 text-center text-xs text-muted-foreground">
-                  Tidak ada notifikasi baru
+                  {t('headerNotificationsEmpty')}
                 </div>
               ) : (
                 notifications.map((n) => (
@@ -219,10 +222,13 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
 
+        {/* Language toggle */}
+        <LanguageSwitcher className="hidden md:inline-flex" />
+
         {/* Workspace Quick Actions */}
         <Badge variant="success" className="gap-1 hidden md:inline-flex py-1 px-2.5">
           <Sparkles className="h-3 w-3 text-emerald-500 fill-current" />
-          <span>Workspace Aktif</span>
+          <span>{t('headerWorkspaceActiveBadge')}</span>
         </Badge>
 
         {/* Mobile profile/menu (sidebar is hidden on mobile) */}
@@ -241,23 +247,23 @@ export function Header() {
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>
-              <Link href={`/${currentWorkspace?.slug}/notes`}><Layers className="h-4 w-4 mr-2" /> Catatan</Link>
+              <Link href={`/${currentWorkspace?.slug}/notes`}><Layers className="h-4 w-4 mr-2" /> {t('dropdownNotes')}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/${currentWorkspace?.slug}/team`}><Users className="h-4 w-4 mr-2" /> Anggota Tim</Link>
+              <Link href={`/${currentWorkspace?.slug}/team`}><Users className="h-4 w-4 mr-2" /> {t('dropdownTeamMembers')}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/${currentWorkspace?.slug}/settings`}><Settings className="h-4 w-4 mr-2" /> Pengaturan</Link>
+              <Link href={`/${currentWorkspace?.slug}/settings`}><Settings className="h-4 w-4 mr-2" /> {t('dropdownSettings')}</Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild>
-              <Link href={`/${currentWorkspace?.slug}/billing`}><CreditCard className="h-4 w-4 mr-2" /> Tagihan</Link>
+              <Link href={`/${currentWorkspace?.slug}/billing`}><CreditCard className="h-4 w-4 mr-2" /> {t('dropdownBilling')}</Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={() => setIsLoggingOut(true)}
               className="text-destructive focus:bg-destructive/10 focus:text-destructive"
             >
-              <LogOut className="h-4 w-4 mr-2" /> Keluar
+              <LogOut className="h-4 w-4 mr-2" /> {t('dropdownLogout')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

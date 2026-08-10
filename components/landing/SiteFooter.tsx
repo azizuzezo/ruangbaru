@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Check } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
+import { useT } from '@/lib/i18n/useT';
 
 /* Brand glyphs (lucide v1 dropped brand logos) */
 function XIcon() {
@@ -33,23 +34,25 @@ function LinkedinIcon() {
 
 const BLUE = '#106CD8';
 
+// `title`/`label` hold translation keys (resolved with t() at render time),
+// not display text, so the footer updates with the locale.
 const COLUMNS = [
   {
-    title: 'Produk',
+    title: 'footerColProduk',
     links: [
-      { label: 'Fitur', href: '/fitur' },
-      { label: 'Harga', href: '/harga' },
-      { label: 'Cara Kerja', href: '/cara-kerja' },
-      { label: 'Dokumentasi', href: '/cara-kerja' },
+      { label: 'footerLinkFitur', href: '/fitur' },
+      { label: 'footerLinkHarga', href: '/harga' },
+      { label: 'footerLinkCaraKerja', href: '/cara-kerja' },
+      { label: 'footerLinkDokumentasi', href: '/cara-kerja' },
     ],
   },
   {
-    title: 'Perusahaan',
+    title: 'footerColPerusahaan',
     links: [
-      { label: 'Tentang', href: '/about' },
-      { label: 'Kontak', href: '/contact' },
-      { label: 'Kebijakan Privasi', href: '/privacy-policy' },
-      { label: 'Ketentuan Layanan', href: '/terms-of-service' },
+      { label: 'footerLinkTentang', href: '/about' },
+      { label: 'footerLinkKontak', href: '/contact' },
+      { label: 'footerLinkPrivasi', href: '/privacy-policy' },
+      { label: 'footerLinkKetentuan', href: '/terms-of-service' },
     ],
   },
 ];
@@ -61,6 +64,7 @@ const SOCIALS = [
 ];
 
 export function SiteFooter() {
+  const t = useT('landing');
   const [email, setEmail] = useState('');
   const [sent, setSent] = useState(false);
 
@@ -79,10 +83,10 @@ export function SiteFooter() {
           <div>
             <Logo variant="wordmark" height={26} />
             <p className="mt-4 max-w-[240px] text-sm leading-6 text-neutral-500">
-              Papan kerja untuk proyek, tugas, dan jadwal tim — dipakai sehari-hari, bukan cuma waktu demo.
+              {t('footerTagline')}
             </p>
             <p className="mt-4 text-sm text-neutral-500">
-              Butuh bantuan?{' '}
+              {t('footerNeedHelp')}{' '}
               <a href="mailto:halo@ruangbaru.my.id" className="font-medium text-neutral-700 hover:text-[#106CD8]">
                 halo@ruangbaru.my.id
               </a>
@@ -106,7 +110,7 @@ export function SiteFooter() {
           {/* Link columns */}
           {COLUMNS.map((col) => (
             <div key={col.title}>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">{col.title}</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">{t(col.title)}</h3>
               <ul className="mt-4 space-y-2.5">
                 {col.links.map((l) => (
                   <li key={l.label}>
@@ -115,7 +119,7 @@ export function SiteFooter() {
                       prefetch
                       className="text-sm text-neutral-600 transition-colors hover:text-neutral-950"
                     >
-                      {l.label}
+                      {t(l.label)}
                     </Link>
                   </li>
                 ))}
@@ -125,9 +129,9 @@ export function SiteFooter() {
 
           {/* Newsletter */}
           <div>
-            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">Newsletter</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-neutral-400">{t('footerNewsletterTitle')}</h3>
             <p className="mt-4 text-sm leading-6 text-neutral-500">
-              Kabar fitur baru saat memang ada — kami tidak punya cukup hal untuk dikirim mingguan.
+              {t('footerNewsletterDesc')}
             </p>
             <form onSubmit={submit} className="mt-4">
               {sent ? (
@@ -136,7 +140,7 @@ export function SiteFooter() {
                   animate={{ opacity: 1, y: 0 }}
                   className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-3.5 py-2.5 text-sm font-medium text-emerald-700"
                 >
-                  <Check className="h-4 w-4" /> Terima kasih sudah bergabung!
+                  <Check className="h-4 w-4" /> {t('footerNewsletterThanks')}
                 </motion.div>
               ) : (
                 <div className="flex items-center gap-2 rounded-xl border border-neutral-200 bg-white p-1 pl-3.5 shadow-sm focus-within:border-[#106CD8]">
@@ -144,12 +148,12 @@ export function SiteFooter() {
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="email@perusahaan.com"
+                    placeholder={t('footerEmailPlaceholder')}
                     className="min-w-0 flex-1 bg-transparent text-sm text-neutral-800 outline-none placeholder:text-neutral-400"
                   />
                   <button
                     type="submit"
-                    aria-label="Berlangganan"
+                    aria-label={t('footerSubscribeAria')}
                     className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white transition-opacity hover:opacity-90"
                     style={{ background: BLUE }}
                   >
@@ -164,15 +168,15 @@ export function SiteFooter() {
         {/* Bottom bar */}
         <div className="mt-12 flex flex-col gap-3 border-t border-neutral-200 pt-6 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs text-neutral-400">
-            &copy; {new Date().getFullYear()} RuangBaru · Dibuat oleh{' '}
+            &copy; {new Date().getFullYear()} RuangBaru · {t('footerMadeBy')}{' '}
             <a href="https://duacincin.id" target="_blank" rel="noreferrer" className="font-medium text-neutral-500 transition-colors hover:text-neutral-800">
               duacincin.id
             </a>
           </p>
           <div className="flex gap-5 text-xs text-neutral-400">
-            <Link href="/privacy-policy" className="transition-colors hover:text-neutral-700">Privasi</Link>
-            <Link href="/terms-of-service" className="transition-colors hover:text-neutral-700">Ketentuan</Link>
-            <Link href="/contact" className="transition-colors hover:text-neutral-700">Kontak</Link>
+            <Link href="/privacy-policy" className="transition-colors hover:text-neutral-700">{t('footerBottomPrivasi')}</Link>
+            <Link href="/terms-of-service" className="transition-colors hover:text-neutral-700">{t('footerBottomKetentuan')}</Link>
+            <Link href="/contact" className="transition-colors hover:text-neutral-700">{t('footerLinkKontak')}</Link>
           </div>
         </div>
       </div>

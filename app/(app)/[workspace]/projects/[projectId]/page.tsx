@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { cn } from '@/lib/utils';
 import { KanbanBoard } from '@/components/tasks/KanbanBoard';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
+import { useT } from '@/lib/i18n/useT';
 
 interface ProjectDetailPageProps {
   params: Promise<{
@@ -27,6 +28,7 @@ interface ProjectDetailPageProps {
 }
 
 export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
+  const t = useT('projects');
   const resolvedParams = use(params);
   const { currentWorkspace } = useWorkspaceStore();
   const { setTaskDetailOpen } = useUIStore();
@@ -77,7 +79,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         setMembers(profileData || []);
       } catch (err: any) {
         console.error('Error loading project details:', err);
-        toast.error('Gagal memuat detail proyek');
+        toast.error(t('detailLoadErrorToast'));
       } finally {
         setLoading(false);
       }
@@ -99,7 +101,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         completed_at: doneKeys.has(status) ? new Date().toISOString() : null,
       })
       .eq('id', taskId);
-    if (error) toast.error('Gagal memindahkan tugas');
+    if (error) toast.error(t('detailMoveErrorToast'));
   };
 
   if (loading) {
@@ -118,11 +120,11 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
   if (!project) {
     return (
       <div className="text-center p-12 space-y-4">
-        <h3 className="text-lg font-bold text-foreground">Proyek Tidak Ditemukan</h3>
-        <p className="text-sm text-muted-foreground">Proyek yang Anda cari tidak ada atau Anda tidak memiliki akses.</p>
+        <h3 className="text-lg font-bold text-foreground">{t('detailNotFoundTitle')}</h3>
+        <p className="text-sm text-muted-foreground">{t('detailNotFoundDesc')}</p>
         <Link href={`/${activeWsSlug}/projects`}>
           <Button variant="outline" className="gap-2">
-            <ArrowLeft className="h-4 w-4" /> Kembali ke Proyek
+            <ArrowLeft className="h-4 w-4" /> {t('detailBackButton')}
           </Button>
         </Link>
       </div>
@@ -154,7 +156,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         <div className="flex gap-2">
           <Link href={`/${activeWsSlug}/tasks`}>
             <Button size="sm" variant="gradient" className="gap-1">
-              <Plus className="h-4 w-4" /> Tambah Tugas
+              <Plus className="h-4 w-4" /> {t('detailAddTaskButton')}
             </Button>
           </Link>
         </div>
@@ -163,10 +165,10 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
       {/* Tabs */}
       <Tabs defaultValue="list" className="w-full space-y-4">
         <TabsList className="bg-muted p-1 border">
-          <TabsTrigger value="list" className="gap-1.5 text-xs"><ListTodo className="h-3.5 w-3.5" /> Daftar Tugas</TabsTrigger>
-          <TabsTrigger value="kanban" className="gap-1.5 text-xs"><Kanban className="h-3.5 w-3.5" /> Papan Kanban</TabsTrigger>
-          <TabsTrigger value="calendar" className="gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /> Kalender</TabsTrigger>
-          <TabsTrigger value="timeline" className="gap-1.5 text-xs"><History className="h-3.5 w-3.5" /> Timeline</TabsTrigger>
+          <TabsTrigger value="list" className="gap-1.5 text-xs"><ListTodo className="h-3.5 w-3.5" /> {t('detailTabList')}</TabsTrigger>
+          <TabsTrigger value="kanban" className="gap-1.5 text-xs"><Kanban className="h-3.5 w-3.5" /> {t('detailTabKanban')}</TabsTrigger>
+          <TabsTrigger value="calendar" className="gap-1.5 text-xs"><CalendarDays className="h-3.5 w-3.5" /> {t('detailTabCalendar')}</TabsTrigger>
+          <TabsTrigger value="timeline" className="gap-1.5 text-xs"><History className="h-3.5 w-3.5" /> {t('detailTabTimeline')}</TabsTrigger>
         </TabsList>
 
         {/* 1. List Tab */}
@@ -176,7 +178,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
               <div className="divide-y divide-border">
                 {tasks.length === 0 ? (
                   <div className="p-12 text-center text-xs text-muted-foreground">
-                    Belum ada tugas di proyek ini. Klik tombol tambah tugas untuk memulai.
+                    {t('detailEmptyTasksList')}
                   </div>
                 ) : (
                   tasks.map((task) => (
@@ -230,9 +232,9 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         {/* 3. Calendar Tab */}
         <TabsContent value="calendar" className="space-y-4">
           <Card className="border border-border/80 p-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">Agenda Proyek</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4">{t('detailCalendarHeading')}</h3>
             <div className="space-y-3">
-              {tasks.filter(t => t.due_date).map((task) => (
+              {tasks.filter(task => task.due_date).map((task) => (
                 <div key={task.id} className="flex gap-4 p-3 border border-border rounded-xl items-center bg-card">
                   <span className="text-xs font-bold text-foreground min-w-[80px]">
                     {task.due_date ? new Date(task.due_date).toLocaleDateString() : ''}
@@ -246,9 +248,9 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                   </span>
                 </div>
               ))}
-              {tasks.filter(t => t.due_date).length === 0 && (
+              {tasks.filter(task => task.due_date).length === 0 && (
                 <div className="text-center text-xs text-muted-foreground py-8">
-                  Tidak ada tugas dengan tenggat waktu
+                  {t('detailCalendarEmpty')}
                 </div>
               )}
             </div>
@@ -258,7 +260,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
         {/* 4. Timeline Tab */}
         <TabsContent value="timeline" className="space-y-4">
           <Card className="border border-border/80 p-6">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-6">Timeline Proyek</h3>
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-6">{t('detailTimelineHeading')}</h3>
             <div className="space-y-6 relative border-l-2 border-border pl-6 ml-3">
               {tasks.map((task) => (
                 <div key={task.id} className="relative space-y-1">
@@ -267,7 +269,7 @@ export default function ProjectDetailPage({ params }: ProjectDetailPageProps) {
                   </span>
                   <h4 className="text-xs font-bold text-foreground">{task.title}</h4>
                   <p className="text-[10px] text-muted-foreground">
-                    Status: <span className="capitalize">{task.status}</span>
+                    {t('detailStatusLabel')} <span className="capitalize">{task.status}</span>
                   </p>
                 </div>
               ))}

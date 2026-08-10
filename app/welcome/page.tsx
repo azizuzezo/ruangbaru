@@ -15,10 +15,14 @@ import {
   FolderKanban, CheckSquare, Rocket, PartyPopper, Layers, Link2, ChevronLeft,
 } from 'lucide-react';
 import type { Workspace, Profile, Project } from '@/types';
+import { useT } from '@/lib/i18n/useT';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 
-const STEPS = ['Ruang Kerja', 'Undang Tim', 'Proyek', 'Tugas', 'Selesai'];
+const STEP_KEYS = ['stepWorkspace', 'stepInviteTeam', 'stepProject', 'stepTask', 'stepDone'] as const;
 
 export default function WelcomeWizard() {
+  const t = useT('auth');
+  const STEPS = STEP_KEYS.map((k) => t(k));
   const router = useRouter();
   const supabase = createClient();
   const { setCurrentWorkspace, setWorkspaces, setCurrentUser } = useWorkspaceStore();
@@ -94,7 +98,7 @@ export default function WelcomeWizard() {
       setWorkspaces([ws as Workspace]);
       setCurrentWorkspace(ws as Workspace);
       setStep(1);
-    } catch (e: any) { toast.error(e.message || 'Gagal membuat ruang kerja'); }
+    } catch (e: any) { toast.error(e.message || t('createWorkspaceError')); }
     finally { setBusy(false); }
   };
 
@@ -117,10 +121,10 @@ export default function WelcomeWizard() {
             invitations: emails.map((email, i) => ({ email, token: (data as any[])?.[i]?.token })),
           }),
         }).catch(() => {});
-        toast.success(`${emails.length} undangan terkirim`);
+        toast.success(t('invitesSentToast').replace('{count}', String(emails.length)));
       }
       setStep(2);
-    } catch (e: any) { toast.error(e.message || 'Gagal mengirim undangan'); }
+    } catch (e: any) { toast.error(e.message || t('sendInvitesError')); }
     finally { setBusy(false); }
   };
 
@@ -135,7 +139,7 @@ export default function WelcomeWizard() {
       if (error) throw error;
       setProject(data as Project);
       setStep(3);
-    } catch (e: any) { toast.error(e.message || 'Gagal membuat proyek'); }
+    } catch (e: any) { toast.error(e.message || t('createProjectError')); }
     finally { setBusy(false); }
   };
 
@@ -151,7 +155,7 @@ export default function WelcomeWizard() {
         if (error) throw error;
       }
       setStep(4);
-    } catch (e: any) { toast.error(e.message || 'Gagal membuat tugas'); }
+    } catch (e: any) { toast.error(e.message || t('createTaskError')); }
     finally { setBusy(false); }
   };
 
@@ -167,10 +171,10 @@ export default function WelcomeWizard() {
       const { data, error } = await supabase.rpc('accept_invitation', { invite_token: token });
       if (error) throw error;
       const { data: ws } = await supabase.from('workspaces').select('slug').eq('id', data as string).single();
-      toast.success('Berhasil bergabung ke ruang kerja!');
+      toast.success(t('joinSuccessToast'));
       router.replace(ws?.slug ? `/${ws.slug}/dashboard` : '/dashboard');
     } catch (e: any) {
-      toast.error(translateInviteError(e?.message || ''));
+      toast.error(translateInviteError(e?.message || '', t));
     } finally {
       setJoining(false);
     }
@@ -185,6 +189,7 @@ export default function WelcomeWizard() {
   return (
     <div className="min-h-screen bg-background px-4 py-8 sm:py-12 relative overflow-hidden">
       <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,oklch(0.5_0.25_270/0.10),transparent_55%)]" />
+      <LanguageSwitcher className="absolute right-4 top-4 sm:right-6 sm:top-6" />
       <div className="mx-auto w-full max-w-lg">
         {/* header + progress */}
         <div className="flex flex-col items-center text-center">
@@ -199,7 +204,10 @@ export default function WelcomeWizard() {
                 ))}
               </div>
               <p className="mt-3 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-                Langkah {Math.min(step + 1, STEPS.length)} dari {STEPS.length} · {STEPS[step]}
+                {t('progressStepLabel')
+                  .replace('{current}', String(Math.min(step + 1, STEPS.length)))
+                  .replace('{total}', String(STEPS.length))
+                  .replace('{stepName}', STEPS[step])}
               </p>
             </>
           )}
@@ -211,9 +219,9 @@ export default function WelcomeWizard() {
             {mode === 'choice' && (
               <Slide key="choice">
                 <div className="mb-6 text-center">
-                  <h2 className="font-display text-xl font-semibold tracking-tight">Anda belum punya ruang kerja</h2>
+                  <h2 className="font-display text-xl font-semibold tracking-tight">{t('choiceTitle')}</h2>
                   <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
-                    Buat ruang kerja baru, atau gabung ke ruang kerja yang sudah mengundang Anda.
+                    {t('choiceSubtitle')}
                   </p>
                 </div>
                 <div className="space-y-3">
@@ -225,8 +233,8 @@ export default function WelcomeWizard() {
                       <Layers className="h-5 w-5" />
                     </span>
                     <span className="flex-1">
-                      <span className="block text-sm font-bold text-foreground">Buat ruang kerja baru</span>
-                      <span className="block text-xs text-muted-foreground mt-0.5">Mulai dari kosong — cocok untuk tim atau proyek baru.</span>
+                      <span className="block text-sm font-bold text-foreground">{t('choiceCreateTitle')}</span>
+                      <span className="block text-xs text-muted-foreground mt-0.5">{t('choiceCreateDesc')}</span>
                     </span>
                     <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
                   </button>
@@ -238,8 +246,8 @@ export default function WelcomeWizard() {
                       <Link2 className="h-5 w-5" />
                     </span>
                     <span className="flex-1">
-                      <span className="block text-sm font-bold text-foreground">Punya undangan?</span>
-                      <span className="block text-xs text-muted-foreground mt-0.5">Tempel tautan atau kode undangan dari email Anda.</span>
+                      <span className="block text-sm font-bold text-foreground">{t('choiceJoinTitle')}</span>
+                      <span className="block text-xs text-muted-foreground mt-0.5">{t('choiceJoinDesc')}</span>
                     </span>
                     <ArrowRight className="h-4 w-4 text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
                   </button>
@@ -251,19 +259,19 @@ export default function WelcomeWizard() {
             {mode === 'join' && (
               <Slide key="join">
                 <button onClick={() => setMode('choice')} className="mb-4 -ml-1 flex items-center gap-1 text-xs font-semibold text-muted-foreground hover:text-foreground">
-                  <ChevronLeft className="h-3.5 w-3.5" /> Kembali
+                  <ChevronLeft className="h-3.5 w-3.5" /> {t('backButtonLabel')}
                 </button>
-                <StepHead icon={Link2} title="Gabung ke ruang kerja" desc="Tempel tautan undangan lengkap (mis. ruangbaru.my.id/invite/abc123) atau cukup kodenya." />
+                <StepHead icon={Link2} title={t('joinTitle')} desc={t('joinDesc')} />
                 <Input
                   autoFocus
                   value={joinInput}
                   onChange={(e) => setJoinInput(e.target.value)}
-                  placeholder="Tautan atau kode undangan"
+                  placeholder={t('joinInputPlaceholder')}
                   className="h-11"
                   onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
                 />
                 <Button onClick={handleJoin} disabled={joining || !joinInput.trim()} className="mt-6 w-full h-11 gap-2">
-                  {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Gabung
+                  {joining ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} {t('joinButtonLabel')}
                 </Button>
               </Slide>
             )}
@@ -271,20 +279,20 @@ export default function WelcomeWizard() {
             {/* STEP 1 */}
             {mode === 'create' && step === 0 && (
               <Slide key="s1">
-                <StepHead icon={Sparkles} title="Halo! Siapa nama Anda? 👋" desc="Dan apa nama ruang kerja tim Anda? Keduanya bisa diubah lagi nanti." />
+                <StepHead icon={Sparkles} title={t('step1Title')} desc={t('step1Desc')} />
                 <div className="space-y-4">
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nama Anda</label>
-                    <Input autoFocus value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="cth. Budi Santoso" className="mt-1.5 h-11" />
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('yourNameLabel')}</label>
+                    <Input autoFocus value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder={t('namePlaceholder')} className="mt-1.5 h-11" />
                   </div>
                   <div>
-                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Nama Ruang Kerja</label>
-                    <Input value={wsName} onChange={(e) => setWsName(e.target.value)} placeholder="cth. Agency HQ, Tim Marketing" className="mt-1.5 h-11"
+                    <label className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{t('workspaceNameLabel')}</label>
+                    <Input value={wsName} onChange={(e) => setWsName(e.target.value)} placeholder={t('workspaceNamePlaceholder')} className="mt-1.5 h-11"
                       onKeyDown={(e) => e.key === 'Enter' && createWorkspace()} />
                   </div>
                 </div>
                 <Button onClick={createWorkspace} disabled={busy || !wsName.trim() || !fullName.trim()} className="mt-6 w-full h-11 gap-2">
-                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Lanjut
+                  {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} {t('continueButtonLabel')}
                 </Button>
               </Slide>
             )}
@@ -292,20 +300,20 @@ export default function WelcomeWizard() {
             {/* STEP 2 */}
             {step === 1 && (
               <Slide key="s2">
-                <StepHead icon={Users} title="Undang tim Anda" desc="Tambahkan rekan kerja lewat email. Mereka akan menerima tautan undangan. Lewati jika ingin nanti." />
+                <StepHead icon={Users} title={t('step2Title')} desc={t('step2Desc')} />
                 <div className="space-y-2">
                   {invites.map((val, i) => (
                     <div key={i} className="relative">
                       <Mail className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                       <Input value={val} onChange={(e) => setInvites((p) => p.map((x, idx) => idx === i ? e.target.value : x))}
-                        placeholder="rekan@perusahaan.com" type="email" className="h-11 pl-9" />
+                        placeholder={t('inviteEmailPlaceholder')} type="email" className="h-11 pl-9" />
                     </div>
                   ))}
                 </div>
                 <div className="mt-6 flex gap-2">
-                  <Button variant="ghost" onClick={() => setStep(2)} disabled={busy} className="flex-1">Lewati</Button>
+                  <Button variant="ghost" onClick={() => setStep(2)} disabled={busy} className="flex-1">{t('skipButtonLabel')}</Button>
                   <Button onClick={sendInvites} disabled={busy} className="flex-1 gap-2">
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Lanjut
+                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} {t('continueButtonLabel')}
                   </Button>
                 </div>
               </Slide>
@@ -314,13 +322,13 @@ export default function WelcomeWizard() {
             {/* STEP 3 */}
             {step === 2 && (
               <Slide key="s3">
-                <StepHead icon={FolderKanban} title="Buat proyek pertama" desc="Proyek adalah wadah untuk tugas-tugas terkait." />
-                <Input autoFocus value={projName} onChange={(e) => setProjName(e.target.value)} placeholder="cth. Peluncuran Website" className="h-11"
+                <StepHead icon={FolderKanban} title={t('step3Title')} desc={t('step3Desc')} />
+                <Input autoFocus value={projName} onChange={(e) => setProjName(e.target.value)} placeholder={t('projectNamePlaceholder')} className="h-11"
                   onKeyDown={(e) => e.key === 'Enter' && createProject()} />
                 <div className="mt-6 flex gap-2">
                   <Button variant="ghost" onClick={() => setStep(1)} disabled={busy} className="gap-1.5"><ArrowLeft className="h-4 w-4" /></Button>
                   <Button onClick={createProject} disabled={busy || !projName.trim()} className="flex-1 gap-2">
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} Lanjut
+                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <ArrowRight className="h-4 w-4" />} {t('continueButtonLabel')}
                   </Button>
                 </div>
               </Slide>
@@ -329,13 +337,13 @@ export default function WelcomeWizard() {
             {/* STEP 4 */}
             {step === 3 && (
               <Slide key="s4">
-                <StepHead icon={CheckSquare} title="Tambahkan tugas pertama" desc={`Apa hal pertama yang perlu dikerjakan di "${project?.name}"?`} />
-                <Input autoFocus value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder="cth. Susun brief & timeline" className="h-11"
+                <StepHead icon={CheckSquare} title={t('step4Title')} desc={t('step4Desc').replace('{projectName}', project?.name ?? '')} />
+                <Input autoFocus value={taskTitle} onChange={(e) => setTaskTitle(e.target.value)} placeholder={t('taskTitlePlaceholder')} className="h-11"
                   onKeyDown={(e) => e.key === 'Enter' && createTask()} />
                 <div className="mt-6 flex gap-2">
-                  <Button variant="ghost" onClick={() => setStep(4)} disabled={busy} className="flex-1">Lewati</Button>
+                  <Button variant="ghost" onClick={() => setStep(4)} disabled={busy} className="flex-1">{t('skipButtonLabel')}</Button>
                   <Button onClick={createTask} disabled={busy} className="flex-1 gap-2">
-                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Buat & Lanjut
+                    {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} {t('createAndContinueButtonLabel')}
                   </Button>
                 </div>
               </Slide>
@@ -349,22 +357,22 @@ export default function WelcomeWizard() {
                     className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl gradient-brand text-white shadow-lg shadow-primary/30">
                     <PartyPopper className="h-8 w-8" />
                   </motion.div>
-                  <h2 className="mt-5 font-display text-2xl font-semibold">Semua siap! 🎉</h2>
-                  <p className="mt-2 text-sm text-muted-foreground">Ruang kerja Anda sudah dikonfigurasi. Berikut yang bisa Anda lakukan selanjutnya:</p>
+                  <h2 className="mt-5 font-display text-2xl font-semibold">{t('doneTitle')}</h2>
+                  <p className="mt-2 text-sm text-muted-foreground">{t('doneSubtitle')}</p>
                   <div className="mt-6 space-y-2 text-left">
                     {[
-                      { icon: FolderKanban, t: 'Atur tugas di papan Kanban' },
-                      { icon: Users, t: 'Undang lebih banyak anggota tim' },
-                      { icon: CheckSquare, t: 'Pantau tenggat di kalender' },
+                      { icon: FolderKanban, label: t('doneTipKanban') },
+                      { icon: Users, label: t('doneTipInvite') },
+                      { icon: CheckSquare, label: t('doneTipCalendar') },
                     ].map((x) => (
-                      <div key={x.t} className="flex items-center gap-3 rounded-xl border border-border bg-background/50 p-3">
+                      <div key={x.label} className="flex items-center gap-3 rounded-xl border border-border bg-background/50 p-3">
                         <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary"><x.icon className="h-4 w-4" /></span>
-                        <span className="text-sm font-medium">{x.t}</span>
+                        <span className="text-sm font-medium">{x.label}</span>
                         <Check className="ml-auto h-4 w-4 text-emerald-500" />
                       </div>
                     ))}
                   </div>
-                  <Button onClick={finish} className="mt-6 w-full h-11 gap-2"><Rocket className="h-4 w-4" /> Buka Dashboard</Button>
+                  <Button onClick={finish} className="mt-6 w-full h-11 gap-2"><Rocket className="h-4 w-4" /> {t('openDashboardButton')}</Button>
                 </div>
               </Slide>
             )}
@@ -375,11 +383,11 @@ export default function WelcomeWizard() {
   );
 }
 
-function translateInviteError(message: string): string {
-  if (message.includes('expired')) return 'Tautan undangan ini sudah kedaluwarsa. Minta undangan baru dari tim Anda.';
-  if (message.includes('already accepted')) return 'Undangan ini sudah pernah digunakan.';
-  if (message.includes('different email')) return 'Undangan ini dikirim ke alamat email yang berbeda.';
-  if (message.includes('not found') || !message) return 'Tautan atau kode undangan tidak ditemukan. Periksa kembali.';
+function translateInviteError(message: string, t: (key: string) => string): string {
+  if (message.includes('expired')) return t('inviteExpiredError');
+  if (message.includes('already accepted')) return t('inviteAlreadyAcceptedError');
+  if (message.includes('different email')) return t('inviteDifferentEmailError');
+  if (message.includes('not found') || !message) return t('inviteNotFoundError');
   return message;
 }
 

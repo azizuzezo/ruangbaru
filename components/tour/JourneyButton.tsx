@@ -3,10 +3,12 @@
 import { Compass } from 'lucide-react';
 import { useTour } from './TourProvider';
 import { cn } from '@/lib/utils';
+import { useT } from '@/lib/i18n/useT';
 
 /** Always-accessible button to (re)play the guided product tour. */
 export function JourneyButton({ className }: { className?: string }) {
   const { start } = useTour();
+  const t = useT('tour');
   return (
     <button
       data-tour="journey"
@@ -17,7 +19,7 @@ export function JourneyButton({ className }: { className?: string }) {
       )}
     >
       <Compass className="h-3.5 w-3.5 text-primary transition-transform group-hover:rotate-[20deg]" />
-      Tur Panduan
+      {t('tourJourneyButtonLabel')}
     </button>
   );
 }

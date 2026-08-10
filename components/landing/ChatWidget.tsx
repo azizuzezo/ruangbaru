@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion';
 import { MessageCircle, X, Send, Sparkles, Loader2, Check } from 'lucide-react';
+import { useT } from '@/lib/i18n/useT';
 
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
@@ -11,65 +12,66 @@ const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
 type Msg = { id: number; from: 'bot' | 'user'; text: string };
 
-type Entry = { patterns: string[]; answer: string };
+// `answerKey` is a translation key resolved with t() inside the component
+// (via answerFor) so the bot's replies follow the active locale. `patterns`
+// stay Indonesian — they only drive keyword matching against raw user input
+// and are never rendered.
+type Entry = { patterns: string[]; answerKey: string };
 
 const KB: Entry[] = [
   {
     patterns: ['halo', 'hai', 'hi', 'hello', 'pagi', 'siang', 'sore', 'malam', 'assalam'],
-    answer: 'Halo! 👋 Saya asisten RuangBaru. Ada yang ingin Anda tahu tentang produk kami? Pilih pertanyaan di bawah atau ketik langsung ya.',
+    answerKey: 'chatKbGreeting',
   },
   {
     patterns: ['apa itu', 'apa sih', 'tentang ruangbaru', 'ruangbaru itu', 'fungsi ruangbaru', 'kegunaan'],
-    answer: 'RuangBaru adalah workspace kolaborasi untuk tim Indonesia. Ia menyatukan proyek, tugas, kalender, catatan, dan manajemen tim dalam satu tempat — supaya tim bisa fokus bekerja, bukan berpindah-pindah aplikasi.',
+    answerKey: 'chatKbAbout',
   },
   {
     patterns: ['fitur', 'bisa apa', 'kemampuan', 'modul', 'apa saja'],
-    answer: 'Fitur utama RuangBaru: 📋 Papan Kanban, ✅ Manajemen Tugas, 📅 Kalender Tim, 📝 Catatan kolaboratif, dan 👥 Manajemen Tim. Semuanya saling terhubung. Lihat detailnya di halaman Fitur.',
+    answerKey: 'chatKbFeatures',
   },
   {
     patterns: ['harga', 'biaya', 'bayar', 'gratis', 'langganan', 'paket', 'berapa', 'mahal'],
-    answer: 'RuangBaru bisa dipakai gratis untuk tim hingga 5 anggota dan 3 proyek aktif — tanpa kartu kredit. Untuk tim yang lebih besar, tersedia paket Pro. Detail lengkapnya ada di halaman Harga.',
+    answerKey: 'chatKbPricing',
   },
   {
     patterns: ['mulai', 'daftar', 'register', 'coba', 'buat akun', 'sign up', 'memulai', 'gimana caranya pakai'],
-    answer: 'Mudah! Klik "Coba Gratis" atau "Mulai gratis", buat akun, lalu bikin workspace pertama Anda dan undang anggota tim. Setup-nya sekitar 2 menit. 🚀',
+    answerKey: 'chatKbGetStarted',
   },
   {
     patterns: ['aman', 'keamanan', 'privasi', 'enkripsi', 'data saya', 'keamanan data'],
-    answer: 'Keamanan kami utamakan. Data dienkripsi saat transit, setiap workspace terisolasi, dan akses diatur berdasarkan peran sehingga hanya anggota berwenang yang bisa melihat data tertentu. Selengkapnya di Kebijakan Privasi.',
+    answerKey: 'chatKbSecurity',
   },
   {
     patterns: ['install', 'download', 'unduh', 'aplikasi', 'web', 'browser', 'hp', 'ponsel', 'mobile'],
-    answer: 'Tidak perlu instalasi. RuangBaru berbasis web dan langsung bisa dibuka dari browser apa pun, baik di desktop maupun ponsel.',
+    answerKey: 'chatKbInstall',
   },
   {
     patterns: ['bahasa', 'indonesia', 'english', 'inggris'],
-    answer: 'Antarmuka RuangBaru sepenuhnya dalam Bahasa Indonesia, dirancang khusus untuk cara kerja tim dan UMKM di Indonesia. 🇮🇩',
+    answerKey: 'chatKbLanguage',
   },
   {
     patterns: ['kontak', 'bantuan', 'hubungi', 'email', 'support', 'cs', 'tanya orang', 'admin', 'tiket'],
-    answer: 'Tim kami siap membantu di halo@ruangbaru.my.id. Anda juga bisa membuat tiket dukungan secara langsung dari chat ini dengan mengklik tombol "Hubungi Dukungan & Buat Tiket" di bawah. 😊',
+    answerKey: 'chatKbContact',
   },
   {
     patterns: ['siapa', 'pembuat', 'dibuat', 'duacincin', 'pemilik', 'siapa yang buat'],
-    answer: 'RuangBaru dibuat oleh Duacincin (duacincin.id), dengan fokus membantu tim dan UMKM Indonesia bekerja lebih teratur.',
+    answerKey: 'chatKbCreator',
   },
   {
     patterns: ['tim besar', 'enterprise', 'banyak anggota', 'perusahaan besar', 'skala besar', 'khusus'],
-    answer: 'Untuk tim besar atau kebutuhan khusus, tersedia paket Khusus dengan onboarding dan dukungan tambahan. Hubungi kami di halo@ruangbaru.my.id untuk mengaturnya.',
+    answerKey: 'chatKbEnterprise',
   },
   {
     patterns: ['terima kasih', 'makasih', 'thanks', 'thank', 'oke', 'ok', 'sip', 'mantap'],
-    answer: 'Sama-sama! 🙌 Kalau ada pertanyaan lain tentang RuangBaru, saya siap membantu.',
+    answerKey: 'chatKbThanks',
   },
 ];
 
-const FALLBACK =
-  'Hmm, saya belum punya jawaban pasti untuk itu. Untuk pertanyaan lebih spesifik, tim kami senang membantu di halo@ruangbaru.my.id. Atau Anda bisa klik "Hubungi Dukungan & Buat Tiket" di bawah untuk langsung membuat tiket bantuan.';
+const QUICK_REPLY_KEYS = ['chatQuickReply1', 'chatQuickReply2', 'chatQuickReply3', 'chatQuickReply4'];
 
-const QUICK_REPLIES = ['Apa itu RuangBaru?', 'Apakah gratis?', 'Fitur apa saja?', 'Bagaimana cara mulai?'];
-
-function answerFor(input: string): string {
+function answerFor(input: string, t: (key: string) => string): string {
   const q = input.toLowerCase();
   let best: Entry | null = null;
   let bestScore = 0;
@@ -77,16 +79,17 @@ function answerFor(input: string): string {
     const score = entry.patterns.reduce((n, p) => (q.includes(p) ? n + 1 : n), 0);
     if (score > bestScore) { bestScore = score; best = entry; }
   }
-  return best ? best.answer : FALLBACK;
+  return t(best ? best.answerKey : 'chatFallback');
 }
 
 type TicketStep = 'none' | 'ask_question' | 'ask_name' | 'ask_email' | 'ask_company' | 'submitting';
 
 export function ChatWidget() {
+  const t = useT('landing');
   const reduce = useReducedMotion();
   const [open, setOpen] = useState(false);
   const [messages, setMessages] = useState<Msg[]>([
-    { id: 0, from: 'bot', text: 'Halo! 👋 Saya asisten RuangBaru. Mau tanya apa tentang produk kami?' },
+    { id: 0, from: 'bot', text: t('chatGreeting') },
   ]);
   const [input, setInput] = useState('');
   const [typing, setTyping] = useState(false);
@@ -122,14 +125,14 @@ export function ChatWidget() {
     if (initialQuestion) {
       setMessages((m) => [
         ...m,
-        { id: idRef.current++, from: 'user', text: 'Saya ingin membuat tiket dukungan' },
-        { id: idRef.current++, from: 'bot', text: `Pertanyaan Anda: "${initialQuestion}"\n\nBaik, saya akan bantu membuatkan tiket untuk tim kami. Boleh tahu siapa nama lengkap Anda?` }
+        { id: idRef.current++, from: 'user', text: t('chatTicketUserMsgWithQuestion') },
+        { id: idRef.current++, from: 'bot', text: t('chatTicketQuestionIntro').replace('{question}', initialQuestion) }
       ]);
     } else {
       setMessages((m) => [
         ...m,
-        { id: idRef.current++, from: 'user', text: 'Saya ingin menghubungi dukungan / membuat tiket' },
-        { id: idRef.current++, from: 'bot', text: 'Tentu! Saya akan bantu membuatkan tiket dukungan untuk Anda. Pertama-tama, silakan tuliskan pertanyaan atau kendala yang sedang Anda hadapi:' }
+        { id: idRef.current++, from: 'user', text: t('chatTicketUserMsgGeneric') },
+        { id: idRef.current++, from: 'bot', text: t('chatTicketAskQuestion') }
       ]);
     }
   };
@@ -150,29 +153,29 @@ export function ChatWidget() {
         if (ticketStep === 'ask_question') {
           setTicketData((prev) => ({ ...prev, question: text }));
           setTicketStep('ask_name');
-          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Terima kasih. Selanjutnya, boleh tahu siapa nama lengkap Anda?' }]);
+          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: t('chatTicketAskName') }]);
           setTyping(false);
         } else if (ticketStep === 'ask_name') {
           setTicketData((prev) => ({ ...prev, name: text }));
           setTicketStep('ask_email');
-          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: `Salam kenal, ${text}! Mohon masukkan alamat email aktif Anda agar kami dapat mengirimkan tanggapan.` }]);
+          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: t('chatTicketAskEmail').replace('{name}', text) }]);
           setTyping(false);
         } else if (ticketStep === 'ask_email') {
           if (!validateEmail(text)) {
-            setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Maaf, format email Anda sepertinya kurang tepat. Silakan masukkan alamat email yang valid (contoh: nama@domain.com).' }]);
+            setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: t('chatTicketInvalidEmail') }]);
             setTyping(false);
             return;
           }
           setTicketData((prev) => ({ ...prev, email: text }));
           setTicketStep('ask_company');
-          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Terakhir, apa nama perusahaan atau organisasi Anda? (Ketik "tidak ada" jika tidak ada).' }]);
+          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: t('chatTicketAskCompany') }]);
           setTyping(false);
         } else if (ticketStep === 'ask_company') {
           const companyVal = text.toLowerCase() === 'tidak ada' ? '' : text;
           const finalData = { ...ticketData, company: companyVal };
           setTicketData(finalData);
           setTicketStep('submitting');
-          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Mengirimkan tiket dukungan Anda...' }]);
+          setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: t('chatTicketSubmitting') }]);
 
           try {
             const res = await fetch('/api/support/ticket', {
@@ -192,14 +195,14 @@ export function ChatWidget() {
                 {
                   id: idRef.current++,
                   from: 'bot',
-                  text: `Tiket Anda berhasil dibuat! 🎉\n\nDetail tiket telah dikirimkan ke halo@ruangbaru.my.id. Tim kami akan menghubungi Anda kembali melalui email di ${finalData.email}.\n\nAda hal lain yang ingin Anda tanyakan?`
+                  text: t('chatTicketSuccess').replace('{email}', finalData.email)
                 }
               ]);
             } else {
-              setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Maaf, terjadi kesalahan saat membuat tiket. Silakan coba lagi.' }]);
+              setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: t('chatTicketError') }]);
             }
           } catch (err) {
-            setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: 'Gagal menghubungi server. Silakan periksa koneksi internet Anda.' }]);
+            setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: t('chatTicketNetworkError') }]);
           } finally {
             setTicketStep('none');
             setTyping(false);
@@ -229,7 +232,7 @@ export function ChatWidget() {
     } catch {
       /* network error → fallback below */
     }
-    if (!reply) reply = answerFor(text);
+    if (!reply) reply = answerFor(text, t);
 
     setMessages((m) => [...m, { id: idRef.current++, from: 'bot', text: reply }]);
     setTyping(false);
@@ -253,10 +256,10 @@ export function ChatWidget() {
                 <span className="absolute -bottom-0 -right-0 h-2.5 w-2.5 rounded-full border-2 border-[#106CD8] bg-emerald-400" />
               </span>
               <div className="flex-1">
-                <p className="text-sm font-bold leading-tight">Asisten RuangBaru</p>
-                <p className="text-[11px] text-blue-100">Biasanya membalas instan</p>
+                <p className="text-sm font-bold leading-tight">{t('chatHeaderTitle')}</p>
+                <p className="text-[11px] text-blue-100">{t('chatHeaderSubtitle')}</p>
               </div>
-              <button onClick={() => setOpen(false)} aria-label="Tutup" className="rounded-md p-1 transition-colors hover:bg-white/15">
+              <button onClick={() => setOpen(false)} aria-label={t('chatCloseAria')} className="rounded-md p-1 transition-colors hover:bg-white/15">
                 <X className="h-4 w-4" />
               </button>
             </div>
@@ -298,13 +301,13 @@ export function ChatWidget() {
               {/* Quick replies (shown until the user asks something) */}
               {messages.length <= 1 && !typing && (
                 <div className="flex flex-wrap gap-2 pt-1">
-                  {QUICK_REPLIES.map((q) => (
+                  {QUICK_REPLY_KEYS.map((qKey) => (
                     <button
-                      key={q}
-                      onClick={() => send(q)}
+                      key={qKey}
+                      onClick={() => send(t(qKey))}
                       className="rounded-full border border-neutral-200 bg-white px-3 py-1.5 text-[12px] font-medium text-neutral-600 transition-colors hover:border-[#106CD8] hover:text-[#106CD8]"
                     >
-                      {q}
+                      {t(qKey)}
                     </button>
                   ))}
                 </div>
@@ -319,7 +322,7 @@ export function ChatWidget() {
                   onClick={() => startTicketFlow()}
                   className="w-full flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-primary/30 bg-primary/5 py-2 text-xs font-bold text-primary hover:bg-primary/10 transition-colors"
                 >
-                  🎫 Hubungi Dukungan & Buat Tiket
+                  {t('chatTicketButton')}
                 </button>
               </div>
             )}
@@ -334,21 +337,21 @@ export function ChatWidget() {
                 onChange={(e) => setInput(e.target.value)}
                 placeholder={
                   ticketStep === 'ask_question'
-                    ? 'Tulis pertanyaan Anda...'
+                    ? t('chatPlaceholderQuestion')
                     : ticketStep === 'ask_name'
-                    ? 'Nama lengkap Anda...'
+                    ? t('chatPlaceholderName')
                     : ticketStep === 'ask_email'
-                    ? 'Alamat email Anda...'
+                    ? t('chatPlaceholderEmail')
                     : ticketStep === 'ask_company'
-                    ? 'Nama perusahaan Anda...'
-                    : 'Tulis pertanyaan…'
+                    ? t('chatPlaceholderCompany')
+                    : t('chatPlaceholderDefault')
                 }
                 className="min-w-0 flex-1 rounded-full bg-neutral-100 px-4 py-2.5 text-[13px] text-neutral-800 outline-none placeholder:text-neutral-400 focus:bg-neutral-50 focus:ring-2 focus:ring-blue-100"
               />
               <button
                 type="submit"
                 disabled={!input.trim() || typing}
-                aria-label="Kirim"
+                aria-label={t('chatSendAria')}
                 className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white transition-opacity disabled:opacity-40"
                 style={{ background: BLUE }}
               >
@@ -356,7 +359,7 @@ export function ChatWidget() {
               </button>
             </form>
 
-            <p className="bg-white pb-2 text-center text-[10px] text-neutral-300">Asisten otomatis · untuk bantuan lanjut: halo@ruangbaru.my.id</p>
+            <p className="bg-white pb-2 text-center text-[10px] text-neutral-300">{t('chatFooterNote')}</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -364,7 +367,7 @@ export function ChatWidget() {
       {/* Floating launcher */}
       <motion.button
         onClick={() => setOpen((o) => !o)}
-        aria-label={open ? 'Tutup chat' : 'Tanya tentang RuangBaru'}
+        aria-label={open ? t('chatCloseChatAria') : t('chatOpenAria')}
         whileHover={reduce ? undefined : { scale: 1.06 }}
         whileTap={reduce ? undefined : { scale: 0.94 }}
         className="relative flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg"

@@ -12,16 +12,19 @@ import { Label } from '@/components/ui/label';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { Loader2, CheckCircle, ShieldCheck } from 'lucide-react';
+import { useT } from '@/lib/i18n/useT';
 
-const schema = z.object({
-  password: z.string().min(8, 'Kata sandi minimal 8 karakter'),
-  confirm: z.string(),
-}).refine((d) => d.password === d.confirm, {
-  message: 'Kata sandi tidak cocok',
-  path: ['confirm'],
-});
+function getSchema(t: (key: string) => string) {
+  return z.object({
+    password: z.string().min(8, t('passwordMin8Error')),
+    confirm: z.string(),
+  }).refine((d) => d.password === d.confirm, {
+    message: t('passwordNoMatchError'),
+    path: ['confirm'],
+  });
+}
 
-type FormValues = z.infer<typeof schema>;
+type FormValues = { password: string; confirm: string };
 
 export default function ResetPasswordPage() {
   return (
@@ -32,6 +35,7 @@ export default function ResetPasswordPage() {
 }
 
 function ResetPasswordForm() {
+  const t = useT('auth');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -47,7 +51,7 @@ function ResetPasswordForm() {
       if (data.session) {
         setSessionReady(true);
       } else {
-        toast.error('Tautan reset tidak valid atau sudah kedaluwarsa. Minta tautan baru.');
+        toast.error(t('resetLinkInvalidToast'));
         router.replace('/forgot-password');
       }
     });
@@ -58,7 +62,7 @@ function ResetPasswordForm() {
     handleSubmit,
     formState: { errors },
   } = useForm<FormValues>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(getSchema(t)),
     defaultValues: { password: '', confirm: '' },
   });
 
@@ -66,11 +70,11 @@ function ResetPasswordForm() {
     setLoading(true);
     const { error } = await supabase.auth.updateUser({ password: data.password });
     if (error) {
-      toast.error(error.message || 'Gagal mengubah kata sandi. Coba lagi.');
+      toast.error(error.message || t('resetPasswordFailToast'));
       setLoading(false);
     } else {
       setDone(true);
-      toast.success('Kata sandi berhasil diubah!');
+      toast.success(t('resetPasswordSuccessToast'));
       // Sign out so user logs in fresh
       await supabase.auth.signOut();
       setTimeout(() => router.push('/login'), 2500);
@@ -84,13 +88,13 @@ function ResetPasswordForm() {
           <CheckCircle className="h-7 w-7 text-emerald-500" />
         </div>
         <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-          Kata Sandi Berhasil Diubah
+          {t('resetPasswordDoneHeading')}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Anda akan diarahkan ke halaman masuk dalam beberapa detik...
+          {t('resetPasswordRedirectText')}
         </p>
         <Link href="/login">
-          <Button className="w-full mt-4">Masuk Sekarang</Button>
+          <Button className="w-full mt-4">{t('loginNowButton')}</Button>
         </Link>
       </div>
     );
@@ -100,7 +104,7 @@ function ResetPasswordForm() {
     return (
       <div className="flex flex-col items-center gap-4 py-12">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
-        <p className="text-sm text-muted-foreground">Memverifikasi tautan reset...</p>
+        <p className="text-sm text-muted-foreground">{t('verifyingResetLinkText')}</p>
       </div>
     );
   }
@@ -112,20 +116,20 @@ function ResetPasswordForm() {
           <ShieldCheck className="h-5 w-5 text-primary" />
         </div>
         <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-          Buat Kata Sandi Baru
+          {t('newPasswordHeading')}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Masukkan kata sandi baru Anda. Gunakan minimal 8 karakter.
+          {t('newPasswordSubheading')}
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="password">Kata Sandi Baru</Label>
+          <Label htmlFor="password">{t('newPasswordLabel')}</Label>
           <Input
             id="password"
             type="password"
-            placeholder="Min. 8 karakter"
+            placeholder={t('passwordMin8CharsPlaceholder')}
             disabled={loading}
             {...register('password')}
           />
@@ -135,11 +139,11 @@ function ResetPasswordForm() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="confirm">Konfirmasi Kata Sandi</Label>
+          <Label htmlFor="confirm">{t('confirmPasswordFieldLabel')}</Label>
           <Input
             id="confirm"
             type="password"
-            placeholder="Ulangi kata sandi baru"
+            placeholder={t('confirmNewPasswordPlaceholder')}
             disabled={loading}
             {...register('confirm')}
           />
@@ -152,18 +156,18 @@ function ResetPasswordForm() {
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Menyimpan...
+              {t('savingLabel')}
             </>
           ) : (
-            'Simpan Kata Sandi Baru'
+            t('saveNewPasswordButton')
           )}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Ingat kata sandi lama?{' '}
+        {t('rememberOldPasswordText')}{' '}
         <Link href="/login" className="font-semibold text-primary hover:underline">
-          Kembali Masuk
+          {t('backToLoginLink')}
         </Link>
       </p>
     </div>

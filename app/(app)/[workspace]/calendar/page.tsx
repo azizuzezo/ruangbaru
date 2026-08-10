@@ -11,6 +11,7 @@ import {
   format, startOfMonth, endOfMonth, startOfWeek, eachDayOfInterval, addDays,
   isSameDay, isSameMonth, isToday, addMonths, subMonths, differenceInCalendarDays,
 } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
 import {
   ChevronLeft, ChevronRight, Plus, Video, CalendarDays, RefreshCw, X, Sparkles, Check,
 } from 'lucide-react';
@@ -23,9 +24,11 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { EventDialog, type DialogMember } from '@/components/calendar/EventDialog';
 import type { CalendarEvent, Task } from '@/types';
+import { useT } from '@/lib/i18n/useT';
+import { useLocale } from '@/lib/i18n/locale-context';
 
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
-const DOW = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+const DOW_KEYS = ['dowSun', 'dowMon', 'dowTue', 'dowWed', 'dowThu', 'dowFri', 'dowSat'] as const;
 
 type Occurrence = { key: string; event: CalendarEvent; date: Date };
 
@@ -50,24 +53,25 @@ function occurrencesInRange(ev: CalendarEvent, rangeStart: Date, rangeEnd: Date)
 }
 
 // Daftar Hari Libur Nasional Indonesia 2026 (Resmi SKB 3 Menteri)
-const INDONESIAN_HOLIDAYS_2026: Record<string, string> = {
-  '2026-01-01': 'Tahun Baru 2026 Masehi',
-  '2026-01-16': 'Isra Mikraj',
-  '2026-02-17': 'Tahun Baru Imlek',
-  '2026-03-19': 'Hari Suci Nyepi',
-  '2026-03-21': 'Hari Raya Idul Fitri',
-  '2026-03-22': 'Hari Raya Idul Fitri',
-  '2026-04-03': 'Wafat Yesus Kristus',
-  '2026-04-05': 'Hari Paskah',
-  '2026-05-01': 'Hari Buruh Internasional',
-  '2026-05-14': 'Kenaikan Yesus Kristus',
-  '2026-05-27': 'Hari Raya Idul Adha',
-  '2026-05-31': 'Hari Raya Waisak',
-  '2026-06-01': 'Hari Lahir Pancasila',
-  '2026-06-16': 'Tahun Baru Islam 1448 H',
-  '2026-08-17': 'Hari Kemerdekaan RI',
-  '2026-08-25': 'Maulid Nabi Muhammad SAW',
-  '2026-12-25': 'Hari Raya Natal',
+// Values are calendar dict keys — resolved via t() at render time.
+const HOLIDAY_KEYS_2026: Record<string, string> = {
+  '2026-01-01': 'holidayNewYear',
+  '2026-01-16': 'holidayIsraMikraj',
+  '2026-02-17': 'holidayChineseNewYear',
+  '2026-03-19': 'holidayNyepi',
+  '2026-03-21': 'holidayEidFitr1',
+  '2026-03-22': 'holidayEidFitr2',
+  '2026-04-03': 'holidayGoodFriday',
+  '2026-04-05': 'holidayEaster',
+  '2026-05-01': 'holidayLabourDay',
+  '2026-05-14': 'holidayAscension',
+  '2026-05-27': 'holidayEidAdha',
+  '2026-05-31': 'holidayVesak',
+  '2026-06-01': 'holidayPancasila',
+  '2026-06-16': 'holidayIslamicNewYear',
+  '2026-08-17': 'holidayIndependenceDay',
+  '2026-08-25': 'holidayMawlid',
+  '2026-12-25': 'holidayChristmas',
 };
 
 function isWeekend(date: Date) {
@@ -97,6 +101,10 @@ export default function CalendarPage() {
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setTaskDetailOpen } = useUIStore();
   const supabase = createClient();
+  const t = useT('calendar');
+  const { locale } = useLocale();
+  const dfnsLocale = locale === 'id' ? idLocale : undefined;
+  const DOW = DOW_KEYS.map((k) => t(k));
 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [slideDirection, setSlideDirection] = useState(0); // -1 for prev, 1 for next
@@ -155,10 +163,10 @@ export default function CalendarPage() {
     const p = new URLSearchParams(window.location.search).get('google');
     if (!p) return;
     const map: Record<string, string> = {
-      connected: 'Google Calendar tersambung! Klik Sinkronkan untuk memuat acara.',
-      not_configured: 'Google Calendar belum dikonfigurasi (butuh kunci OAuth).',
-      denied: 'Koneksi Google dibatalkan.',
-      error: 'Gagal menyambungkan Google Calendar.',
+      connected: t('googleConnectedToast'),
+      not_configured: t('googleNotConfiguredToast'),
+      denied: t('googleConnectionCancelledToast'),
+      error: t('googleConnectErrorToast'),
     };
     if (map[p]) (p === 'connected' ? toast.success : toast.error)(map[p]);
     window.history.replaceState({}, '', window.location.pathname);
@@ -182,12 +190,12 @@ export default function CalendarPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error === 'reconnect_required' ? 'Sesi Google kedaluwarsa — sambungkan ulang.' : 'Gagal menyinkronkan.');
+        toast.error(data.error === 'reconnect_required' ? t('googleSessionExpiredToast') : t('syncFailedToast'));
       } else {
-        toast.success(`Tersinkron: ${data.pulled} masuk, ${data.pushed} terkirim.`);
+        toast.success(t('syncSuccessToast').replace('{pulled}', String(data.pulled)).replace('{pushed}', String(data.pushed)));
         await reloadEvents();
       }
-    } catch { toast.error('Gagal menyinkronkan.'); }
+    } catch { toast.error(t('syncFailedToast')); }
     finally { setSyncing(false); }
   };
 
@@ -195,7 +203,7 @@ export default function CalendarPage() {
     if (!currentWorkspace || !currentUser) return;
     await supabase.from('google_calendar_connections').delete().eq('user_id', currentUser.id).eq('workspace_id', currentWorkspace.id);
     setGoogleConn(null);
-    toast.success('Google Calendar diputus.');
+    toast.success(t('googleDisconnectedToast'));
   };
 
   const handlePrevMonth = () => {
@@ -247,13 +255,13 @@ export default function CalendarPage() {
     const targetDay = new Date(targetKey + 'T00:00:00');
     const delta = differenceInCalendarDays(targetDay, occ.date);
     if (delta === 0) return;
-    if (occ.event.recurrence !== 'none') { toast.info('Acara berulang tidak bisa diseret. Buka untuk mengedit.'); return; }
+    if (occ.event.recurrence !== 'none') { toast.info(t('recurringDragBlockedToast')); return; }
     const ev = occ.event;
     const newStart = new Date(new Date(ev.start_at).getTime() + delta * 864e5).toISOString();
     const newEnd = new Date(new Date(ev.end_at).getTime() + delta * 864e5).toISOString();
     setEvents((prev) => prev.map((x) => (x.id === ev.id ? { ...x, start_at: newStart, end_at: newEnd } : x)));
     const { error } = await supabase.from('events').update({ start_at: newStart, end_at: newEnd }).eq('id', ev.id);
-    if (error) toast.error('Gagal memindahkan acara');
+    if (error) toast.error(t('moveEventFailedToast'));
   };
 
   if (loading) return <CalendarSkeleton />;
@@ -272,7 +280,7 @@ export default function CalendarPage() {
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
             <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl capitalize leading-none">
-              {format(currentDate, 'MMMM')}
+              {format(currentDate, 'MMMM', { locale: dfnsLocale })}
             </h1>
             <span className="text-xs font-semibold text-neutral-400 mt-1 tracking-wider">
               {format(currentDate, 'yyyy')}
@@ -294,7 +302,7 @@ export default function CalendarPage() {
               className="h-8 rounded-lg font-semibold text-xs text-neutral-600 hover:text-foreground hover:bg-white px-2.5"
               onClick={handleToday}
             >
-              Hari ini
+              {t('todayButton')}
             </Button>
             <Button
               variant="ghost"
@@ -316,20 +324,20 @@ export default function CalendarPage() {
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
               </span>
               <span className="text-[11px] font-bold text-emerald-700 truncate max-w-[120px]" title={googleConn.google_email || ''}>
-                Google Connected
+                {t('googleConnectedLabel')}
               </span>
-              <Button 
-                size="sm" 
-                variant="ghost" 
-                className="h-7 gap-1 text-[11px] font-bold hover:bg-emerald-500/10 text-emerald-700" 
-                onClick={handleSync} 
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-7 gap-1 text-[11px] font-bold hover:bg-emerald-500/10 text-emerald-700"
+                onClick={handleSync}
                 disabled={syncing}
               >
-                <RefreshCw className={cn('h-3 w-3', syncing && 'animate-spin')} /> Sinkronkan
+                <RefreshCw className={cn('h-3 w-3', syncing && 'animate-spin')} /> {t('syncButton')}
               </Button>
-              <button 
-                onClick={disconnectGoogle} 
-                aria-label="Putuskan Google" 
+              <button
+                onClick={disconnectGoogle}
+                aria-label={t('disconnectGoogleAriaLabel')}
                 className="rounded-lg p-1 text-emerald-700/60 hover:bg-emerald-500/10 hover:text-emerald-800"
               >
                 <X className="h-3.5 w-3.5" />
@@ -338,7 +346,7 @@ export default function CalendarPage() {
           ) : (
             <a href={`/api/google/connect?workspace=${wsSlug}`}>
               <Button size="sm" variant="outline" className="gap-1.5 rounded-xl text-xs font-bold shadow-sm">
-                <CalendarDays className="h-4 w-4" /> Sambungkan Google
+                <CalendarDays className="h-4 w-4" /> {t('connectGoogleButton')}
               </Button>
             </a>
           )}
@@ -357,7 +365,7 @@ export default function CalendarPage() {
               'h-1.5 w-1.5 rounded-full transition-all',
               showTasks ? 'bg-[#10B29F] scale-100' : 'bg-neutral-300 scale-75'
             )} />
-            Tugas
+            {t('tasksToggleLabel')}
           </button>
 
           {/* View Toggle */}
@@ -379,7 +387,7 @@ export default function CalendarPage() {
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
-                {v === 'month' ? 'Bulan' : 'Agenda'}
+                {v === 'month' ? t('viewMonth') : t('viewAgenda')}
               </button>
             ))}
           </div>
@@ -390,7 +398,7 @@ export default function CalendarPage() {
             style={{ background: '#106CD8' }}
             onClick={() => openCreate(new Date())}
           >
-            <Plus className="h-4 w-4" /> Acara
+            <Plus className="h-4 w-4" /> {t('createEventButton')}
           </Button>
         </div>
         </div>
@@ -425,8 +433,9 @@ export default function CalendarPage() {
                   {gridDays.map((day) => {
                     const key = format(day, 'yyyy-MM-dd');
                     const occ = occByDay.get(key) || [];
-                    const dayTasks = showTasks ? tasks.filter((t) => t.due_date && isSameDay(new Date(t.due_date), day)) : [];
-                    const holiday = INDONESIAN_HOLIDAYS_2026[key];
+                    const dayTasks = showTasks ? tasks.filter((tk) => tk.due_date && isSameDay(new Date(tk.due_date), day)) : [];
+                    const holidayKey = HOLIDAY_KEYS_2026[key];
+                    const holiday = holidayKey ? t(holidayKey) : undefined;
                     const weekend = isWeekend(day);
                     
                     return (
@@ -465,19 +474,19 @@ export default function CalendarPage() {
                           {occ.slice(0, 3).map((o) => <EventChip key={o.key} occ={o} onClick={() => openEdit(o.event)} />)}
                           {occ.length > 3 && (
                             <span className="px-2 text-[9px] font-bold text-neutral-400 bg-neutral-50 rounded py-0.5 self-start">
-                              +{occ.length - 3} lagi
+                              +{occ.length - 3} {t('moreEventsSuffix')}
                             </span>
                           )}
-                          
-                          {dayTasks.slice(0, 2).map((t) => (
-                            <motion.button 
-                              key={t.id} 
-                              onClick={(e) => { e.stopPropagation(); setTaskDetailOpen(true, t.id); }}
+
+                          {dayTasks.slice(0, 2).map((tk) => (
+                            <motion.button
+                              key={tk.id}
+                              onClick={(e) => { e.stopPropagation(); setTaskDetailOpen(true, tk.id); }}
                               whileHover={{ y: -0.5, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
                               className="truncate rounded-md border border-dashed border-amber-200 bg-amber-50/30 hover:bg-amber-50/60 px-2 py-0.5 text-left text-[10px] font-bold text-amber-800 transition-all flex items-center gap-1.5"
                             >
                               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
-                              <span className="truncate flex-1">{t.title}</span>
+                              <span className="truncate flex-1">{tk.title}</span>
                             </motion.button>
                           ))}
                         </div>
@@ -567,6 +576,9 @@ function EventChip({ occ, onClick }: { occ: Occurrence; onClick: () => void }) {
 }
 
 function AgendaView({ events, wsSlug, onEdit }: { events: CalendarEvent[]; wsSlug: string; onEdit: (e: CalendarEvent) => void }) {
+  const t = useT('calendar');
+  const { locale } = useLocale();
+  const dfnsLocale = locale === 'id' ? idLocale : undefined;
   const now = new Date();
   const horizon = addDays(now, 60);
   const occ: Occurrence[] = [];
@@ -577,8 +589,8 @@ function AgendaView({ events, wsSlug, onEdit }: { events: CalendarEvent[]; wsSlu
     return (
       <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/50 px-6 py-16 text-center">
         <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"><CalendarDays className="h-6 w-6" /></div>
-        <p className="mt-4 text-sm font-bold text-foreground">Belum ada acara mendatang</p>
-        <p className="mt-1 text-xs text-muted-foreground">Buat acara untuk mengisi agenda tim Anda.</p>
+        <p className="mt-4 text-sm font-bold text-foreground">{t('agendaEmptyTitle')}</p>
+        <p className="mt-1 text-xs text-muted-foreground">{t('agendaEmptySubtitle')}</p>
       </div>
     );
   }
@@ -594,7 +606,7 @@ function AgendaView({ events, wsSlug, onEdit }: { events: CalendarEvent[]; wsSlu
         return (
           <div key={k} className="flex gap-6">
             <div className="w-16 shrink-0 text-right pt-1.5">
-              <p className={cn('text-[10px] font-semibold uppercase tracking-wider', isToday(d) ? 'text-primary' : 'text-neutral-400')}>{format(d, 'EEE')}</p>
+              <p className={cn('text-[10px] font-semibold uppercase tracking-wider', isToday(d) ? 'text-primary' : 'text-neutral-400')}>{format(d, 'EEE', { locale: dfnsLocale })}</p>
               <p className={cn('font-display text-2xl font-semibold mt-0.5', isToday(d) ? 'text-primary' : 'text-neutral-800')}>{format(d, 'd')}</p>
             </div>
             <div className="flex-1 space-y-3 border-l border-neutral-100 pl-6 relative pb-1">
@@ -616,11 +628,11 @@ function AgendaView({ events, wsSlug, onEdit }: { events: CalendarEvent[]; wsSlu
                     <span className="h-8 w-1 rounded-full shrink-0" style={{ background: ev.color }} />
                     <button onClick={() => onEdit(ev)} className="min-w-0 flex-1 text-left">
                       <p className="truncate text-sm font-bold text-foreground hover:text-primary transition-colors">{ev.title}</p>
-                      <p className="text-[11px] font-medium text-muted-foreground mt-0.5">{ev.all_day ? 'Sepanjang hari' : `${format(new Date(ev.start_at), 'HH:mm')} – ${format(new Date(ev.end_at), 'HH:mm')}`}{ev.location ? ` · ${ev.location}` : ''}</p>
+                      <p className="text-[11px] font-medium text-muted-foreground mt-0.5">{ev.all_day ? t('allDayLabel') : `${format(new Date(ev.start_at), 'HH:mm')} – ${format(new Date(ev.end_at), 'HH:mm')}`}{ev.location ? ` · ${ev.location}` : ''}</p>
                     </button>
                     {hasMeeting && (
                       <Link href={`/${wsSlug}/meetings/${ev.meeting_id}`}>
-                        <Button size="sm" variant="outline-brand" className="gap-1.5 font-bold text-xs rounded-lg"><Video className="h-3.5 w-3.5" /> Gabung</Button>
+                        <Button size="sm" variant="outline-brand" className="gap-1.5 font-bold text-xs rounded-lg"><Video className="h-3.5 w-3.5" /> {t('joinMeetingButton')}</Button>
                       </Link>
                     )}
                   </motion.div>
@@ -635,6 +647,8 @@ function AgendaView({ events, wsSlug, onEdit }: { events: CalendarEvent[]; wsSlu
 }
 
 function CalendarSkeleton() {
+  const t = useT('calendar');
+  const DOW = DOW_KEYS.map((k) => t(k));
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">

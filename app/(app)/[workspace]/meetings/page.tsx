@@ -15,6 +15,7 @@ import { cn, getInitials } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import type { Meeting } from '@/types';
+import { useT } from '@/lib/i18n/useT';
 
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
@@ -24,6 +25,7 @@ export default function MeetingsPage() {
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const router = useRouter();
   const supabase = createClient();
+  const t = useT('meetings');
 
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -72,7 +74,7 @@ export default function MeetingsPage() {
       .select()
       .single();
     if (error || !data) {
-      toast.error('Gagal membuat rapat. Pastikan tabel meetings sudah dibuat.');
+      toast.error(t('meetingsCreateErrorToast'));
       return null;
     }
     // Host + invited participants.
@@ -125,22 +127,22 @@ export default function MeetingsPage() {
       <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, ease: E }}
         className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Rapat</h1>
-          <p className="mt-1 text-xs text-muted-foreground">Rapat video langsung di dalam RuangBaru — tanpa tautan eksternal.</p>
+          <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">{t('meetingsPageTitle')}</h1>
+          <p className="mt-1 text-xs text-muted-foreground">{t('meetingsPageSubtitle')}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setScheduleOpen(true)}>
-            <CalendarClock className="h-4 w-4" /> Jadwalkan
+            <CalendarClock className="h-4 w-4" /> {t('meetingsScheduleButton')}
           </Button>
           <Button size="sm" variant="gradient" className="gap-1.5" onClick={startInstant} disabled={starting}>
-            {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />} Mulai rapat instan
+            {starting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Video className="h-4 w-4" />} {t('meetingsStartInstantButton')}
           </Button>
         </div>
       </motion.div>
 
       {/* Live */}
       {live.length > 0 && (
-        <Section title="Sedang Berlangsung" tone="text-emerald-600">
+        <Section title={t('meetingsSectionLive')} tone="text-emerald-600">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {live.map((m) => <MeetingCard key={m.id} meeting={m} wsSlug={wsSlug} live />)}
           </div>
@@ -148,7 +150,7 @@ export default function MeetingsPage() {
       )}
 
       {/* Upcoming */}
-      <Section title="Akan Datang" tone="text-primary">
+      <Section title={t('meetingsSectionUpcoming')} tone="text-primary">
         {upcoming.length === 0 ? (
           <EmptyState onStart={startInstant} onSchedule={() => setScheduleOpen(true)} />
         ) : (
@@ -160,7 +162,7 @@ export default function MeetingsPage() {
 
       {/* Past */}
       {past.length > 0 && (
-        <Section title="Selesai" tone="text-muted-foreground">
+        <Section title={t('meetingsSectionPast')} tone="text-muted-foreground">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {past.map((m) => <MeetingCard key={m.id} meeting={m} wsSlug={wsSlug} ended />)}
           </div>
@@ -172,7 +174,7 @@ export default function MeetingsPage() {
         onOpenChange={setScheduleOpen}
         members={members}
         currentUserId={currentUser?.id}
-        onCreate={async (vals) => { const m = await createMeeting(vals); if (m) { setScheduleOpen(false); setMeetings((p) => [m, ...p]); toast.success('Rapat dijadwalkan!'); } }}
+        onCreate={async (vals) => { const m = await createMeeting(vals); if (m) { setScheduleOpen(false); setMeetings((p) => [m, ...p]); toast.success(t('meetingsScheduledToast')); } }}
       />
     </div>
   );
@@ -188,6 +190,7 @@ function Section({ title, tone, children }: { title: string; tone: string; child
 }
 
 function MeetingCard({ meeting, wsSlug, live, ended }: { meeting: Meeting; wsSlug: string; live?: boolean; ended?: boolean }) {
+  const t = useT('meetings');
   const when = meeting.scheduled_at ? new Date(meeting.scheduled_at) : new Date(meeting.created_at);
   return (
     <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4, ease: E }}
@@ -198,12 +201,12 @@ function MeetingCard({ meeting, wsSlug, live, ended }: { meeting: Meeting; wsSlu
         </div>
         {live ? (
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-            <Radio className="h-3 w-3 animate-pulse" /> Langsung
+            <Radio className="h-3 w-3 animate-pulse" /> {t('meetingsBadgeLive')}
           </span>
         ) : ended ? (
-          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">Selesai</span>
+          <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">{t('meetingsBadgeEnded')}</span>
         ) : (
-          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">Terjadwal</span>
+          <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">{t('meetingsBadgeScheduled')}</span>
         )}
       </div>
       <h3 className="mt-3 line-clamp-1 text-sm font-bold text-foreground">{meeting.title}</h3>
@@ -215,16 +218,16 @@ function MeetingCard({ meeting, wsSlug, live, ended }: { meeting: Meeting; wsSlu
         <div className="mt-4 flex items-center gap-2">
           <a href={`/${wsSlug}/meetings/${meeting.id}`} className="flex-1">
             <Button size="sm" variant={live ? 'gradient' : 'outline-brand'} className="w-full gap-1.5">
-              {live ? 'Gabung sekarang' : 'Gabung'} <ArrowRight className="h-3.5 w-3.5" />
+              {live ? t('meetingsJoinNowButton') : t('meetingsJoinButton')} <ArrowRight className="h-3.5 w-3.5" />
             </Button>
           </a>
           <Button
-            size="icon" variant="outline" className="h-9 w-9 shrink-0" aria-label="Salin tautan undangan"
+            size="icon" variant="outline" className="h-9 w-9 shrink-0" aria-label={t('meetingsCopyInviteLinkAria')}
             onClick={async () => {
               try {
                 await navigator.clipboard.writeText(`${window.location.origin}/${wsSlug}/meetings/${meeting.id}`);
-                toast.success('Tautan rapat disalin — bagikan untuk mengundang.');
-              } catch { toast.error('Tidak dapat menyalin tautan.'); }
+                toast.success(t('meetingsLinkCopiedToast'));
+              } catch { toast.error(t('meetingsCopyLinkErrorToast')); }
             }}
           >
             <Link2 className="h-4 w-4" />
@@ -236,14 +239,15 @@ function MeetingCard({ meeting, wsSlug, live, ended }: { meeting: Meeting; wsSlu
 }
 
 function EmptyState({ onStart, onSchedule }: { onStart: () => void; onSchedule: () => void }) {
+  const t = useT('meetings');
   return (
     <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-card/50 px-6 py-12 text-center">
       <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10 text-primary"><Video className="h-6 w-6" /></div>
-      <p className="mt-4 text-sm font-bold text-foreground">Belum ada rapat terjadwal</p>
-      <p className="mt-1 max-w-sm text-xs text-muted-foreground">Mulai rapat instan untuk berbicara dengan tim sekarang, atau jadwalkan untuk nanti.</p>
+      <p className="mt-4 text-sm font-bold text-foreground">{t('meetingsEmptyTitle')}</p>
+      <p className="mt-1 max-w-sm text-xs text-muted-foreground">{t('meetingsEmptyDesc')}</p>
       <div className="mt-5 flex gap-2">
-        <Button size="sm" variant="outline" className="gap-1.5" onClick={onSchedule}><CalendarClock className="h-4 w-4" /> Jadwalkan</Button>
-        <Button size="sm" variant="gradient" className="gap-1.5" onClick={onStart}><Video className="h-4 w-4" /> Mulai sekarang</Button>
+        <Button size="sm" variant="outline" className="gap-1.5" onClick={onSchedule}><CalendarClock className="h-4 w-4" /> {t('meetingsScheduleButton')}</Button>
+        <Button size="sm" variant="gradient" className="gap-1.5" onClick={onStart}><Video className="h-4 w-4" /> {t('meetingsStartNowButton')}</Button>
       </div>
     </div>
   );
@@ -253,6 +257,7 @@ function ScheduleDialog({ open, onOpenChange, members, currentUserId, onCreate }
   open: boolean; onOpenChange: (v: boolean) => void; members: Member[]; currentUserId?: string;
   onCreate: (vals: { title: string; scheduledAt: string; invitees: string[] }) => Promise<void>;
 }) {
+  const t = useT('meetings');
   const [title, setTitle] = useState('');
   const [when, setWhen] = useState('');
   const [invitees, setInvitees] = useState<string[]>([]);
@@ -273,21 +278,21 @@ function ScheduleDialog({ open, onOpenChange, members, currentUserId, onCreate }
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Jadwalkan rapat</DialogTitle>
-          <DialogDescription>Buat rapat terjadwal dan undang anggota tim.</DialogDescription>
+          <DialogTitle>{t('meetingsScheduleDialogTitle')}</DialogTitle>
+          <DialogDescription>{t('meetingsScheduleDialogDesc')}</DialogDescription>
         </DialogHeader>
         <form onSubmit={submit} className="space-y-4 pt-1">
           <div className="space-y-1.5">
-            <Label htmlFor="m-title">Judul</Label>
-            <Input id="m-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="cth. Standup mingguan" required />
+            <Label htmlFor="m-title">{t('meetingsTitleLabel')}</Label>
+            <Input id="m-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t('meetingsTitlePlaceholder')} required />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="m-when">Waktu</Label>
+            <Label htmlFor="m-when">{t('meetingsTimeLabel')}</Label>
             <Input id="m-when" type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} required />
           </div>
           {members.length > 0 && (
             <div className="space-y-1.5">
-              <Label>Undang anggota</Label>
+              <Label>{t('meetingsInviteMembersLabel')}</Label>
               <div className="max-h-40 space-y-1 overflow-y-auto rounded-xl border border-border p-1.5">
                 {members.filter((m) => m.profile && m.user_id !== currentUserId).map((m) => {
                   const sel = invitees.includes(m.user_id);
@@ -304,7 +309,7 @@ function ScheduleDialog({ open, onOpenChange, members, currentUserId, onCreate }
             </div>
           )}
           <Button type="submit" className="w-full gap-1.5" disabled={saving || !title.trim() || !when}>
-            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />} Jadwalkan rapat
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CalendarClock className="h-4 w-4" />} {t('meetingsScheduleSubmitButton')}
           </Button>
         </form>
       </DialogContent>
@@ -313,7 +318,8 @@ function ScheduleDialog({ open, onOpenChange, members, currentUserId, onCreate }
 }
 
 function MeetingsUpgradeWall({ plan, wsSlug }: { plan: string; wsSlug: string }) {
-  const PLAN_LABEL: Record<string, string> = { free: 'Gratis', pro: 'Pro', business: 'Business' };
+  const t = useT('meetings');
+  const PLAN_LABEL: Record<string, string> = { free: t('meetingsPlanFree'), pro: t('meetingsPlanPro'), business: t('meetingsPlanBusiness') };
   return (
     <div className="flex flex-col items-center justify-center min-h-[60vh] px-6 text-center">
       {/* Blurred preview card behind the lock */}
@@ -348,31 +354,31 @@ function MeetingsUpgradeWall({ plan, wsSlug }: { plan: string; wsSlug: string })
           </div>
           <div className="space-y-1.5">
             <h2 className="font-display text-xl font-semibold tracking-tight text-foreground">
-              Fitur Rapat — Enterprise Only
+              {t('meetingsUpgradeTitle')}
             </h2>
             <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-              Paket Anda saat ini adalah <span className="font-semibold text-foreground">{PLAN_LABEL[plan] ?? plan}</span>. Rapat video terintegrasi tersedia di paket Enterprise.
+              {t('meetingsUpgradeDescPrefix')} <span className="font-semibold text-foreground">{PLAN_LABEL[plan] ?? plan}</span>{t('meetingsUpgradeDescSuffix')}
             </p>
           </div>
           <div className="flex flex-col sm:flex-row items-center gap-3">
             <a href={`/${wsSlug}/billing`}>
               <Button variant="gradient" className="gap-2">
-                <Sparkles className="h-4 w-4" /> Upgrade ke Enterprise
+                <Sparkles className="h-4 w-4" /> {t('meetingsUpgradeButton')}
               </Button>
             </a>
             <a href={`/${wsSlug}/dashboard`}>
               <Button variant="outline" className="gap-1.5">
-                Kembali ke Dashboard
+                {t('meetingsBackToDashboardButton')}
               </Button>
             </a>
           </div>
           <div className="mt-1 rounded-xl bg-primary/5 border border-primary/10 px-5 py-3 text-left max-w-sm">
-            <p className="text-xs font-bold text-primary mb-1.5 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> Keunggulan Enterprise</p>
+            <p className="text-xs font-bold text-primary mb-1.5 flex items-center gap-1.5"><Sparkles className="h-3 w-3" /> {t('meetingsEnterpriseBenefitsTitle')}</p>
             <ul className="text-[11px] text-muted-foreground space-y-1">
-              <li>• Rapat video langsung tanpa link eksternal</li>
-              <li>• Jadwalkan rapat & undang anggota tim</li>
-              <li>• Akses catatan & tugas selama rapat berlangsung</li>
-              <li>• Rekaman & ringkasan otomatis (segera hadir)</li>
+              <li>• {t('meetingsBenefit1')}</li>
+              <li>• {t('meetingsBenefit2')}</li>
+              <li>• {t('meetingsBenefit3')}</li>
+              <li>• {t('meetingsBenefit4')}</li>
             </ul>
           </div>
         </div>

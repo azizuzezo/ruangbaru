@@ -9,6 +9,7 @@ import { toast } from 'sonner';
 import { Kanban, Plus, Trash2, ChevronUp, ChevronDown, Loader2, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { TaskStatusDef } from '@/types';
+import { useT } from '@/lib/i18n/useT';
 
 const COLOR_PRESETS = ['#9CA3AF', '#0EA5E9', '#F59E0B', '#8B5CF6', '#10B981', '#EF4444', '#EC4899', '#106CD8'];
 
@@ -17,6 +18,7 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
   statuses: TaskStatusDef[];
   onChanged: () => void;
 }) {
+  const t = useT('settings');
   const supabase = createClient();
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
@@ -33,11 +35,11 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
         workspace_id: workspaceId, key, name: newName.trim(), color, position: maxPos + 1, is_done: false,
       });
       if (error) throw error;
-      toast.success(`Kolom "${newName.trim()}" ditambahkan`);
+      toast.success(t('kanbanColumnAdded').replace('{name}', newName.trim()));
       setNewName('');
       onChanged();
     } catch (err: any) {
-      toast.error(err.message?.includes('duplicate') ? 'Sudah ada kolom dengan nama itu' : (err.message || 'Gagal menambah kolom'));
+      toast.error(err.message?.includes('duplicate') ? t('kanbanDuplicateColumnName') : (err.message || t('kanbanAddColumnFailed')));
     } finally {
       setAdding(false);
     }
@@ -52,15 +54,15 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
         .eq('workspace_id', workspaceId)
         .eq('status', col.key);
       if (count && count > 0) {
-        toast.error(`Pindahkan ${count} tugas dari kolom ini dulu sebelum menghapusnya.`);
+        toast.error(t('kanbanMoveTasksFirst').replace('{count}', String(count)));
         return;
       }
       const { error } = await supabase.from('task_statuses').delete().eq('id', col.id);
       if (error) throw error;
-      toast.success('Kolom dihapus');
+      toast.success(t('kanbanColumnDeleted'));
       onChanged();
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menghapus kolom');
+      toast.error(err.message || t('kanbanDeleteColumnFailed'));
     } finally {
       setBusyId(null);
     }
@@ -73,7 +75,7 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
       if (error) throw error;
       onChanged();
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menyimpan');
+      toast.error(err.message || t('kanbanSaveFailed'));
     } finally {
       setBusyId(null);
     }
@@ -92,7 +94,7 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
       ]);
       onChanged();
     } catch {
-      toast.error('Gagal mengubah urutan');
+      toast.error(t('kanbanReorderFailed'));
     } finally {
       setBusyId(null);
     }
@@ -104,10 +106,10 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
     <Card className="border border-border/80 bg-card/60 backdrop-blur-sm">
       <CardHeader className="pb-3 border-b border-border">
         <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
-          <Kanban className="h-4 w-4 text-primary" /> Papan Kanban
+          <Kanban className="h-4 w-4 text-primary" /> {t('kanbanCardTitle')}
         </CardTitle>
         <CardDescription className="text-[11px]">
-          Kolom yang muncul di papan Tugas untuk seluruh anggota workspace ini. Tandai satu kolom sebagai &quot;Selesai&quot; agar statistik dashboard menghitungnya dengan benar.
+          {t('kanbanCardDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6 space-y-2">
@@ -123,9 +125,9 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
                 'flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold transition-colors',
                 col.is_done ? 'bg-emerald-500/10 text-emerald-600' : 'bg-muted text-muted-foreground hover:text-foreground',
               )}
-              title="Tandai sebagai kolom 'Selesai'"
+              title={t('kanbanMarkDoneTitle')}
             >
-              <CheckCircle2 className="h-3 w-3" /> Selesai
+              <CheckCircle2 className="h-3 w-3" /> {t('kanbanDoneLabel')}
             </button>
             <div className="flex items-center">
               <button type="button" onClick={() => move(col, -1)} disabled={i === 0 || busyId === col.id} className="p-1 text-muted-foreground hover:text-foreground disabled:opacity-30">
@@ -140,7 +142,7 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
               onClick={() => removeColumn(col)}
               disabled={busyId === col.id}
               className="p-1 text-muted-foreground hover:text-destructive transition-colors"
-              title="Hapus kolom"
+              title={t('kanbanDeleteColumnTitle')}
             >
               {busyId === col.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             </button>
@@ -151,14 +153,14 @@ export function KanbanColumnsSettings({ workspaceId, statuses, onChanged }: {
           <Input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
-            placeholder="cth. Ready for Review"
+            placeholder={t('kanbanNewColumnPlaceholder')}
             className="h-9 text-xs"
             disabled={adding}
             onKeyDown={(e) => e.key === 'Enter' && addColumn()}
           />
           <Button type="button" size="sm" onClick={addColumn} disabled={adding || !newName.trim()} className="gap-1.5 h-9 text-xs shrink-0">
             {adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            Tambah Kolom
+            {t('kanbanAddColumnButton')}
           </Button>
         </div>
       </CardContent>

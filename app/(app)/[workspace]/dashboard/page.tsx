@@ -20,6 +20,7 @@ import { useTour } from '@/components/tour/TourProvider';
 import { JourneyButton } from '@/components/tour/JourneyButton';
 import { usePresence, getPageLabel } from '@/lib/hooks/usePresence';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
+import { useT } from '@/lib/i18n/useT';
 import type { Task, Project, ActivityLog, Meeting } from '@/types';
 
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
@@ -33,11 +34,11 @@ const PRIORITY_STYLES: Record<string, string> = {
   low: 'bg-sky-500/10 text-sky-600 border-sky-500/20',
 };
 
-const PRIORITY_LABELS: Record<string, string> = {
-  urgent: 'Mendesak',
-  high: 'Tinggi',
-  medium: 'Sedang',
-  low: 'Rendah',
+const PRIORITY_LABEL_KEYS: Record<string, string> = {
+  urgent: 'priorityUrgent',
+  high: 'priorityHigh',
+  medium: 'priorityMedium',
+  low: 'priorityLow',
 };
 
 const PRESENCE_COLORS: Record<string, string> = {
@@ -48,38 +49,41 @@ const PRESENCE_COLORS: Record<string, string> = {
   viewing: 'bg-emerald-500',
 };
 
+// `actionKey` points at a dashboard dict key; `name` is sample demo content
+// (not a UI string) shown only until real activity rows arrive.
 const DEMO_ACTIVITY = [
-  { who: 'Putri', what: 'menyelesaikan', name: 'Desain halaman onboarding', mins: 8 },
-  { who: 'Adi', what: 'mengomentari', name: 'Riset wawancara pengguna', mins: 35 },
-  { who: 'Rani', what: 'memindahkan ke Sedang Berjalan', name: 'Spesifikasi kalender', mins: 92 },
-  { who: 'Budi', what: 'membuat proyek', name: 'Peluncuran Q3', mins: 180 },
+  { who: 'Putri', actionKey: 'demoCompleted', name: 'Desain halaman onboarding', mins: 8 },
+  { who: 'Adi', actionKey: 'demoCommented', name: 'Riset wawancara pengguna', mins: 35 },
+  { who: 'Rani', actionKey: 'demoMovedToInProgress', name: 'Spesifikasi kalender', mins: 92 },
+  { who: 'Budi', actionKey: 'activityProjectCreated', name: 'Peluncuran Q3', mins: 180 },
 ];
 
-function greetingFor(hour: number) {
-  if (hour < 11) return 'Selamat pagi';
-  if (hour < 15) return 'Selamat siang';
-  if (hour < 18) return 'Selamat sore';
-  return 'Selamat malam';
+function greetingFor(hour: number, t: (key: string) => string) {
+  if (hour < 11) return t('greetingMorning');
+  if (hour < 15) return t('greetingAfternoon');
+  if (hour < 18) return t('greetingEvening');
+  return t('greetingNight');
 }
 
-const STATUS_LABELS: Record<string, string> = {
-  backlog: 'Backlog', todo: 'Perlu Dikerjakan', in_progress: 'Sedang Berjalan',
-  in_review: 'Sedang Ditinjau', done: 'Selesai', cancelled: 'Dibatalkan',
+const STATUS_LABEL_KEYS: Record<string, string> = {
+  backlog: 'statusBacklog', todo: 'statusTodo', in_progress: 'statusInProgress',
+  in_review: 'statusInReview', done: 'statusDone', cancelled: 'statusCancelled',
 };
 
 // Maps the machine-readable `activity_logs.action` codes (written by the
 // DB triggers in supabase/migrations/20260809_activity_log_triggers.sql)
-// to the Indonesian phrase shown in the feed.
-function activityLabel(a: ActivityLog): string {
+// to the phrase shown in the feed.
+function activityLabel(a: ActivityLog, t: (key: string) => string): string {
   switch (a.action) {
-    case 'task.created': return 'membuat tugas';
+    case 'task.created': return t('activityTaskCreated');
     case 'task.status_changed': {
       const to = (a.metadata as { to?: string })?.to;
-      if (to === 'done') return 'menyelesaikan tugas';
-      return `memindahkan tugas ke ${to ? (STATUS_LABELS[to] || to) : 'status baru'}`;
+      if (to === 'done') return t('activityTaskCompleted');
+      const statusLabel = to ? (STATUS_LABEL_KEYS[to] ? t(STATUS_LABEL_KEYS[to]) : to) : t('statusNew');
+      return t('activityTaskMoved').replace('{status}', statusLabel);
     }
-    case 'project.created': return 'membuat proyek';
-    case 'member.joined': return 'bergabung ke ruang kerja';
+    case 'project.created': return t('activityProjectCreated');
+    case 'member.joined': return t('activityMemberJoined');
     default: return a.action;
   }
 }
@@ -137,6 +141,7 @@ function TaskQuickActions({
   onComplete: () => void;
   onOpen: () => void;
 }) {
+  const t = useT('dashboard');
   return (
     <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
       <TooltipProvider delayDuration={300}>
@@ -149,7 +154,7 @@ function TaskQuickActions({
               <Check className="h-3.5 w-3.5" />
             </button>
           </TooltipTrigger>
-          <TooltipContent>Tandai selesai</TooltipContent>
+          <TooltipContent>{t('markComplete')}</TooltipContent>
         </Tooltip>
         <Tooltip>
           <TooltipTrigger asChild>
@@ -160,7 +165,7 @@ function TaskQuickActions({
               <ExternalLink className="h-3 w-3" />
             </button>
           </TooltipTrigger>
-          <TooltipContent>Buka detail</TooltipContent>
+          <TooltipContent>{t('openDetail')}</TooltipContent>
         </Tooltip>
       </TooltipProvider>
     </div>
@@ -168,6 +173,7 @@ function TaskQuickActions({
 }
 
 export default function DashboardPage() {
+  const t = useT('dashboard');
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setTaskDetailOpen } = useUIStore();
   const { maybeAutoStart } = useTour();
@@ -310,10 +316,10 @@ export default function DashboardPage() {
 
     const withDue = open.filter((t) => t.due_date).sort((a, b) => +new Date(a.due_date!) - +new Date(b.due_date!));
     const groups: { label: string; tone: string; dotColor: string; items: Task[] }[] = [
-      { label: 'Terlewat', tone: 'text-rose-600', dotColor: 'bg-rose-500', items: withDue.filter((t) => new Date(t.due_date!) < todayStart) },
-      { label: 'Hari ini', tone: 'text-primary', dotColor: 'bg-primary', items: withDue.filter((t) => { const d = new Date(t.due_date!); return d >= todayStart && d < tomorrowStart; }) },
-      { label: 'Besok', tone: 'text-amber-600', dotColor: 'bg-amber-500', items: withDue.filter((t) => { const d = new Date(t.due_date!); return d >= tomorrowStart && d < new Date(tomorrowStart.getTime() + 864e5); }) },
-      { label: 'Minggu ini', tone: 'text-emerald-600', dotColor: 'bg-emerald-500', items: withDue.filter((t) => { const d = new Date(t.due_date!); return d >= new Date(tomorrowStart.getTime() + 864e5) && d < weekEnd; }) },
+      { label: t('groupOverdue'), tone: 'text-rose-600', dotColor: 'bg-rose-500', items: withDue.filter((t) => new Date(t.due_date!) < todayStart) },
+      { label: t('groupToday'), tone: 'text-primary', dotColor: 'bg-primary', items: withDue.filter((t) => { const d = new Date(t.due_date!); return d >= todayStart && d < tomorrowStart; }) },
+      { label: t('groupTomorrow'), tone: 'text-amber-600', dotColor: 'bg-amber-500', items: withDue.filter((t) => { const d = new Date(t.due_date!); return d >= tomorrowStart && d < new Date(tomorrowStart.getTime() + 864e5); }) },
+      { label: t('groupThisWeek'), tone: 'text-emerald-600', dotColor: 'bg-emerald-500', items: withDue.filter((t) => { const d = new Date(t.due_date!); return d >= new Date(tomorrowStart.getTime() + 864e5) && d < weekEnd; }) },
     ].filter((g) => g.items.length > 0);
 
     const momentum = projects.map((p) => {
@@ -326,7 +332,7 @@ export default function DashboardPage() {
     }).sort((a, b) => b.total - a.total).slice(0, 4);
 
     return { open, doneThisWeek, focus, myOverdue, myToday, groups, momentum };
-  }, [tasks, projects, currentUser, todayStart.getTime(), doneKeys]);
+  }, [tasks, projects, currentUser, todayStart.getTime(), doneKeys, t]);
 
   const completeTask = useCallback(async (taskId: string) => {
     const doneStatus = statuses.find((s) => s.is_done)?.key || 'done';
@@ -338,21 +344,21 @@ export default function DashboardPage() {
 
   if (loading) return <DashboardSkeleton />;
 
-  const firstName = currentUser?.full_name?.split(' ')[0] || 'Teman';
+  const firstName = currentUser?.full_name?.split(' ')[0] || t('defaultUserName');
   const wsSlug = currentWorkspace?.slug || 'dashboard';
   const dateStr = now.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long' });
 
   const summary = derived.myOverdue > 0
-    ? `${derived.myToday} tugas hari ini · ${derived.myOverdue} terlewat`
+    ? t('summaryOverdue').replace('{today}', String(derived.myToday)).replace('{overdue}', String(derived.myOverdue))
     : derived.focus.length > 0
-      ? `${derived.myToday} tugas menunggu hari ini`
-      : 'Tidak ada tugas mendesak ✨';
+      ? t('summaryToday').replace('{today}', String(derived.myToday))
+      : t('summaryClear');
 
   const pulse = [
-    { label: 'Proyek aktif', value: projects.length, tone: 'text-primary' },
-    { label: 'Tugas terbuka', value: derived.open.length, tone: 'text-sky-600' },
-    { label: 'Selesai minggu ini', value: derived.doneThisWeek, tone: 'text-emerald-600' },
-    { label: 'Anggota tim', value: memberCount, tone: 'text-amber-600' },
+    { label: t('pulseActiveProjects'), value: projects.length, tone: 'text-primary' },
+    { label: t('pulseOpenTasks'), value: derived.open.length, tone: 'text-sky-600' },
+    { label: t('pulseDoneThisWeek'), value: derived.doneThisWeek, tone: 'text-emerald-600' },
+    { label: t('pulseTeamMembers'), value: memberCount, tone: 'text-amber-600' },
   ];
 
   const liveM = meetings.filter((m) => m.status === 'live');
@@ -369,7 +375,7 @@ export default function DashboardPage() {
         >
           <div>
             <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-              {greetingFor(now.getHours())}, {firstName}
+              {greetingFor(now.getHours(), t)}, {firstName}
             </h1>
             <p className="mt-1 text-xs text-muted-foreground">
               <span className="capitalize">{dateStr}</span>
@@ -381,12 +387,12 @@ export default function DashboardPage() {
             <JourneyButton />
             <Link href={`/${wsSlug}/tasks`}>
               <Button size="sm" variant="outline" className="gap-1 h-8 text-xs">
-                <Plus className="h-3.5 w-3.5" /> Tugas
+                <Plus className="h-3.5 w-3.5" /> {t('addTaskButton')}
               </Button>
             </Link>
             <Link href={`/${wsSlug}/projects`}>
               <Button size="sm" className="gap-1 h-8 text-xs bg-primary hover:bg-primary/90 text-white">
-                <Plus className="h-3.5 w-3.5" /> Proyek
+                <Plus className="h-3.5 w-3.5" /> {t('addProjectButton')}
               </Button>
             </Link>
           </div>
@@ -413,11 +419,11 @@ export default function DashboardPage() {
                       <Radio className="h-4 w-4 text-white animate-pulse" />
                     </span>
                     <div className="min-w-0 flex-1">
-                      <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">Rapat sedang berlangsung</p>
+                      <p className="text-xs font-bold text-emerald-800 dark:text-emerald-300">{t('liveMeetingLabel')}</p>
                       <p className="mt-0.5 truncate text-[11px] text-emerald-700 dark:text-emerald-400">{m.title}</p>
                     </div>
                     <span className="shrink-0 rounded-lg bg-emerald-500 px-3 py-1.5 text-[11px] font-bold text-white shadow-sm group-hover:bg-emerald-600 transition-colors">
-                      Gabung Sekarang →
+                      {t('joinNowButton')}
                     </span>
                   </Link>
                 ))}
@@ -432,12 +438,12 @@ export default function DashboardPage() {
                     </span>
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-bold text-rose-800 dark:text-rose-300">
-                        {derived.myOverdue} tugas terlewat tenggat
+                        {t('overdueAlert').replace('{count}', String(derived.myOverdue))}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-rose-700 dark:text-rose-400">Butuh perhatian segera</p>
+                      <p className="mt-0.5 text-[11px] text-rose-700 dark:text-rose-400">{t('overdueAlertSubtext')}</p>
                     </div>
                     <span className="shrink-0 text-[11px] font-bold text-rose-600 group-hover:text-rose-700 transition-colors">
-                      Lihat semua →
+                      {t('viewAllArrow')}
                     </span>
                   </Link>
                 )}
@@ -475,10 +481,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
               <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
                 <Video className="h-4 w-4 text-primary" />
-                Rapat Mendatang
+                {t('upcomingMeetingsTitle')}
               </h2>
               <Link href={`/${wsSlug}/meetings`}>
-                <Button variant="ghost" size="sm" className="gap-1 text-xs h-7">Semua <ChevronRight className="h-3.5 w-3.5" /></Button>
+                <Button variant="ghost" size="sm" className="gap-1 text-xs h-7">{t('viewAll')} <ChevronRight className="h-3.5 w-3.5" /></Button>
               </Link>
             </div>
             <div className="grid gap-px bg-border sm:grid-cols-3">
@@ -497,7 +503,7 @@ export default function DashboardPage() {
                         {when.toLocaleString('id-ID', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
                       </p>
                     </div>
-                    <span className="shrink-0 rounded-lg bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">Lihat</span>
+                    <span className="shrink-0 rounded-lg bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">{t('viewBadge')}</span>
                   </Link>
                 );
               })}
@@ -521,16 +527,16 @@ export default function DashboardPage() {
                 title={
                   <span className="flex items-center gap-2">
                     <Target className="h-4 w-4 text-primary" />
-                    Fokus Saya
+                    {t('focusTitle')}
                   </span>
                 }
-                subtitle={derived.focus.length > 0 ? `${derived.focus.length} tugas menunggu Anda` : undefined}
+                subtitle={derived.focus.length > 0 ? t('focusSubtitle').replace('{count}', String(derived.focus.length)) : undefined}
                 collapsed={focusCollapsed}
                 onToggle={() => setFocusCollapsed((v) => !v)}
                 action={
                   <Link href={`/${wsSlug}/tasks`}>
                     <Button variant="ghost" size="sm" className="gap-1 text-xs h-7">
-                      Semua <ChevronRight className="h-3.5 w-3.5" />
+                      {t('viewAll')} <ChevronRight className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
                 }
@@ -545,17 +551,17 @@ export default function DashboardPage() {
                   >
                     {derived.focus.length === 0 ? (
                       <div className="px-5 py-10 text-center">
-                        <p className="text-sm font-semibold text-foreground">Tidak ada tugas mendesak untuk Anda ✨</p>
-                        <p className="mt-1 text-xs text-muted-foreground">Nikmati ketenangannya, atau ambil tugas baru dari papan.</p>
+                        <p className="text-sm font-semibold text-foreground">{t('focusEmptyTitle')}</p>
+                        <p className="mt-1 text-xs text-muted-foreground">{t('focusEmptyDesc')}</p>
                       </div>
                     ) : (
                       <ul>
-                        {derived.focus.map((t, i) => {
-                          const overdue = t.due_date && new Date(t.due_date) < todayStart;
-                          const isCompleting = completing.has(t.id);
+                        {derived.focus.map((task, i) => {
+                          const overdue = task.due_date && new Date(task.due_date) < todayStart;
+                          const isCompleting = completing.has(task.id);
                           return (
                             <motion.li
-                              key={t.id}
+                              key={task.id}
                               initial={{ opacity: 0, x: -8 }}
                               animate={{ opacity: isCompleting ? 0.4 : 1, x: 0, scale: isCompleting ? 0.98 : 1 }}
                               transition={{ duration: isCompleting ? 0.4 : 0.3, delay: isCompleting ? 0 : 0.12 + i * 0.035 }}
@@ -563,50 +569,50 @@ export default function DashboardPage() {
                             >
                               {/* Complete button */}
                               <button
-                                onClick={() => completeTask(t.id)}
+                                onClick={() => completeTask(task.id)}
                                 className={cn(
                                   'flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 transition-all duration-150',
                                   isCompleting
                                     ? 'border-emerald-500 bg-emerald-500 text-white'
                                     : 'border-muted-foreground/25 text-transparent hover:border-emerald-500 hover:text-emerald-500'
                                 )}
-                                aria-label="Tandai selesai"
+                                aria-label={t('markComplete')}
                               >
                                 <Check className="h-3 w-3" />
                               </button>
 
                               {/* Task info */}
                               <button
-                                onClick={() => setTaskDetailOpen(true, t.id)}
+                                onClick={() => setTaskDetailOpen(true, task.id)}
                                 className="flex min-w-0 flex-1 items-center gap-3 text-left"
                               >
                                 <div className="min-w-0 flex-1">
                                   <p className={cn('truncate text-xs font-bold text-foreground transition-all', isCompleting && 'line-through opacity-50')}>
-                                    {t.title}
+                                    {task.title}
                                   </p>
                                   <p className="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                                    <span className="truncate">{t.project?.name || 'Tanpa proyek'}</span>
-                                    {t.due_date && (
+                                    <span className="truncate">{task.project?.name || t('noProject')}</span>
+                                    {task.due_date && (
                                       <span className={cn('font-semibold', overdue ? 'text-rose-600' : 'text-muted-foreground')}>
-                                        · {overdue ? '⚠ Terlewat' : new Date(t.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+                                        · {overdue ? t('overdueBadge') : new Date(task.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                                       </span>
                                     )}
                                   </p>
                                 </div>
 
-                                {t.priority && t.priority !== 'no_priority' && (
-                                  <span className={cn('shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide', PRIORITY_STYLES[t.priority])}>
-                                    {PRIORITY_LABELS[t.priority]}
+                                {task.priority && task.priority !== 'no_priority' && (
+                                  <span className={cn('shrink-0 rounded border px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide', PRIORITY_STYLES[task.priority])}>
+                                    {t(PRIORITY_LABEL_KEYS[task.priority])}
                                   </span>
                                 )}
                               </button>
 
                               {/* Quick actions (visible on hover) */}
                               <TaskQuickActions
-                                taskId={t.id}
+                                taskId={task.id}
                                 wsSlug={wsSlug}
-                                onComplete={() => completeTask(t.id)}
-                                onOpen={() => setTaskDetailOpen(true, t.id)}
+                                onComplete={() => completeTask(task.id)}
+                                onOpen={() => setTaskDetailOpen(true, task.id)}
                               />
                             </motion.li>
                           );
@@ -628,10 +634,10 @@ export default function DashboardPage() {
                 title={
                   <span className="flex items-center gap-2">
                     <Clock className="h-4 w-4 text-amber-500" />
-                    Linimasa Tim
+                    {t('timelineTitle')}
                   </span>
                 }
-                subtitle="Tenggat yang akan datang"
+                subtitle={t('timelineSubtitle')}
                 collapsed={timelineCollapsed}
                 onToggle={() => setTimelineCollapsed((v) => !v)}
               />
@@ -646,7 +652,7 @@ export default function DashboardPage() {
                   >
                     {derived.groups.length === 0 ? (
                       <p className="py-6 text-center text-xs text-muted-foreground">
-                        Belum ada tugas berjadwal. Tambahkan tenggat agar muncul di sini.
+                        {t('timelineEmpty')}
                       </p>
                     ) : (
                       <div className="space-y-5">
@@ -656,29 +662,29 @@ export default function DashboardPage() {
                             <span className="absolute left-[3px] top-3 h-[calc(100%-4px)] w-px bg-border" />
                             <p className={cn('text-[11px] font-bold uppercase tracking-wider', g.tone)}>{g.label}</p>
                             <ul className="mt-2 space-y-1">
-                              {g.items.slice(0, 5).map((t) => (
+                              {g.items.slice(0, 5).map((task) => (
                                 <motion.li
-                                  key={t.id}
+                                  key={task.id}
                                   whileHover={{ x: 2 }}
                                   transition={{ duration: 0.15 }}
                                 >
                                   <button
-                                    onClick={() => setTaskDetailOpen(true, t.id)}
+                                    onClick={() => setTaskDetailOpen(true, task.id)}
                                     className="flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-accent/50 group"
                                   >
                                     <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-muted-foreground/40" />
                                     <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
-                                      {t.title}
+                                      {task.title}
                                     </span>
-                                    {t.assignee ? (
+                                    {task.assignee ? (
                                       <Tooltip>
                                         <TooltipTrigger asChild>
                                           <Avatar className="h-5 w-5">
-                                            <AvatarImage src={t.assignee.avatar_url || ''} />
-                                            <AvatarFallback className="text-[8px]">{getInitials(t.assignee.full_name)}</AvatarFallback>
+                                            <AvatarImage src={task.assignee.avatar_url || ''} />
+                                            <AvatarFallback className="text-[8px]">{getInitials(task.assignee.full_name)}</AvatarFallback>
                                           </Avatar>
                                         </TooltipTrigger>
-                                        <TooltipContent>{t.assignee.full_name || 'Anggota tim'}</TooltipContent>
+                                        <TooltipContent>{task.assignee.full_name || t('teamMemberFallback')}</TooltipContent>
                                       </Tooltip>
                                     ) : null}
                                   </button>
@@ -686,7 +692,7 @@ export default function DashboardPage() {
                               ))}
                               {g.items.length > 5 && (
                                 <li className="px-2 py-1 text-[10px] text-muted-foreground">
-                                  +{g.items.length - 5} lainnya
+                                  {t('moreItems').replace('{count}', String(g.items.length - 5))}
                                 </li>
                               )}
                             </ul>
@@ -715,10 +721,10 @@ export default function DashboardPage() {
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
                       <span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500" />
                     </span>
-                    Sedang Aktif
+                    {t('activeNowTitle')}
                   </span>
                 }
-                subtitle={onlineMembers.length > 0 ? `${onlineMembers.length} online` : 'Hanya Anda online'}
+                subtitle={onlineMembers.length > 0 ? t('onlineCount').replace('{count}', String(onlineMembers.length)) : t('onlyYouOnline')}
                 collapsed={presenceCollapsed}
                 onToggle={() => setPresenceCollapsed((v) => !v)}
               />
@@ -732,10 +738,10 @@ export default function DashboardPage() {
                   >
                     {onlineMembers.length === 0 ? (
                       <div className="px-5 py-5 text-center">
-                        <p className="text-xs text-muted-foreground">Undang rekan kerja untuk berkolaborasi bersama.</p>
+                        <p className="text-xs text-muted-foreground">{t('inviteEmptyDesc')}</p>
                         <Link href={`/${wsSlug}/team`} className="mt-3 inline-flex">
                           <Button size="sm" variant="outline" className="h-7 text-xs gap-1">
-                            <Plus className="h-3 w-3" /> Undang Tim
+                            <Plus className="h-3 w-3" /> {t('inviteTeamButton')}
                           </Button>
                         </Link>
                       </div>
@@ -760,7 +766,7 @@ export default function DashboardPage() {
                               )} />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="truncate text-[11px] font-bold text-foreground">{m.fullName || 'Anggota'}</p>
+                              <p className="truncate text-[11px] font-bold text-foreground">{m.fullName || t('memberFallback')}</p>
                               <p className="truncate text-[10px] text-muted-foreground">{getPageLabel(m.page)}</p>
                             </div>
                           </motion.li>
@@ -782,7 +788,7 @@ export default function DashboardPage() {
                 title={
                   <span className="flex items-center gap-2">
                     <Activity className="h-4 w-4 text-violet-500" />
-                    Aktivitas Tim
+                    {t('activityTitle')}
                   </span>
                 }
                 collapsed={activityCollapsed}
@@ -799,10 +805,10 @@ export default function DashboardPage() {
                   >
                     {activity.length === 0 ? (
                       <div>
-                        <p className="px-2 pb-2 text-[10px] text-muted-foreground">Belum ada aktivitas — contoh tampilan:</p>
+                        <p className="px-2 pb-2 text-[10px] text-muted-foreground">{t('activityEmptyLabel')}</p>
                         <ul className="space-y-0.5">
                           {DEMO_ACTIVITY.map((a, i) => (
-                            <ActivityRow key={i} name={a.who} action={a.what} resource={a.name} time={`${a.mins} mnt lalu`} avatarUrl={null} />
+                            <ActivityRow key={i} name={a.who} action={t(a.actionKey)} resource={a.name} time={t('minutesAgo').replace('{mins}', String(a.mins))} avatarUrl={null} />
                           ))}
                         </ul>
                       </div>
@@ -816,8 +822,8 @@ export default function DashboardPage() {
                             transition={{ delay: 0.14 + i * 0.04 }}
                           >
                             <ActivityRow
-                              name={a.user?.full_name || 'Seseorang'}
-                              action={activityLabel(a)}
+                              name={a.user?.full_name || t('someoneFallback')}
+                              action={activityLabel(a, t)}
                               resource={a.action === 'member.joined' ? '' : (a.resource_name || '')}
                               time={formatRelativeTime(a.created_at)}
                               avatarUrl={a.user?.avatar_url || null}
@@ -841,7 +847,7 @@ export default function DashboardPage() {
                 title={
                   <span className="flex items-center gap-2">
                     <Zap className="h-4 w-4 text-amber-500" />
-                    Proyek
+                    {t('projectsTitle')}
                   </span>
                 }
                 collapsed={momentumCollapsed}
@@ -849,7 +855,7 @@ export default function DashboardPage() {
                 action={
                   <Link href={`/${wsSlug}/projects`}>
                     <Button variant="ghost" size="sm" className="gap-1 text-xs h-7">
-                      Semua <ChevronRight className="h-3.5 w-3.5" />
+                      {t('viewAll')} <ChevronRight className="h-3.5 w-3.5" />
                     </Button>
                   </Link>
                 }
@@ -868,7 +874,7 @@ export default function DashboardPage() {
                         href={`/${wsSlug}/projects`}
                         className="flex items-center justify-between rounded-xl border border-dashed border-border px-4 py-4 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-foreground"
                       >
-                        Belum ada proyek aktif — buat yang pertama
+                        {t('momentumEmpty')}
                         <ArrowRight className="h-4 w-4" />
                       </Link>
                     ) : (
@@ -908,12 +914,12 @@ export default function DashboardPage() {
                                 >
                                   {m.inProgress > 0 && (
                                     <span className="text-[10px] font-medium text-amber-600 bg-amber-50 rounded px-1.5 py-0.5">
-                                      {m.inProgress} berjalan
+                                      {t('inProgressCount').replace('{count}', String(m.inProgress))}
                                     </span>
                                   )}
                                   {m.overdue > 0 && (
                                     <span className="text-[10px] font-medium text-rose-600 bg-rose-50 rounded px-1.5 py-0.5">
-                                      {m.overdue} terlewat
+                                      {t('momentumOverdueBadge').replace('{count}', String(m.overdue))}
                                     </span>
                                   )}
                                 </motion.div>
@@ -936,10 +942,10 @@ export default function DashboardPage() {
               <div className="flex items-center justify-between border-b border-border px-5 py-3.5">
                 <h2 className="flex items-center gap-2 text-sm font-bold text-foreground">
                   <Users className="h-4 w-4 text-muted-foreground" />
-                  Tim Anda
+                  {t('teamTitle')}
                 </h2>
                 <Link href={`/${wsSlug}/team`}>
-                  <Button variant="ghost" size="sm" className="gap-1 text-xs h-7">Kelola <ChevronRight className="h-3.5 w-3.5" /></Button>
+                  <Button variant="ghost" size="sm" className="gap-1 text-xs h-7">{t('manageButton')} <ChevronRight className="h-3.5 w-3.5" /></Button>
                 </Link>
               </div>
               <div className="flex items-center justify-between p-4">
@@ -952,7 +958,7 @@ export default function DashboardPage() {
                           <AvatarFallback className="text-[10px]">{getInitials(m.profile?.full_name || m.profile?.email)}</AvatarFallback>
                         </Avatar>
                       </TooltipTrigger>
-                      <TooltipContent>{m.profile?.full_name || m.profile?.email || 'Anggota'}</TooltipContent>
+                      <TooltipContent>{m.profile?.full_name || m.profile?.email || t('memberFallback')}</TooltipContent>
                     </Tooltip>
                   ))}
                   {memberCount > 6 && (
@@ -963,7 +969,7 @@ export default function DashboardPage() {
                 </div>
                 <Link href={`/${wsSlug}/team`}>
                   <Button size="sm" variant="outline" className="gap-1 text-xs h-7">
-                    <Plus className="h-3.5 w-3.5" /> Undang
+                    <Plus className="h-3.5 w-3.5" /> {t('inviteButton')}
                   </Button>
                 </Link>
               </div>

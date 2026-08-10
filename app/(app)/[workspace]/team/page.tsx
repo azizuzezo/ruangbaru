@@ -16,8 +16,10 @@ import type { WorkspaceMember, WorkspaceInvitation } from '@/types';
 import { getInitials } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { useT } from '@/lib/i18n/useT';
 
 export default function TeamPage() {
+  const t = useT('team');
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const [members, setMembers] = useState<WorkspaceMember[]>([]);
   const [invitations, setInvitations] = useState<WorkspaceInvitation[]>([]);
@@ -100,10 +102,10 @@ export default function TeamPage() {
         .then((r) => r.json())
         .then((res) => {
           if (res?.sent) {
-            toast.success(`Undangan email terkirim ke ${email}`);
+            toast.success(t('teamInviteEmailSent').replace('{email}', email));
           } else {
             const reason = res?.errors?.[0];
-            if (reason) toast.warning(`Email gagal: ${reason}`, { duration: 8000 });
+            if (reason) toast.warning(t('teamEmailFailed').replace('{reason}', reason), { duration: 8000 });
             copyInviteLink(created.token, email);
           }
         })
@@ -113,7 +115,7 @@ export default function TeamPage() {
       setEmail('');
       setRole('member');
     } catch (err: any) {
-      toast.error(err.message || 'Gagal mengirim undangan');
+      toast.error(err.message || t('teamInviteSendError'));
     } finally {
       setInviting(false);
     }
@@ -122,7 +124,7 @@ export default function TeamPage() {
   // Change member role handler
   const handleChangeRole = async (memberId: string, userId: string, newRole: 'admin' | 'member' | 'viewer') => {
     if (userId === currentUser?.id) {
-      toast.error('Anda tidak dapat mengubah peran sendiri');
+      toast.error(t('teamChangeRoleSelfError'));
       return;
     }
     try {
@@ -131,17 +133,17 @@ export default function TeamPage() {
         .update({ role: newRole })
         .eq('id', memberId);
       if (error) throw error;
-      toast.success('Peran anggota berhasil diperbarui');
+      toast.success(t('teamRoleUpdateSuccess'));
       setMembers((prev) => prev.map((m) => m.id === memberId ? { ...m, role: newRole } : m));
     } catch (err: any) {
-      toast.error(err.message || 'Gagal mengubah peran anggota');
+      toast.error(err.message || t('teamRoleUpdateError'));
     }
   };
 
   // Remove member handler
   const handleRemoveMember = async (memberId: string, userId: string) => {
     if (userId === currentUser?.id) {
-      toast.error('Anda tidak dapat menghapus diri sendiri dari workspace');
+      toast.error(t('teamRemoveSelfError'));
       return;
     }
 
@@ -153,10 +155,10 @@ export default function TeamPage() {
 
       if (error) throw error;
 
-      toast.success('Anggota berhasil dihapus dari workspace');
+      toast.success(t('teamRemoveMemberSuccess'));
       setMembers((prev) => prev.filter((m) => m.id !== memberId));
     } catch (err: any) {
-      toast.error(err.message || 'Gagal mengeluarkan anggota');
+      toast.error(err.message || t('teamRemoveMemberError'));
     }
   };
 
@@ -166,11 +168,11 @@ export default function TeamPage() {
     try {
       await navigator.clipboard.writeText(link);
       toast.success(
-        forEmail ? `Undangan dibuat untuk ${forEmail}. Tautan disalin!` : 'Tautan undangan disalin ke clipboard',
+        forEmail ? t('teamInviteLinkCreatedForEmail').replace('{email}', forEmail) : t('teamInviteLinkCopied'),
         { description: link }
       );
     } catch {
-      toast.info('Tautan undangan', { description: link });
+      toast.info(t('teamInviteLinkToastTitle'), { description: link });
     }
   };
 
@@ -184,10 +186,10 @@ export default function TeamPage() {
 
       if (error) throw error;
 
-      toast.success('Undangan berhasil dibatalkan');
+      toast.success(t('teamInviteCancelSuccess'));
       setInvitations((prev) => prev.filter((i) => i.id !== inviteId));
     } catch (err: any) {
-      toast.error(err.message || 'Gagal membatalkan undangan');
+      toast.error(err.message || t('teamInviteCancelError'));
     }
   };
 
@@ -199,34 +201,34 @@ export default function TeamPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight sm:text-3xl">
-            Anggota Tim Workspace
+            {t('teamPageTitle')}
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Kelola akses, peranan, dan undangan kolaborasi tim Anda di sini.
+            {t('teamPageSubtitle')}
           </p>
         </div>
 
         <Dialog open={inviteOpen} onOpenChange={setInviteOpen}>
           <DialogTrigger asChild>
             <Button variant="gradient" size="sm" className="gap-1">
-              <Plus className="h-4 w-4" /> Undang Anggota
+              <Plus className="h-4 w-4" /> {t('teamInviteButton')}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Mail className="h-5 w-5 text-primary" />
-                Undang Anggota Tim Baru
+                {t('teamInviteDialogTitle')}
               </DialogTitle>
               <DialogDescription>
-                Masukkan email rekan kerja Anda untuk mengundangnya bergabung ke workspace ini.
+                {t('teamInviteDialogDescription')}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleInvite} className="space-y-4 pt-2">
               <div className="space-y-1.5">
                 <Input
                   type="email"
-                  placeholder="rekan@perusahaan.com"
+                  placeholder={t('teamEmailPlaceholder')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   disabled={inviting}
@@ -236,15 +238,15 @@ export default function TeamPage() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">Peran Akses</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase">{t('teamRoleLabel')}</label>
                 <select
                   value={role}
                   onChange={(e) => setRole(e.target.value as any)}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <option value="admin">Administrator (Admin)</option>
-                  <option value="member">Anggota Tim (Member)</option>
-                  <option value="viewer">Pengamat (Viewer)</option>
+                  <option value="admin">{t('teamRoleAdminOption')}</option>
+                  <option value="member">{t('teamRoleMemberOption')}</option>
+                  <option value="viewer">{t('teamRoleViewerOption')}</option>
                 </select>
               </div>
 
@@ -252,12 +254,12 @@ export default function TeamPage() {
                 {inviting ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Mengirim Undangan...
+                    {t('teamInviteSending')}
                   </>
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />
-                    Kirim Undangan
+                    {t('teamInviteSendButton')}
                   </>
                 )}
               </Button>
@@ -271,8 +273,8 @@ export default function TeamPage() {
         <div className="lg:col-span-2 space-y-4">
           <Card className="border border-border/80">
             <CardHeader className="pb-3 border-b border-border">
-              <CardTitle className="text-sm font-bold text-foreground">Anggota Aktif</CardTitle>
-              <CardDescription className="text-[11px]">Rekan yang saat ini memiliki akses penuh ke ruang kerja.</CardDescription>
+              <CardTitle className="text-sm font-bold text-foreground">{t('teamActiveMembersTitle')}</CardTitle>
+              <CardDescription className="text-[11px]">{t('teamActiveMembersDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-border">
               {loading ? (
@@ -289,7 +291,7 @@ export default function TeamPage() {
                         {getInitials(m.profile?.full_name)}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-foreground truncate">{m.profile?.full_name || 'Rekan Tim'}</p>
+                        <p className="text-xs font-bold text-foreground truncate">{m.profile?.full_name || t('teamMemberFallbackName')}</p>
                         <p className="text-[10px] text-muted-foreground truncate">{m.profile?.email}</p>
                       </div>
                     </div>
@@ -314,7 +316,7 @@ export default function TeamPage() {
                         <button
                           onClick={() => handleRemoveMember(m.id, m.user_id)}
                           className="p-1.5 hover:bg-destructive/10 hover:text-destructive rounded transition-colors text-muted-foreground"
-                          title="Keluarkan dari tim"
+                          title={t('teamRemoveMemberTooltip')}
                         >
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
@@ -331,8 +333,8 @@ export default function TeamPage() {
         <div className="space-y-4">
           <Card className="border border-border/80">
             <CardHeader className="pb-3 border-b border-border">
-              <CardTitle className="text-sm font-bold text-foreground">Undangan Tertunda</CardTitle>
-              <CardDescription className="text-[11px]">Rekan yang belum menyetujui undangan.</CardDescription>
+              <CardTitle className="text-sm font-bold text-foreground">{t('teamPendingInvitationsTitle')}</CardTitle>
+              <CardDescription className="text-[11px]">{t('teamPendingInvitationsDesc')}</CardDescription>
             </CardHeader>
             <CardContent className="p-0 divide-y divide-border">
               {loading ? (
@@ -343,27 +345,27 @@ export default function TeamPage() {
                 </div>
               ) : invitations.length === 0 ? (
                 <div className="p-8 text-center text-xs text-muted-foreground">
-                  Tidak ada undangan tertunda
+                  {t('teamNoPendingInvitations')}
                 </div>
               ) : (
                 invitations.map((i) => (
                   <div key={i.id} className="flex items-center justify-between p-4 hover:bg-muted/10 transition-colors">
                     <div className="min-w-0">
                       <p className="text-xs font-bold text-foreground truncate">{i.email}</p>
-                      <p className="text-[9px] text-muted-foreground truncate">Peran: <span className="capitalize">{i.role}</span></p>
+                      <p className="text-[9px] text-muted-foreground truncate">{t('teamInvitationRolePrefix')}<span className="capitalize">{i.role}</span></p>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <button
                         onClick={() => copyInviteLink(i.token)}
                         className="p-1 hover:bg-primary/10 hover:text-primary rounded text-muted-foreground transition-colors"
-                        title="Salin tautan undangan"
+                        title={t('teamCopyInviteLinkTooltip')}
                       >
                         <Copy className="h-3.5 w-3.5" />
                       </button>
                       <button
                         onClick={() => handleCancelInvite(i.id)}
                         className="p-1 hover:bg-destructive/10 hover:text-destructive rounded text-muted-foreground transition-colors"
-                        title="Batalkan Undangan"
+                        title={t('teamCancelInviteTooltip')}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </button>

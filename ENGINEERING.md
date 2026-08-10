@@ -621,3 +621,75 @@ context onto the Settings list); renaming an existing column's `key`
 key would require rewriting every task row that references it, skipped
 as unnecessary complexity); per-project (vs per-workspace) custom fields
 or columns — both are workspace-wide only, matching what was asked.
+
+## 2026-08-10 — Bilingual support (Indonesian/English), full site
+
+User asked for an English option everywhere, no mixed-language pages, and
+switching language must change the entire site — confirmed via
+AskUserQuestion to be: a header toggle (no `/en` URL routing) persisted
+client-side, covering the marketing site AND the full authenticated app
+in one pass.
+
+**Architecture** (`lib/i18n/`):
+- `locale-context.tsx` — `LocaleProvider`/`useLocale()`. Client Context,
+  `locale: 'id'|'en'` defaulting to `'id'`, persisted to
+  `localStorage['ruangbaru-locale']`, also sets `document.documentElement.lang`.
+  Wired once in `app/providers.tsx` (wraps everything under the root layout,
+  so it covers marketing + auth + the authenticated app uniformly).
+- `useT.ts` — `useT(namespace: string)` returns `t(key) => string`, looked
+  up from `dict/index.ts`'s merged table. Missing key falls back to the key
+  itself (visible, not blank) — deliberately loose typing (`Record<string,
+  Record<string, string>>`) so per-namespace dict files can land
+  independently without the aggregator blocking them.
+- `dict/<namespace>.ts` — one file per feature area, each exporting
+  `export const xDict = { id: {...flat camelCase key: string}, en: {...} }`.
+  Sixteen namespaces: `common`, `marketingFeatures`, `marketingPages`,
+  `auth`, `dashboard`, `projects`, `tasks`, `calendar`, `notes`, `team`,
+  `settings`, `billing`, `meetings`, `appLayout`, `landing`, `tour`.
+- `dict/index.ts` — the only file that imports every namespace and merges
+  them into `dictionaries`. Kept as a thin append-only aggregator
+  specifically so many namespaces could be authored in parallel without
+  colliding on one shared file.
+- `components/i18n/LanguageSwitcher.tsx` — the ID/EN pill toggle. Placed in:
+  `MarketingHeader` (desktop + mobile menu), the authenticated app's
+  `Header.tsx` and `Sidebar.tsx` (bottom, when expanded), the `(auth)`
+  layout's top bar (`AuthLayoutChrome.tsx`), and standalone pages with no
+  shared header (`app/welcome/page.tsx`, `app/invite/[token]/page.tsx`) —
+  every reachable entry point has its own switcher, not just inherited
+  `localStorage` state, so a user landing anywhere first (e.g. an invite
+  email link) can still change language immediately.
+
+**How it was built:** hand-built the infra + one reference conversion
+(`MarketingHeader.tsx` + `dict/common.ts`), then fanned out 12 parallel
+agents — one per cohesive file group (marketing pages, about/contact/legal,
+auth+welcome+invite, dashboard+projects, tasks, calendar, notes+team,
+settings+billing, meetings, shared app layout, landing/homepage, tour) —
+each creating its own dict file and editing only its assigned source
+files, so there was zero shared-file contention during the fan-out.
+Merged all 16 dict files into `dict/index.ts` by hand afterward.
+
+**Verification:** `npx tsc --noEmit` and `npm run build` both clean after
+the merge. Live browser check (Playwright against the running dev server):
+toggled EN on the homepage, confirmed hero/nav copy switched, navigated to
+`/fitur` and `/login` with no re-toggle needed (locale persisted via
+localStorage), toggled back to ID from the login page's own switcher —
+all correct. Screenshotted `/login` in EN to confirm layout/spacing held up
+(showcase panel, form, footer all translated, no overflow).
+
+**Deliberately left untranslated (by design, not oversight):** any string
+that is actual data rather than UI chrome — DB-sourced status/custom-field
+names, assignee/project/member names, user-authored note/comment bodies,
+demo/seed content, notification rows already persisted to the DB (translating
+at insert time would bake in the creator's locale, not the viewer's).
+date-fns locale swaps were added only for the calendar's month/weekday
+names (`components/calendar/EventDialog.tsx`, `[workspace]/calendar/page.tsx`);
+other `toLocaleDateString('id-ID', …)` calls elsewhere were left as-is —
+harmless day-of-month formatting differences, not a translation gap.
+
+**Not done:** the marketing site's `<html lang="id">` in the root
+`app/layout.tsx` is still a static server-rendered default — `useLocale`
+updates `document.documentElement.lang` client-side after hydration, so
+there's a brief moment before JS runs where the attribute doesn't yet
+reflect a returning English-preferring visitor. Acceptable tradeoff for a
+client-only, no-`/en`-route architecture; would need a locale cookie read
+in a server component to close entirely.

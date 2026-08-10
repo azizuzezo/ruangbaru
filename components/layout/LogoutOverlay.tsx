@@ -5,8 +5,10 @@ import { motion as m, AnimatePresence } from 'framer-motion';
 import { Check, Loader2, ShieldAlert } from 'lucide-react';
 import { useUIStore as useUI } from '@/lib/stores/ui-store';
 import { createClient } from '@/lib/supabase/client';
+import { useT } from '@/lib/i18n/useT';
 
 export function LogoutOverlay() {
+  const t = useT('appLayout');
   const isLoggingOut = useUI((state) => state.isLoggingOut);
   const setIsLoggingOut = useUI((state) => state.setIsLoggingOut);
   const [phase, setPhase] = useState<'loading' | 'success'>('loading');
@@ -82,10 +84,10 @@ export function LogoutOverlay() {
                   
                   <div className="space-y-2">
                     <h3 className="font-display text-lg font-semibold text-foreground tracking-tight">
-                      Mengamankan Sesi Anda
+                      {t('logoutOverlaySecuringTitle')}
                     </h3>
                     <p className="text-xs text-muted-foreground leading-relaxed px-4">
-                      Sedang keluar dari akun RuangBaru Anda dengan aman...
+                      {t('logoutOverlaySecuringBody')}
                     </p>
                   </div>
                 </m.div>
@@ -109,10 +111,10 @@ export function LogoutOverlay() {
 
                   <div className="space-y-2">
                     <h3 className="font-display text-lg font-semibold text-foreground tracking-tight">
-                      Keluar Berhasil
+                      {t('logoutOverlaySuccessTitle')}
                     </h3>
                     <p className="text-xs text-muted-foreground leading-relaxed px-4">
-                      Terima kasih atas dedikasi dan kerja keras Anda hari ini. Sampai jumpa kembali!
+                      {t('logoutOverlaySuccessBody')}
                     </p>
                   </div>
                 </m.div>

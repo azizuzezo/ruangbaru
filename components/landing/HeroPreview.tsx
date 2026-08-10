@@ -6,12 +6,15 @@ import {
   Check, Clock, CalendarDays, MessageSquare, Plus, Search, Bell, GripVertical,
 } from 'lucide-react';
 import { openCommandPalette } from '@/components/landing/CommandPalette';
+import { useT } from '@/lib/i18n/useT';
 
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
 const YELLOW = '#FDB31A';
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
+// `title` and `due` below hold translation keys (resolved with t() at render
+// time), not display text, so this demo data updates with the locale.
 type ColKey = 'todo' | 'doing' | 'done';
 type Card = {
   id: string;
@@ -24,41 +27,41 @@ type Card = {
 };
 
 const WORKSPACES = [
-  { id: 'produk', label: 'Tim Produk', accent: BLUE },
-  { id: 'marketing', label: 'Marketing', accent: TEAL },
-  { id: 'operasional', label: 'Operasional', accent: YELLOW },
+  { id: 'produk', label: 'hpWsProduk', accent: BLUE },
+  { id: 'marketing', label: 'hpWsMarketing', accent: TEAL },
+  { id: 'operasional', label: 'hpWsOperasional', accent: YELLOW },
 ] as const;
 
 const BOARDS: Record<string, Card[]> = {
   produk: [
-    { id: 'p1', title: 'Desain halaman onboarding', col: 'doing', assignee: { name: 'Putri', color: BLUE }, due: '2 hari', checklist: [3, 5], comments: 4 },
-    { id: 'p2', title: 'Riset wawancara pengguna', col: 'todo', assignee: { name: 'Adi', color: TEAL }, due: 'Minggu ini', checklist: [0, 3], comments: 1 },
-    { id: 'p3', title: 'Spesifikasi fitur kalender', col: 'todo', assignee: { name: 'Rani', color: YELLOW }, due: '5 hari', checklist: [1, 4], comments: 2 },
-    { id: 'p4', title: 'Rilis versi 1.2', col: 'done', assignee: { name: 'Budi', color: '#8B5CF6' }, due: 'Selesai', checklist: [6, 6], comments: 8 },
+    { id: 'p1', title: 'hpCardTitleP1', col: 'doing', assignee: { name: 'Putri', color: BLUE }, due: 'hpDue2Days', checklist: [3, 5], comments: 4 },
+    { id: 'p2', title: 'hpCardTitleP2', col: 'todo', assignee: { name: 'Adi', color: TEAL }, due: 'hpDueThisWeek', checklist: [0, 3], comments: 1 },
+    { id: 'p3', title: 'hpCardTitleP3', col: 'todo', assignee: { name: 'Rani', color: YELLOW }, due: 'hpDue5Days', checklist: [1, 4], comments: 2 },
+    { id: 'p4', title: 'hpCardTitleP4', col: 'done', assignee: { name: 'Budi', color: '#8B5CF6' }, due: 'hpDueDone', checklist: [6, 6], comments: 8 },
   ],
   marketing: [
-    { id: 'm1', title: 'Kampanye peluncuran Q3', col: 'doing', assignee: { name: 'Sari', color: TEAL }, due: '3 hari', checklist: [2, 6], comments: 5 },
-    { id: 'm2', title: 'Konten media sosial', col: 'todo', assignee: { name: 'Dewi', color: BLUE }, due: 'Besok', checklist: [4, 8], comments: 3 },
-    { id: 'm3', title: 'Newsletter bulanan', col: 'done', assignee: { name: 'Tono', color: YELLOW }, due: 'Selesai', checklist: [5, 5], comments: 2 },
+    { id: 'm1', title: 'hpCardTitleM1', col: 'doing', assignee: { name: 'Sari', color: TEAL }, due: 'hpDue3Days', checklist: [2, 6], comments: 5 },
+    { id: 'm2', title: 'hpCardTitleM2', col: 'todo', assignee: { name: 'Dewi', color: BLUE }, due: 'hpDueTomorrow', checklist: [4, 8], comments: 3 },
+    { id: 'm3', title: 'hpCardTitleM3', col: 'done', assignee: { name: 'Tono', color: YELLOW }, due: 'hpDueDone', checklist: [5, 5], comments: 2 },
   ],
   operasional: [
-    { id: 'o1', title: 'Review kontrak vendor', col: 'todo', assignee: { name: 'Joko', color: YELLOW }, due: 'Minggu ini', checklist: [1, 4], comments: 1 },
-    { id: 'o2', title: 'Onboarding karyawan baru', col: 'doing', assignee: { name: 'Mira', color: BLUE }, due: '4 hari', checklist: [3, 7], comments: 6 },
-    { id: 'o3', title: 'Audit anggaran triwulan', col: 'done', assignee: { name: 'Hadi', color: TEAL }, due: 'Selesai', checklist: [9, 9], comments: 4 },
+    { id: 'o1', title: 'hpCardTitleO1', col: 'todo', assignee: { name: 'Joko', color: YELLOW }, due: 'hpDueThisWeek', checklist: [1, 4], comments: 1 },
+    { id: 'o2', title: 'hpCardTitleO2', col: 'doing', assignee: { name: 'Mira', color: BLUE }, due: 'hpDue4Days', checklist: [3, 7], comments: 6 },
+    { id: 'o3', title: 'hpCardTitleO3', col: 'done', assignee: { name: 'Hadi', color: TEAL }, due: 'hpDueDone', checklist: [9, 9], comments: 4 },
   ],
 };
 
 const COLUMNS: { key: ColKey; label: string; dot: string }[] = [
-  { key: 'todo', label: 'Akan Dikerjakan', dot: '#9CA3AF' },
-  { key: 'doing', label: 'Sedang Berjalan', dot: BLUE },
-  { key: 'done', label: 'Selesai', dot: TEAL },
+  { key: 'todo', label: 'hpColTodo', dot: '#9CA3AF' },
+  { key: 'doing', label: 'hpColDoing', dot: BLUE },
+  { key: 'done', label: 'hpColDone', dot: TEAL },
 ];
 
 const ACTIVITY = [
-  { who: 'Putri', what: 'memindahkan kartu ke Selesai', color: BLUE },
-  { who: 'Adi', what: 'menambahkan komentar baru', color: TEAL },
-  { who: 'Rani', what: 'menyelesaikan 2 sub-tugas', color: YELLOW },
-  { who: 'Budi', what: 'mengundang anggota baru', color: '#8B5CF6' },
+  { who: 'Putri', whatKey: 'hpActivityWhat1', color: BLUE },
+  { who: 'Adi', whatKey: 'hpActivityWhat2', color: TEAL },
+  { who: 'Rani', whatKey: 'hpActivityWhat3', color: YELLOW },
+  { who: 'Budi', whatKey: 'hpActivityWhat4', color: '#8B5CF6' },
 ];
 
 const PRESENCE = [
@@ -69,9 +72,9 @@ const PRESENCE = [
 ];
 
 const NOTIFICATIONS = [
-  { who: 'Adi', what: 'menyebut Anda di "Riset pengguna"', time: '2 mnt', color: TEAL },
-  { who: 'Putri', what: 'menugaskan "Desain onboarding" ke Anda', time: '18 mnt', color: BLUE },
-  { who: 'Rani', what: 'mengomentari kartu kalender', time: '1 jam', color: YELLOW },
+  { who: 'Adi', whatKey: 'hpNotifWhat1', timeKey: 'hpNotifTime1', color: TEAL },
+  { who: 'Putri', whatKey: 'hpNotifWhat2', timeKey: 'hpNotifTime2', color: BLUE },
+  { who: 'Rani', whatKey: 'hpNotifWhat3', timeKey: 'hpNotifTime3', color: YELLOW },
 ];
 
 function initials(name: string) {
@@ -87,6 +90,7 @@ function groupByCol(cards: Card[]): Record<ColKey, Card[]> {
 }
 
 export function HeroPreview() {
+  const t = useT('landing');
   const reduce = useReducedMotion();
   const [ws, setWs] = useState<string>('produk');
   const [expanded, setExpanded] = useState<string | null>(null);
@@ -140,7 +144,7 @@ export function HeroPreview() {
                   transition={{ duration: 0.3, ease: E }}
                 />
               )}
-              <span className="relative">{w.label}</span>
+              <span className="relative">{t(w.label)}</span>
             </button>
           ))}
         </div>
@@ -151,7 +155,7 @@ export function HeroPreview() {
             onClick={openCommandPalette}
             className="hidden items-center gap-1.5 rounded-md border border-neutral-200 px-2 py-1 text-[10px] text-neutral-400 transition-colors hover:border-neutral-300 hover:text-neutral-600 sm:flex"
           >
-            <Search className="h-3 w-3" /> Cari… <kbd className="rounded bg-neutral-100 px-1 text-[8px]">⌘K</kbd>
+            <Search className="h-3 w-3" /> {t('hpSearchLabel')} <kbd className="rounded bg-neutral-100 px-1 text-[8px]">⌘K</kbd>
           </button>
 
           {/* Notifications */}
@@ -159,7 +163,7 @@ export function HeroPreview() {
             <button
               onClick={() => { setNotifOpen((o) => !o); setNotifRead(true); }}
               className="relative flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-100"
-              aria-label="Notifikasi"
+              aria-label={t('hpNotifLabel')}
             >
               <Bell className="h-4 w-4" />
               {!notifRead && (
@@ -177,16 +181,16 @@ export function HeroPreview() {
                     transition={{ duration: 0.2, ease: E }}
                     className="absolute right-0 top-9 z-20 w-64 overflow-hidden rounded-xl border border-neutral-200 bg-white shadow-xl"
                   >
-                    <div className="border-b border-neutral-100 px-3 py-2 text-[11px] font-semibold text-neutral-700">Notifikasi</div>
+                    <div className="border-b border-neutral-100 px-3 py-2 text-[11px] font-semibold text-neutral-700">{t('hpNotifLabel')}</div>
                     <div className="divide-y divide-neutral-50">
                       {NOTIFICATIONS.map((n) => (
-                        <div key={n.who + n.what} className="flex items-start gap-2 px-3 py-2.5">
+                        <div key={n.who + n.whatKey} className="flex items-start gap-2 px-3 py-2.5">
                           <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-bold text-white" style={{ background: n.color }}>
                             {initials(n.who)}
                           </span>
                           <p className="text-[10px] leading-snug text-neutral-600">
-                            <span className="font-semibold text-neutral-800">{n.who}</span> {n.what}
-                            <span className="mt-0.5 block text-[9px] text-neutral-400">{n.time} lalu</span>
+                            <span className="font-semibold text-neutral-800">{n.who}</span> {t(n.whatKey)}
+                            <span className="mt-0.5 block text-[9px] text-neutral-400">{t(n.timeKey)} {t('hpTimeAgoSuffix')}</span>
                           </p>
                         </div>
                       ))}
@@ -216,14 +220,14 @@ export function HeroPreview() {
       {/* Board header */}
       <div className="flex items-center justify-between px-4 pt-4">
         <div>
-          <p className="text-sm font-bold text-neutral-900">{WORKSPACES.find((w) => w.id === ws)!.label}</p>
-          <p className="text-[11px] text-neutral-400">{totalCards} tugas aktif · seret kartu untuk mengatur ulang</p>
+          <p className="text-sm font-bold text-neutral-900">{t(WORKSPACES.find((w) => w.id === ws)!.label)}</p>
+          <p className="text-[11px] text-neutral-400">{totalCards}{t('hpActiveTasksSuffix')}</p>
         </div>
         <button
           className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm"
           style={{ background: accent }}
         >
-          <Plus className="h-3 w-3" /> Tugas
+          <Plus className="h-3 w-3" /> {t('hpAddTaskButton')}
         </button>
       </div>
 
@@ -233,7 +237,7 @@ export function HeroPreview() {
           <div key={col.key} className="min-w-0">
             <div className="mb-2 flex items-center gap-1.5">
               <span className="h-2 w-2 rounded-full" style={{ background: col.dot }} />
-              <span className="truncate text-[10px] font-semibold text-neutral-500">{col.label}</span>
+              <span className="truncate text-[10px] font-semibold text-neutral-500">{t(col.label)}</span>
               <span className="ml-auto text-[10px] text-neutral-300">{board[col.key].length}</span>
             </div>
 
@@ -257,7 +261,7 @@ export function HeroPreview() {
                   >
                     <button onClick={() => setExpanded(isOpen ? null : card.id)} className="block w-full text-left">
                       <div className="flex items-start gap-1">
-                        <p className="flex-1 text-[11px] font-medium leading-snug text-neutral-800">{card.title}</p>
+                        <p className="flex-1 text-[11px] font-medium leading-snug text-neutral-800">{t(card.title)}</p>
                         <GripVertical className="h-3 w-3 shrink-0 text-neutral-300 opacity-0 transition-opacity group-hover:opacity-100" />
                       </div>
 
@@ -273,7 +277,7 @@ export function HeroPreview() {
                           {initials(card.assignee.name)}
                         </span>
                         <span className="flex items-center gap-0.5 text-[8px] text-neutral-400">
-                          <Clock className="h-2.5 w-2.5" /> {card.due}
+                          <Clock className="h-2.5 w-2.5" /> {t(card.due)}
                         </span>
                       </div>
 
@@ -287,9 +291,9 @@ export function HeroPreview() {
                             className="overflow-hidden"
                           >
                             <div className="mt-2 space-y-1.5 border-t border-neutral-100 pt-2">
-                              <div className="flex items-center gap-1.5 text-[9px] text-neutral-500"><CalendarDays className="h-2.5 w-2.5" /> Tenggat {card.due}</div>
-                              <div className="flex items-center gap-1.5 text-[9px] text-neutral-500"><Check className="h-2.5 w-2.5" /> {done} dari {total} sub-tugas</div>
-                              <div className="flex items-center gap-1.5 text-[9px] text-neutral-500"><MessageSquare className="h-2.5 w-2.5" /> {card.comments} komentar</div>
+                              <div className="flex items-center gap-1.5 text-[9px] text-neutral-500"><CalendarDays className="h-2.5 w-2.5" /> {t('hpDueLabelPrefix')}{t(card.due)}</div>
+                              <div className="flex items-center gap-1.5 text-[9px] text-neutral-500"><Check className="h-2.5 w-2.5" /> {t('hpChecklistLabel').replace('{done}', String(done)).replace('{total}', String(total))}</div>
+                              <div className="flex items-center gap-1.5 text-[9px] text-neutral-500"><MessageSquare className="h-2.5 w-2.5" /> {t('hpCommentsLabel').replace('{count}', String(card.comments))}</div>
                             </div>
                           </motion.div>
                         )}
@@ -322,7 +326,7 @@ export function HeroPreview() {
               transition={{ duration: 0.35, ease: E }}
               className="absolute inset-0 truncate text-[10px] text-neutral-500"
             >
-              <span className="font-semibold" style={{ color: current.color }}>{current.who}</span>{' '}{current.what}
+              <span className="font-semibold" style={{ color: current.color }}>{current.who}</span>{' '}{t(current.whatKey)}
             </motion.p>
           </AnimatePresence>
         </div>

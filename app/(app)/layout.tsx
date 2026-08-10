@@ -15,12 +15,14 @@ import { TourProvider } from '@/components/tour/TourProvider';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2 } from 'lucide-react';
 import type { Workspace } from '@/types';
+import { useT } from '@/lib/i18n/useT';
 
 export default function AppLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const t = useT('appLayout');
   const router = useRouter();
   const {
     currentWorkspace,
@@ -107,10 +109,10 @@ export default function AppLayout({
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-foreground gap-4">
-        <Image src="/logo.png" alt="RuangBaru" width={48} height={48} className="rounded-xl animate-pulse" />
+        <Image src="/logo.png" alt={t('layoutLogoAlt')} width={48} height={48} className="rounded-xl animate-pulse" />
         <div className="flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          <span>Memuat ruang kerja Anda...</span>
+          <span>{t('layoutLoadingWorkspace')}</span>
         </div>
       </div>
     );

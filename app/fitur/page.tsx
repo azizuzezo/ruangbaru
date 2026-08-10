@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { SiteFooter } from '@/components/landing/SiteFooter';
+import { useT } from '@/lib/i18n/useT';
 
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
@@ -34,15 +35,16 @@ function FadeIn({ children, delay = 0, className = '' }: {
 
 /* ── Interactive Kanban preview ─────────────────────────── */
 const INIT_CARDS = [
-  { id: 1, title: 'Desain halaman login', col: 0 },
-  { id: 2, title: 'Review brief klien', col: 0 },
-  { id: 3, title: 'Update dokumentasi', col: 1 },
-  { id: 4, title: 'Deploy ke staging', col: 2 },
+  { id: 1, title: 'featuresKanbanCard1', col: 0 },
+  { id: 2, title: 'featuresKanbanCard2', col: 0 },
+  { id: 3, title: 'featuresKanbanCard3', col: 1 },
+  { id: 4, title: 'featuresKanbanCard4', col: 2 },
 ];
 
 function KanbanPreview() {
+  const t = useT('marketingFeatures');
   const [cards, setCards] = useState(INIT_CARDS);
-  const cols = ['Perlu Dikerjakan', 'Sedang Berjalan', 'Selesai'];
+  const cols = [t('featuresKanbanColTodo'), t('featuresKanbanColProgress'), t('featuresKanbanColDone')];
   const colColors = [BLUE, YELLOW, TEAL];
 
   const move = (id: number, dir: 1 | -1) => {
@@ -65,19 +67,19 @@ function KanbanPreview() {
                 className="rounded-lg border border-neutral-200 bg-white p-2.5 cursor-pointer select-none group"
                 style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.04)' }}
                 whileHover={{ y: -1, boxShadow: '0 3px 8px rgba(0,0,0,0.08)' }}>
-                <p className="text-[11px] font-medium text-neutral-800">{card.title}</p>
+                <p className="text-[11px] font-medium text-neutral-800">{t(card.title)}</p>
                 <div className="mt-1.5 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   {ci > 0 && (
                     <button onClick={() => move(card.id, -1)}
                       className="rounded px-1.5 py-0.5 text-[9px] font-semibold bg-neutral-100 hover:bg-neutral-200 text-neutral-600 transition-colors">
-                      ← Balik
+                      {t('featuresKanbanBack')}
                     </button>
                   )}
                   {ci < 2 && (
                     <button onClick={() => move(card.id, 1)}
                       className="rounded px-1.5 py-0.5 text-[9px] font-semibold text-white transition-colors"
                       style={{ background: colColors[ci + 1] }}>
-                      Maju →
+                      {t('featuresKanbanForward')}
                     </button>
                   )}
                 </div>
@@ -92,31 +94,32 @@ function KanbanPreview() {
 
 /* ── Checklist preview ──────────────────────────────────── */
 const INIT_TASKS = [
-  { id: 1, label: 'Kirim proposal klien', done: true },
-  { id: 2, label: 'Review desain landing', done: false },
-  { id: 3, label: 'Meeting standup 09:00', done: false },
-  { id: 4, label: 'Update CHANGELOG', done: true },
+  { id: 1, label: 'featuresChecklistTask1', done: true },
+  { id: 2, label: 'featuresChecklistTask2', done: false },
+  { id: 3, label: 'featuresChecklistTask3', done: false },
+  { id: 4, label: 'featuresChecklistTask4', done: true },
 ];
 
 function ChecklistPreview() {
+  const t = useT('marketingFeatures');
   const [tasks, setTasks] = useState(INIT_TASKS);
-  const toggle = (id: number) => setTasks(ts => ts.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const toggle = (id: number) => setTasks(ts => ts.map(task => task.id === id ? { ...task, done: !task.done } : task));
 
   return (
     <div className="space-y-2">
-      {tasks.map(t => (
-        <motion.button key={t.id} onClick={() => toggle(t.id)}
+      {tasks.map(task => (
+        <motion.button key={task.id} onClick={() => toggle(task.id)}
           className="w-full flex items-center gap-3 rounded-xl border border-neutral-100 bg-white p-3 text-left hover:border-neutral-200 transition-colors"
           whileTap={{ scale: 0.99 }}>
-          <motion.span animate={{ scale: t.done ? [1.2, 1] : 1 }}
+          <motion.span animate={{ scale: task.done ? [1.2, 1] : 1 }}
             transition={{ type: 'spring', stiffness: 300, damping: 20 }}
             className="h-5 w-5 rounded-md border-2 flex items-center justify-center shrink-0"
-            style={{ borderColor: t.done ? TEAL : '#D1D5DB', background: t.done ? TEAL : 'white' }}>
-            {t.done && <Check className="h-3 w-3 text-white" />}
+            style={{ borderColor: task.done ? TEAL : '#D1D5DB', background: task.done ? TEAL : 'white' }}>
+            {task.done && <Check className="h-3 w-3 text-white" />}
           </motion.span>
           <span className="text-sm font-medium transition-colors"
-            style={{ color: t.done ? '#9CA3AF' : '#111827', textDecoration: t.done ? 'line-through' : 'none' }}>
-            {t.label}
+            style={{ color: task.done ? '#9CA3AF' : '#111827', textDecoration: task.done ? 'line-through' : 'none' }}>
+            {t(task.label)}
           </span>
         </motion.button>
       ))}
@@ -126,15 +129,20 @@ function ChecklistPreview() {
 
 /* ── Calendar preview ───────────────────────────────────── */
 function CalendarPreview() {
+  const t = useT('marketingFeatures');
   const [selected, setSelected] = useState<number[]>([5, 12, 19]);
   const days = Array.from({ length: 30 }, (_, i) => i + 1);
   const toggle = (d: number) => setSelected(s => s.includes(d) ? s.filter(x => x !== d) : [...s, d]);
+  const weekDays = [
+    t('featuresCalendarDaySen'), t('featuresCalendarDaySel'), t('featuresCalendarDayRab'),
+    t('featuresCalendarDayKam'), t('featuresCalendarDayJum'), t('featuresCalendarDaySab'), t('featuresCalendarDayMin'),
+  ];
 
   return (
     <div>
       <div className="grid grid-cols-7 gap-1 mb-2">
-        {['Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab', 'Min'].map(d => (
-          <div key={d} className="text-center text-[9px] font-semibold text-neutral-400">{d}</div>
+        {weekDays.map((d, i) => (
+          <div key={i} className="text-center text-[9px] font-semibold text-neutral-400">{d}</div>
         ))}
       </div>
       <div className="grid grid-cols-7 gap-1">
@@ -152,7 +160,7 @@ function CalendarPreview() {
       </div>
       {selected.length > 0 && (
         <p className="mt-3 text-[10px] text-neutral-500 font-medium">
-          {selected.length} hari dipilih — klik untuk tambah/hapus event
+          {t('featuresCalendarSelectedCount').replace('{count}', String(selected.length))}
         </p>
       )}
     </div>
@@ -161,13 +169,14 @@ function CalendarPreview() {
 
 /* ── Team preview ───────────────────────────────────────── */
 const TEAM = [
-  { name: 'Budi Santoso', role: 'Admin', color: BLUE, initials: 'BS', online: true },
-  { name: 'Rani Amalia', role: 'Anggota', color: TEAL, initials: 'RA', online: true },
-  { name: 'Ahmad Fajar', role: 'Anggota', color: '#8B5CF6', initials: 'AF', online: false },
-  { name: 'Dewi Kurnia', role: 'Anggota', color: YELLOW, initials: 'DK', online: false },
+  { name: 'Budi Santoso', role: 'featuresTeamRoleAdmin', color: BLUE, initials: 'BS', online: true },
+  { name: 'Rani Amalia', role: 'featuresTeamRoleMember', color: TEAL, initials: 'RA', online: true },
+  { name: 'Ahmad Fajar', role: 'featuresTeamRoleMember', color: '#8B5CF6', initials: 'AF', online: false },
+  { name: 'Dewi Kurnia', role: 'featuresTeamRoleMember', color: YELLOW, initials: 'DK', online: false },
 ];
 
 function TeamPreview() {
+  const t = useT('marketingFeatures');
   const [revealed, setRevealed] = useState<number[]>([]);
   const toggle = (i: number) => setRevealed(r => r.includes(i) ? r.filter(x => x !== i) : [...r, i]);
 
@@ -181,7 +190,7 @@ function TeamPreview() {
             style={{ background: m.color }}>{m.initials}</span>
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold text-neutral-900">{m.name}</p>
-            <p className="text-xs text-neutral-500">{m.role}</p>
+            <p className="text-xs text-neutral-500">{t(m.role)}</p>
           </div>
           <AnimatePresence>
             {revealed.includes(i) && (
@@ -193,7 +202,7 @@ function TeamPreview() {
                   color: m.online ? '#065F46' : '#6B7280',
                 }}>
                 <span className="h-1.5 w-1.5 rounded-full" style={{ background: m.online ? '#10B981' : '#9CA3AF' }} />
-                {m.online ? 'Online' : 'Offline'}
+                {m.online ? t('featuresTeamStatusOnline') : t('featuresTeamStatusOffline')}
               </motion.span>
             )}
           </AnimatePresence>
@@ -210,33 +219,33 @@ function TeamPreview() {
 const FEATURES = [
   {
     id: 'kanban',
-    label: 'Proyek & Kanban',
+    label: 'featuresTabKanbanLabel',
     icon: <FolderKanban className="h-5 w-5" />,
-    desc: 'Atur pekerjaan dalam papan visual. Geser kartu antar kolom dan lacak progress setiap task.',
+    desc: 'featuresTabKanbanDesc',
     color: BLUE,
     preview: <KanbanPreview />,
   },
   {
     id: 'tugas',
-    label: 'Daftar Tugas',
+    label: 'featuresTabTugasLabel',
     icon: <ListTodo className="h-5 w-5" />,
-    desc: 'Kelola tugas harian dengan prioritas dan tenggat waktu. Centang ketika selesai.',
+    desc: 'featuresTabTugasDesc',
     color: TEAL,
     preview: <ChecklistPreview />,
   },
   {
     id: 'kalender',
-    label: 'Kalender Tim',
+    label: 'featuresTabKalenderLabel',
     icon: <CalendarDays className="h-5 w-5" />,
-    desc: 'Lihat jadwal tim dalam satu tampilan. Klik tanggal untuk menambah atau menghapus event.',
+    desc: 'featuresTabKalenderDesc',
     color: '#8B5CF6',
     preview: <CalendarPreview />,
   },
   {
     id: 'tim',
-    label: 'Manajemen Tim',
+    label: 'featuresTabTimLabel',
     icon: <Users className="h-5 w-5" />,
-    desc: 'Undang anggota, atur peran, dan pantau status kehadiran tim secara real-time.',
+    desc: 'featuresTabTimDesc',
     color: YELLOW,
     preview: <TeamPreview />,
   },
@@ -244,6 +253,7 @@ const FEATURES = [
 
 /* ── Page ───────────────────────────────────────────────── */
 export default function FiturPage() {
+  const t = useT('marketingFeatures');
   const [active, setActive] = useState(0);
 
   return (
@@ -256,11 +266,10 @@ export default function FiturPage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: E }}>
             <h1 className="text-[clamp(1.9rem,3.6vw,2.75rem)] font-semibold tracking-tight text-neutral-900" style={{ lineHeight: 1.2 }}>
-              Empat alat kerja, bukan empat aplikasi terpisah.
+              {t('featuresHeroTitle')}
             </h1>
             <p className="mt-4 text-lg text-neutral-600 max-w-xl mx-auto">
-              Klik-klik dulu sebelum daftar. Kartu, kalender, dan daftar tugas
-              di bawah ini beneran interaktif — bukan tangkapan layar.
+              {t('featuresHeroSubtitle')}
             </p>
             <div className="mt-8 flex items-center justify-center gap-3">
               <Link href="/register">
@@ -268,7 +277,7 @@ export default function FiturPage() {
                   className="inline-flex items-center gap-2 rounded-lg px-5 py-2.5 text-sm font-semibold text-white"
                   style={{ background: BLUE }}
                   whileHover={{ opacity: 0.88 }} whileTap={{ scale: 0.97 }}>
-                  Mulai gratis <ArrowRight className="h-4 w-4" />
+                  {t('featuresHeroCta')} <ArrowRight className="h-4 w-4" />
                 </motion.button>
               </Link>
             </div>
@@ -298,8 +307,8 @@ export default function FiturPage() {
                     {f.icon}
                   </span>
                   <div>
-                    <p className="text-sm font-semibold text-neutral-900">{f.label}</p>
-                    <p className="mt-0.5 text-xs leading-5 text-neutral-500 hidden lg:block">{f.desc}</p>
+                    <p className="text-sm font-semibold text-neutral-900">{t(f.label)}</p>
+                    <p className="mt-0.5 text-xs leading-5 text-neutral-500 hidden lg:block">{t(f.desc)}</p>
                   </div>
                   {active === i && (
                     <motion.div className="h-0.5 w-full rounded-full" style={{ background: f.color }}
@@ -313,9 +322,9 @@ export default function FiturPage() {
             <div className="rounded-2xl border border-neutral-200 bg-white p-6 shadow-sm min-h-[360px]">
               <div className="mb-4">
                 <h2 className="text-lg font-semibold text-neutral-900">
-                  {FEATURES[active].label}
+                  {t(FEATURES[active].label)}
                 </h2>
-                <p className="mt-1 text-sm text-neutral-500">{FEATURES[active].desc}</p>
+                <p className="mt-1 text-sm text-neutral-500">{t(FEATURES[active].desc)}</p>
               </div>
               <AnimatePresence mode="wait">
                 <motion.div key={active}
@@ -334,21 +343,21 @@ export default function FiturPage() {
         <div className="mx-auto max-w-6xl">
           <FadeIn className="mb-12 max-w-xl">
             <h2 className="text-[clamp(1.4rem,2.4vw,1.9rem)] font-semibold text-neutral-900">
-              Detail yang biasanya baru ketahuan setelah daftar
+              {t('featuresGridSectionTitle')}
             </h2>
           </FadeIn>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { title: 'Ganti 5 tab jadi 1', desc: 'Proyek, tugas, kalender, dan catatan ada di domain yang sama — tidak login berkali-kali ke aplikasi berbeda.', color: BLUE },
-              { title: 'Jalan di browser apa saja', desc: 'Chrome di kantor, Safari di HP, Edge di komputer klien — datanya sama, tanpa instal apa pun.', color: TEAL },
-              { title: 'Data terisolasi per workspace', desc: 'Tim lain tidak bisa lihat data Anda meski satu server. Anda yang atur siapa boleh masuk.', color: '#8B5CF6' },
-              { title: 'Dibuat untuk kerja Indonesia', desc: 'Bahasa Indonesia asli, bukan hasil translate — dan harga dalam Rupiah.', color: YELLOW },
+              { title: 'featuresGridItem1Title', desc: 'featuresGridItem1Desc', color: BLUE },
+              { title: 'featuresGridItem2Title', desc: 'featuresGridItem2Desc', color: TEAL },
+              { title: 'featuresGridItem3Title', desc: 'featuresGridItem3Desc', color: '#8B5CF6' },
+              { title: 'featuresGridItem4Title', desc: 'featuresGridItem4Desc', color: YELLOW },
             ].map((item, i) => (
               <FadeIn key={item.title} delay={i * 0.07}>
                 <div className="card-interactive h-full overflow-hidden rounded-2xl border border-neutral-200 bg-white p-6">
                   <span className="block h-1 w-10 rounded-full" style={{ background: item.color }} />
-                  <h3 className="mt-4 text-sm font-semibold text-neutral-900">{item.title}</h3>
-                  <p className="mt-1 text-xs leading-5 text-neutral-500">{item.desc}</p>
+                  <h3 className="mt-4 text-sm font-semibold text-neutral-900">{t(item.title)}</h3>
+                  <p className="mt-1 text-xs leading-5 text-neutral-500">{t(item.desc)}</p>
                 </div>
               </FadeIn>
             ))}
@@ -361,20 +370,20 @@ export default function FiturPage() {
         <div className="mx-auto max-w-2xl text-center">
           <FadeIn>
             <h2 className="text-[clamp(1.5rem,2.6vw,2.15rem)] font-semibold text-neutral-900">
-              Sudah lihat semuanya? Coba pakai buat kerjaan asli.
+              {t('featuresCtaTitle')}
             </h2>
-            <p className="mt-3 text-neutral-600">Gratis untuk tim hingga 5 anggota. Tidak perlu kartu kredit.</p>
+            <p className="mt-3 text-neutral-600">{t('featuresCtaSubtitle')}</p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/register">
                 <motion.button
                   className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white"
                   style={{ background: BLUE }}
                   whileHover={{ opacity: 0.88 }} whileTap={{ scale: 0.97 }}>
-                  Buat workspace gratis <ArrowRight className="h-4 w-4" />
+                  {t('featuresCtaButton')} <ArrowRight className="h-4 w-4" />
                 </motion.button>
               </Link>
               <Link href="/harga" className="text-sm font-medium text-neutral-500 hover:text-neutral-800 transition-colors">
-                Lihat harga →
+                {t('featuresCtaPricingLink')}
               </Link>
             </div>
           </FadeIn>

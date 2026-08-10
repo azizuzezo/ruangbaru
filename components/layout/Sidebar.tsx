@@ -25,31 +25,34 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { signOut } from '@/lib/supabase/actions';
 import { toast } from 'sonner';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useT } from '@/lib/i18n/useT';
 
 export function Sidebar() {
+  const t = useT('appLayout');
   const pathname = usePathname();
-  const { 
-    currentWorkspace, 
-    setCurrentWorkspace, 
-    workspaces, 
+  const {
+    currentWorkspace,
+    setCurrentWorkspace,
+    workspaces,
     currentUser,
     sidebarCollapsed,
     toggleSidebar
   } = useWorkspaceStore();
   const { setCommandPaletteOpen, setIsLoggingOut } = useUIStore();
-  
+
   const activeWorkspaceSlug = currentWorkspace?.slug || 'dashboard';
 
   const menuItems = [
-    { label: 'Dashboard', href: `/${activeWorkspaceSlug}/dashboard`, icon: LayoutDashboard, tour: 'dashboard' },
-    { label: 'Proyek', href: `/${activeWorkspaceSlug}/projects`, icon: FolderKanban, tour: 'projects' },
-    { label: 'Tugas', href: `/${activeWorkspaceSlug}/tasks`, icon: CheckSquare, tour: 'tasks' },
-    { label: 'Kalender', href: `/${activeWorkspaceSlug}/calendar`, icon: CalendarDays, tour: 'calendar' },
-    { label: 'Rapat', href: `/${activeWorkspaceSlug}/meetings`, icon: Video, tour: 'meetings' },
-    { label: 'Catatan', href: `/${activeWorkspaceSlug}/notes`, icon: StickyNote, tour: 'notes' },
-    { label: 'Anggota Tim', href: `/${activeWorkspaceSlug}/team`, icon: Users, tour: 'team' },
-    { label: 'Pengaturan', href: `/${activeWorkspaceSlug}/settings`, icon: Settings, tour: 'settings' },
-    { label: 'Tagihan', href: `/${activeWorkspaceSlug}/billing`, icon: CreditCard, tour: 'billing' },
+    { label: t('sidebarNavDashboard'), href: `/${activeWorkspaceSlug}/dashboard`, icon: LayoutDashboard, tour: 'dashboard' },
+    { label: t('sidebarNavProjects'), href: `/${activeWorkspaceSlug}/projects`, icon: FolderKanban, tour: 'projects' },
+    { label: t('sidebarNavTasks'), href: `/${activeWorkspaceSlug}/tasks`, icon: CheckSquare, tour: 'tasks' },
+    { label: t('sidebarNavCalendar'), href: `/${activeWorkspaceSlug}/calendar`, icon: CalendarDays, tour: 'calendar' },
+    { label: t('sidebarNavMeetings'), href: `/${activeWorkspaceSlug}/meetings`, icon: Video, tour: 'meetings' },
+    { label: t('sidebarNavNotes'), href: `/${activeWorkspaceSlug}/notes`, icon: StickyNote, tour: 'notes' },
+    { label: t('sidebarNavTeam'), href: `/${activeWorkspaceSlug}/team`, icon: Users, tour: 'team' },
+    { label: t('sidebarNavSettings'), href: `/${activeWorkspaceSlug}/settings`, icon: Settings, tour: 'settings' },
+    { label: t('sidebarNavBilling'), href: `/${activeWorkspaceSlug}/billing`, icon: CreditCard, tour: 'billing' },
   ];
 
   const handleLogout = () => {
@@ -80,7 +83,7 @@ export function Sidebar() {
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="right" align="start" className="w-56">
-              <DropdownMenuLabel>Ganti Ruang Kerja</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('sidebarSwitchWorkspace')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {workspaces.map((ws) => (
                 <DropdownMenuItem 
@@ -109,14 +112,14 @@ export function Sidebar() {
                   </div>
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-foreground truncate leading-none mb-0.5">{currentWorkspace?.name}</p>
-                    <p className="text-[10px] text-muted-foreground truncate leading-none capitalize">{currentWorkspace?.plan} plan</p>
+                    <p className="text-[10px] text-muted-foreground truncate leading-none capitalize">{currentWorkspace?.plan} {t('sidebarPlanLabel')}</p>
                   </div>
                 </div>
                 <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0 ml-1" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="w-56">
-              <DropdownMenuLabel>Pilih Ruang Kerja</DropdownMenuLabel>
+              <DropdownMenuLabel>{t('sidebarChooseWorkspace')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               {workspaces.map((ws) => (
                 <DropdownMenuItem 
@@ -134,7 +137,7 @@ export function Sidebar() {
                     <span className="truncate text-xs">{ws.name}</span>
                   </div>
                   {ws.plan === 'pro' && (
-                    <span className="text-[9px] bg-primary/10 text-primary px-1 rounded font-bold uppercase shrink-0">Pro</span>
+                    <span className="text-[9px] bg-primary/10 text-primary px-1 rounded font-bold uppercase shrink-0">{t('sidebarProBadge')}</span>
                   )}
                 </DropdownMenuItem>
               ))}
@@ -147,7 +150,7 @@ export function Sidebar() {
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
         {menuItems.map((item, index) => {
           const Icon = item.icon;
-          const isActive = pathname.startsWith(item.href) || (item.label === 'Dashboard' && pathname.endsWith('/dashboard'));
+          const isActive = pathname.startsWith(item.href) || (item.tour === 'dashboard' && pathname.endsWith('/dashboard'));
           return (
             <motion.div
               key={item.label}
@@ -198,7 +201,7 @@ export function Sidebar() {
           ) : (
             <>
               <ChevronLeft className="h-4 w-4" />
-              <span>Sembunyikan Menu</span>
+              <span>{t('sidebarHideMenu')}</span>
             </>
           )}
         </button>
@@ -219,7 +222,7 @@ export function Sidebar() {
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={handleLogout} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
                 <LogOut className="h-4 w-4 mr-2" />
-                Keluar
+                {t('sidebarLogout')}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -231,17 +234,24 @@ export function Sidebar() {
                 <AvatarFallback>{getInitials(currentUser?.full_name)}</AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground truncate leading-none mb-0.5">{currentUser?.full_name || 'User'}</p>
+                <p className="text-xs font-bold text-foreground truncate leading-none mb-0.5">{currentUser?.full_name || t('sidebarUserFallback')}</p>
                 <p className="text-[10px] text-muted-foreground truncate leading-none">{currentUser?.email}</p>
               </div>
             </div>
-            <button 
+            <button
               onClick={handleLogout}
               className="p-1 rounded text-muted-foreground hover:text-destructive hover:bg-destructive/5 transition-colors"
-              title="Keluar"
+              title={t('sidebarLogout')}
             >
               <LogOut className="h-3.5 w-3.5" />
             </button>
+          </div>
+        )}
+
+        {/* Language toggle */}
+        {!sidebarCollapsed && (
+          <div className="flex justify-center pt-1">
+            <LanguageSwitcher />
           </div>
         )}
       </div>

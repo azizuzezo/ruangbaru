@@ -9,8 +9,10 @@ import {
   CalendarDays, StickyNote, Users, Settings
 } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { useT } from '@/lib/i18n/useT';
 
 export function CommandPalette() {
+  const t = useT('appLayout');
   const router = useRouter();
   const { commandPaletteOpen, setCommandPaletteOpen } = useUIStore();
   const { currentWorkspace } = useWorkspaceStore();
@@ -20,13 +22,13 @@ export function CommandPalette() {
   const activeWorkspaceSlug = currentWorkspace?.slug || 'dashboard';
 
   const commands = [
-    { label: 'Buka Dashboard', icon: LayoutDashboard, action: () => router.push(`/${activeWorkspaceSlug}/dashboard`) },
-    { label: 'Lihat Daftar Proyek', icon: FolderKanban, action: () => router.push(`/${activeWorkspaceSlug}/projects`) },
-    { label: 'Lihat Daftar Tugas', icon: CheckSquare, action: () => router.push(`/${activeWorkspaceSlug}/tasks`) },
-    { label: 'Buka Kalender', icon: CalendarDays, action: () => router.push(`/${activeWorkspaceSlug}/calendar`) },
-    { label: 'Buka Catatan', icon: StickyNote, action: () => router.push(`/${activeWorkspaceSlug}/notes`) },
-    { label: 'Manajemen Tim', icon: Users, action: () => router.push(`/${activeWorkspaceSlug}/team`) },
-    { label: 'Pengaturan Workspace', icon: Settings, action: () => router.push(`/${activeWorkspaceSlug}/settings`) },
+    { label: t('commandPaletteOpenDashboard'), icon: LayoutDashboard, action: () => router.push(`/${activeWorkspaceSlug}/dashboard`) },
+    { label: t('commandPaletteViewProjects'), icon: FolderKanban, action: () => router.push(`/${activeWorkspaceSlug}/projects`) },
+    { label: t('commandPaletteViewTasks'), icon: CheckSquare, action: () => router.push(`/${activeWorkspaceSlug}/tasks`) },
+    { label: t('commandPaletteOpenCalendar'), icon: CalendarDays, action: () => router.push(`/${activeWorkspaceSlug}/calendar`) },
+    { label: t('commandPaletteOpenNotes'), icon: StickyNote, action: () => router.push(`/${activeWorkspaceSlug}/notes`) },
+    { label: t('commandPaletteTeamManagement'), icon: Users, action: () => router.push(`/${activeWorkspaceSlug}/team`) },
+    { label: t('commandPaletteWorkspaceSettings'), icon: Settings, action: () => router.push(`/${activeWorkspaceSlug}/settings`) },
   ];
 
   const filteredCommands = commands.filter((c) =>
@@ -40,7 +42,7 @@ export function CommandPalette() {
           <Search className="h-4 w-4 text-muted-foreground shrink-0" />
           <input
             type="text"
-            placeholder="Ketik perintah atau cari navigasi cepat..."
+            placeholder={t('commandPaletteSearchPlaceholder')}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="flex-1 bg-transparent border-0 text-sm focus:outline-none focus:ring-0 placeholder:text-muted-foreground text-foreground"
@@ -50,7 +52,7 @@ export function CommandPalette() {
         <div className="max-h-[300px] overflow-y-auto p-2 divide-y divide-border/20">
           {filteredCommands.length === 0 ? (
             <div className="p-8 text-center text-xs text-muted-foreground">
-              Tidak ada hasil pencarian ditemukan
+              {t('commandPaletteNoResults')}
             </div>
           ) : (
             filteredCommands.map((cmd) => {
@@ -68,7 +70,7 @@ export function CommandPalette() {
                   <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
                   <span className="flex-1 text-foreground">{cmd.label}</span>
                   <span className="text-[10px] bg-muted px-1.5 py-0.5 rounded text-muted-foreground/80 font-mono">
-                    Buka
+                    {t('commandPaletteOpenBadge')}
                   </span>
                 </button>
               );

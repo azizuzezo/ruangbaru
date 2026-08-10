@@ -13,15 +13,18 @@ import { Label } from '@/components/ui/label';
 import { signIn } from '@/lib/supabase/actions';
 import { toast } from 'sonner';
 import { Loader2, Check, ArrowRight, Eye, EyeOff, KeyRound, CornerDownLeft } from 'lucide-react';
+import { useT } from '@/lib/i18n/useT';
 
 const BLUE = '#106CD8';
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
-const loginSchema = z.object({
-  email:    z.string().email('Masukkan alamat email yang valid'),
-  password: z.string().min(6, 'Kata sandi minimal 6 karakter'),
-});
-type LoginFormValues = z.infer<typeof loginSchema>;
+function getLoginSchema(t: (key: string) => string) {
+  return z.object({
+    email:    z.string().email(t('emailInvalidError')),
+    password: z.string().min(6, t('passwordMin6Error')),
+  });
+}
+type LoginFormValues = { email: string; password: string };
 
 export default function LoginPage() {
   return (
@@ -32,6 +35,7 @@ export default function LoginPage() {
 }
 
 function LoginForm() {
+  const t = useT('auth');
   const [loading,   setLoading]   = useState(false);
   const [showPw,    setShowPw]    = useState(false);
   const [capsOn,    setCapsOn]    = useState(false);
@@ -45,7 +49,7 @@ function LoginForm() {
     watch,
     formState: { errors },
   } = useForm<LoginFormValues>({
-    resolver: zodResolver(loginSchema),
+    resolver: zodResolver(getLoginSchema(t)),
     mode: 'onTouched',
     defaultValues: { email: '', password: '' },
   });
@@ -66,7 +70,7 @@ function LoginForm() {
       if (result?.error) { toast.error(result.error); setLoading(false); }
     } catch (err: any) {
       if (err?.digest?.startsWith('NEXT_REDIRECT')) return;
-      toast.error('Terjadi kesalahan saat masuk. Coba lagi.');
+      toast.error(t('loginErrorToast'));
       setLoading(false);
     }
   };
@@ -85,10 +89,10 @@ function LoginForm() {
       {/* Heading */}
       <div className="space-y-1.5">
         <h1 className="text-2xl font-semibold tracking-tight text-neutral-950">
-          Masuk ke ruang kerja Anda
+          {t('loginHeading')}
         </h1>
         <p className="text-sm text-neutral-500">
-          Papan kerja Anda sudah di sana, menunggu — tinggal login.
+          {t('loginSubheading')}
         </p>
       </div>
 
@@ -101,12 +105,12 @@ function LoginForm() {
           transition={{ duration: 0.35, delay: 0.06, ease: E }}
           className="space-y-1.5"
         >
-          <Label htmlFor="email" className="text-sm font-semibold text-neutral-700">Email</Label>
+          <Label htmlFor="email" className="text-sm font-semibold text-neutral-700">{t('emailLabel')}</Label>
           <div className="relative">
             <Input
               id="email"
               type="email"
-              placeholder="nama@perusahaan.com"
+              placeholder={t('emailPlaceholder')}
               disabled={loading}
               autoFocus
               className={`h-11 pr-9 transition-all border-neutral-200 focus:border-[#106CD8] focus:ring-2 focus:ring-blue-100 ${
@@ -154,16 +158,16 @@ function LoginForm() {
           className="space-y-1.5"
         >
           <div className="flex items-center justify-between">
-            <Label htmlFor="password" className="text-sm font-semibold text-neutral-700">Kata Sandi</Label>
+            <Label htmlFor="password" className="text-sm font-semibold text-neutral-700">{t('passwordLabel')}</Label>
             <Link href="/forgot-password" className="text-xs font-semibold text-[#106CD8] hover:text-[#0D59B4]">
-              Lupa kata sandi?
+              {t('forgotPasswordLink')}
             </Link>
           </div>
           <div className="relative">
             <Input
               id="password"
               type={showPw ? 'text' : 'password'}
-              placeholder="••••••••"
+              placeholder={t('passwordPlaceholderDots')}
               disabled={loading}
               onKeyUp={checkCaps}
               onKeyDown={checkCaps}
@@ -192,7 +196,7 @@ function LoginForm() {
                 exit={{ opacity: 0, height: 0 }}
                 className="flex items-center gap-1.5 text-xs font-medium text-amber-600"
               >
-                <KeyRound className="h-3 w-3" /> Caps Lock aktif
+                <KeyRound className="h-3 w-3" /> {t('capsLockActiveText')}
               </motion.p>
             )}
             {errors.password && (
@@ -222,16 +226,16 @@ function LoginForm() {
             className="group flex w-full h-11 items-center justify-center gap-2 rounded-xl bg-[#106CD8] text-white text-sm font-semibold shadow-sm shadow-blue-200 transition-colors hover:bg-[#0D59B4] disabled:opacity-60"
           >
             {loading ? (
-              <><Loader2 className="h-4 w-4 animate-spin" />Masuk...</>
+              <><Loader2 className="h-4 w-4 animate-spin" />{t('loginSubmittingLabel')}</>
             ) : (
               <>
-                Masuk ke Workspace
+                {t('loginSubmitLabel')}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </>
             )}
           </motion.button>
           <p className="mt-2.5 flex items-center justify-center gap-1 text-[11px] text-neutral-400">
-            <CornerDownLeft className="h-3 w-3" /> Tekan Enter untuk masuk
+            <CornerDownLeft className="h-3 w-3" /> {t('pressEnterHint')}
           </p>
         </motion.div>
       </form>
@@ -242,9 +246,9 @@ function LoginForm() {
         transition={{ duration: 0.4, delay: 0.3, ease: E }}
         className="text-center text-sm text-neutral-500"
       >
-        Belum punya akun?{' '}
+        {t('noAccountText')}{' '}
         <Link href="/register" className="font-semibold text-[#106CD8] hover:text-[#0D59B4] transition-colors">
-          Daftar gratis
+          {t('signUpFreeLink')}
         </Link>
       </motion.p>
     </motion.div>

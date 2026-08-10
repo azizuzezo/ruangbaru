@@ -17,6 +17,7 @@ import { cn, getInitials } from '@/lib/utils';
 import { toast } from 'sonner';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { CalendarEvent, EventRecurrence, Workspace, Profile, Task, Project, TaskStatus, TaskPriority } from '@/types';
+import { useT } from '@/lib/i18n/useT';
 
 export type DialogMember = {
   user_id: string;
@@ -30,18 +31,18 @@ export type DialogMember = {
 
 const COLORS = ['#106CD8', '#10B29F', '#FDB31A', '#8B5CF6', '#EF4444', '#10B981'];
 const REMINDERS = [
-  { label: 'Tanpa pengingat', value: '' },
-  { label: '5 menit sebelum', value: '5' },
-  { label: '10 menit sebelum', value: '10' },
-  { label: '15 menit sebelum', value: '15' },
-  { label: '30 menit sebelum', value: '30' },
-  { label: '1 jam sebelum', value: '60' },
+  { key: 'reminderNone', value: '' },
+  { key: 'reminder5min', value: '5' },
+  { key: 'reminder10min', value: '10' },
+  { key: 'reminder15min', value: '15' },
+  { key: 'reminder30min', value: '30' },
+  { key: 'reminder1hour', value: '60' },
 ];
-const RECURRENCE: { label: string; value: EventRecurrence }[] = [
-  { label: 'Tidak berulang', value: 'none' },
-  { label: 'Harian', value: 'daily' },
-  { label: 'Mingguan', value: 'weekly' },
-  { label: 'Bulanan', value: 'monthly' },
+const RECURRENCE: { key: string; value: EventRecurrence }[] = [
+  { key: 'recurrenceNone', value: 'none' },
+  { key: 'recurrenceDaily', value: 'daily' },
+  { key: 'recurrenceWeekly', value: 'weekly' },
+  { key: 'recurrenceMonthly', value: 'monthly' },
 ];
 
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
@@ -64,6 +65,7 @@ export function EventDialog({
   onTaskSaved?: (t: Task) => void;
 }) {
   const supabase = createClient();
+  const t = useT('calendar');
   const isEdit = !!event;
 
   // Tabs: 'event' | 'task'
@@ -238,10 +240,10 @@ export function EventDialog({
       saved!.attendees = invitees.map((u) => ({ id: '', event_id: saved!.id, user_id: u, status: 'invited' as const }));
       onSaved(saved!);
       onOpenChange(false);
-      toast.success(isEdit ? 'Acara diperbarui' : 'Acara dibuat');
+      toast.success(isEdit ? t('eventUpdatedToast') : t('eventCreatedToast'));
     } catch (err) {
       console.error(err);
-      toast.error('Gagal menyimpan acara.');
+      toast.error(t('saveEventFailedToast'));
     } finally {
       setSaving(false);
     }
@@ -250,7 +252,7 @@ export function EventDialog({
   const submitTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!taskTitle.trim() || !projectId) {
-      toast.error('Judul tugas dan Proyek wajib diisi');
+      toast.error(t('taskTitleProjectRequiredToast'));
       return;
     }
     setSaving(true);
@@ -286,14 +288,14 @@ export function EventDialog({
         });
       }
 
-      toast.success(`Tugas "${taskTitle}" berhasil dibuat!`);
+      toast.success(t('taskCreatedToast').replace('{title}', taskTitle));
       if (onTaskSaved) {
         onTaskSaved(data as unknown as Task);
       }
       onOpenChange(false);
     } catch (err: any) {
       console.error(err);
-      toast.error(err.message || 'Gagal membuat tugas');
+      toast.error(err.message || t('saveTaskFailedToast'));
     } finally {
       setSaving(false);
     }
@@ -305,12 +307,12 @@ export function EventDialog({
     const { error } = await supabase.from('events').delete().eq('id', event.id);
     setDeleting(false);
     if (error) {
-      toast.error('Gagal menghapus acara');
+      toast.error(t('deleteEventFailedToast'));
       return;
     }
     onDeleted(event.id);
     onOpenChange(false);
-    toast.success('Acara dihapus');
+    toast.success(t('eventDeletedToast'));
   };
 
   return (
@@ -327,7 +329,7 @@ export function EventDialog({
             >
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
               <p className="mt-2.5 text-xs font-semibold text-neutral-600">
-                {deleting ? 'Menghapus acara...' : 'Menyimpan perubahan...'}
+                {deleting ? t('deletingEventLabel') : t('savingChangesLabel')}
               </p>
             </motion.div>
           )}
@@ -338,12 +340,12 @@ export function EventDialog({
           <div className="border-b border-neutral-100 p-4 pb-3">
             <DialogHeader className="space-y-1">
               <DialogTitle className="text-base font-bold text-neutral-900 leading-none">
-                {isEdit ? 'Edit Acara' : activeTab === 'event' ? 'Buat Acara Baru' : 'Buat Tugas Baru'}
+                {isEdit ? t('editEventTitle') : activeTab === 'event' ? t('createEventTitle') : t('createTaskTitle')}
               </DialogTitle>
               <DialogDescription className="text-[11px] text-neutral-500">
                 {activeTab === 'event'
-                  ? 'Jadwalkan rapat atau agenda kolaborasi dengan tim.'
-                  : 'Buat tugas kerja baru dan tentukan penanggung jawab.'}
+                  ? t('eventDialogEventDesc')
+                  : t('eventDialogTaskDesc')}
               </DialogDescription>
             </DialogHeader>
 
@@ -359,7 +361,7 @@ export function EventDialog({
                   )}
                 >
                   <Calendar className="h-3.5 w-3.5" />
-                  Acara Kalender
+                  {t('tabEventLabel')}
                 </button>
                 <button
                   type="button"
@@ -370,7 +372,7 @@ export function EventDialog({
                   )}
                 >
                   <CheckSquare className="h-3.5 w-3.5" />
-                  Tugas Baru
+                  {t('tabTaskLabel')}
                 </button>
               </div>
             )}
@@ -384,12 +386,12 @@ export function EventDialog({
                  ========================================== */
               <form id="event-form" onSubmit={submitEvent} className="space-y-4">
                 <div className="space-y-1.5">
-                  <Label htmlFor="ev-title" className="text-xs font-semibold text-neutral-700">Judul Acara</Label>
+                  <Label htmlFor="ev-title" className="text-xs font-semibold text-neutral-700">{t('eventTitleLabel')}</Label>
                   <Input
                     id="ev-title"
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
-                    placeholder="cth. Rapat mingguan tim"
+                    placeholder={t('eventTitlePlaceholder')}
                     required
                     className="h-10"
                   />
@@ -397,7 +399,7 @@ export function EventDialog({
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
-                    <Label htmlFor="ev-start" className="text-xs font-semibold text-neutral-700">Mulai</Label>
+                    <Label htmlFor="ev-start" className="text-xs font-semibold text-neutral-700">{t('startLabel')}</Label>
                     <Input
                       id="ev-start"
                       type="datetime-local"
@@ -408,7 +410,7 @@ export function EventDialog({
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <Label htmlFor="ev-end" className="text-xs font-semibold text-neutral-700">Selesai</Label>
+                    <Label htmlFor="ev-end" className="text-xs font-semibold text-neutral-700">{t('endLabel')}</Label>
                     <Input
                       id="ev-end"
                       type="datetime-local"
@@ -421,15 +423,15 @@ export function EventDialog({
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2 pt-1">
-                  <Toggle active={allDay} onClick={() => setAllDay((v) => !v)}>Sepanjang hari</Toggle>
+                  <Toggle active={allDay} onClick={() => setAllDay((v) => !v)}>{t('allDayLabel')}</Toggle>
                   <Toggle active={enableMeeting} onClick={() => setEnableMeeting((v) => !v)}>
-                    <Video className="h-3.5 w-3.5" /> Aktifkan rapat video
+                    <Video className="h-3.5 w-3.5" /> {t('enableMeetingLabel')}
                   </Toggle>
                 </div>
 
                 {/* Color */}
                 <div className="space-y-1.5">
-                  <Label className="text-xs font-semibold text-neutral-700">Pilih Warna</Label>
+                  <Label className="text-xs font-semibold text-neutral-700">{t('colorLabel')}</Label>
                   <div className="flex gap-2">
                     {COLORS.map((c) => (
                       <button
@@ -450,33 +452,33 @@ export function EventDialog({
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5 text-xs font-semibold text-neutral-700">
-                      <Repeat className="h-3.5 w-3.5 text-neutral-400" /> Pengulangan
+                      <Repeat className="h-3.5 w-3.5 text-neutral-400" /> {t('recurrenceLabel')}
                     </Label>
                     <select
                       value={recurrence}
                       onChange={(e) => setRecurrence(e.target.value as EventRecurrence)}
                       className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 outline-none focus:border-neutral-400"
                     >
-                      {RECURRENCE.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                      {RECURRENCE.map((r) => <option key={r.value} value={r.value}>{t(r.key)}</option>)}
                     </select>
                   </div>
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5 text-xs font-semibold text-neutral-700">
-                      <Bell className="h-3.5 w-3.5 text-neutral-400" /> Pengingat
+                      <Bell className="h-3.5 w-3.5 text-neutral-400" /> {t('reminderLabel')}
                     </Label>
                     <select
                       value={reminder}
                       onChange={(e) => setReminder(e.target.value)}
                       className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 outline-none focus:border-neutral-400"
                     >
-                      {REMINDERS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}
+                      {REMINDERS.map((r) => <option key={r.value} value={r.value}>{t(r.key)}</option>)}
                     </select>
                   </div>
                 </div>
 
                 {recurrence !== 'none' && (
                   <div className="space-y-1.5">
-                    <Label htmlFor="ev-until" className="text-xs font-semibold text-neutral-700">Berulang hingga (opsional)</Label>
+                    <Label htmlFor="ev-until" className="text-xs font-semibold text-neutral-700">{t('recurUntilLabel')}</Label>
                     <Input
                       id="ev-until"
                       type="date"
@@ -489,26 +491,26 @@ export function EventDialog({
 
                 <div className="space-y-1.5">
                   <Label htmlFor="ev-loc" className="flex items-center gap-1.5 text-xs font-semibold text-neutral-700">
-                    <MapPin className="h-3.5 w-3.5 text-neutral-400" /> Lokasi (opsional)
+                    <MapPin className="h-3.5 w-3.5 text-neutral-400" /> {t('locationLabel')}
                   </Label>
                   <Input
                     id="ev-loc"
                     value={location}
                     onChange={(e) => setLocation(e.target.value)}
-                    placeholder="cth. Ruang rapat / online"
+                    placeholder={t('locationPlaceholder')}
                     className="h-10"
                   />
                 </div>
 
                 <div className="space-y-1.5">
-                  <Label htmlFor="ev-desc" className="text-xs font-semibold text-neutral-700">Catatan (opsional)</Label>
+                  <Label htmlFor="ev-desc" className="text-xs font-semibold text-neutral-700">{t('notesLabel')}</Label>
                   <textarea
                     id="ev-desc"
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
                     rows={2}
                     className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-800 placeholder-neutral-400 outline-none focus:border-neutral-400"
-                    placeholder="Agenda, tautan, atau detail lain"
+                    placeholder={t('notesPlaceholder')}
                   />
                 </div>
 
@@ -516,7 +518,7 @@ export function EventDialog({
                 {members.length > 0 && (
                   <div className="space-y-1.5">
                     <Label className="flex items-center gap-1.5 text-xs font-semibold text-neutral-700">
-                      <UsersIcon className="h-3.5 w-3.5 text-neutral-400" /> Undang Anggota
+                      <UsersIcon className="h-3.5 w-3.5 text-neutral-400" /> {t('inviteMembersLabel')}
                     </Label>
                     <div className="max-h-32 space-y-1 overflow-y-auto rounded-xl border border-neutral-200 p-1.5 bg-neutral-50/50">
                       {members.filter((m) => m.profile && m.user_id !== currentUser.id).map((m) => {
@@ -563,20 +565,20 @@ export function EventDialog({
                 {projects.length === 0 ? (
                   <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-amber-300 bg-amber-50/50 p-4 text-center">
                     <AlertCircle className="h-5 w-5 text-amber-600" />
-                    <p className="mt-2 text-xs font-bold text-amber-800">Belum ada Proyek Aktif</p>
+                    <p className="mt-2 text-xs font-bold text-amber-800">{t('noActiveProjectTitle')}</p>
                     <p className="mt-1 text-[11px] text-amber-600">
-                      Anda harus membuat Proyek terlebih dahulu sebelum bisa menambahkan Tugas.
+                      {t('noActiveProjectSubtitle')}
                     </p>
                   </div>
                 ) : (
                   <>
                     <div className="space-y-1.5">
-                      <Label htmlFor="task-title" className="text-xs font-semibold text-neutral-700">Judul Tugas</Label>
+                      <Label htmlFor="task-title" className="text-xs font-semibold text-neutral-700">{t('taskTitleLabel')}</Label>
                       <Input
                         id="task-title"
                         value={taskTitle}
                         onChange={(e) => setTaskTitle(e.target.value)}
-                        placeholder="cth. Buat desain konsep baru"
+                        placeholder={t('taskTitlePlaceholder')}
                         required
                         className="h-10"
                       />
@@ -585,7 +587,7 @@ export function EventDialog({
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label className="flex items-center gap-1.5 text-xs font-semibold text-neutral-700">
-                          <Folder className="h-3.5 w-3.5 text-neutral-400" /> Pilih Proyek
+                          <Folder className="h-3.5 w-3.5 text-neutral-400" /> {t('selectProjectLabel')}
                         </Label>
                         <select
                           value={projectId}
@@ -601,7 +603,7 @@ export function EventDialog({
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label htmlFor="task-due" className="text-xs font-semibold text-neutral-700">Tenggat Waktu</Label>
+                        <Label htmlFor="task-due" className="text-xs font-semibold text-neutral-700">{t('dueDateLabel')}</Label>
                         <Input
                           id="task-due"
                           type="date"
@@ -614,32 +616,32 @@ export function EventDialog({
 
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-neutral-700">Status</Label>
+                        <Label className="text-xs font-semibold text-neutral-700">{t('statusLabel')}</Label>
                         <select
                           value={taskStatus}
                           onChange={(e) => setTaskStatus(e.target.value as TaskStatus)}
                           className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 outline-none focus:border-neutral-400"
                         >
-                          <option value="backlog">Backlog</option>
-                          <option value="todo">Belum Dikerjakan</option>
-                          <option value="in_progress">Sedang Dikerjakan</option>
-                          <option value="in_review">Menunggu Review</option>
-                          <option value="done">Selesai</option>
+                          <option value="backlog">{t('statusBacklog')}</option>
+                          <option value="todo">{t('statusTodo')}</option>
+                          <option value="in_progress">{t('statusInProgress')}</option>
+                          <option value="in_review">{t('statusInReview')}</option>
+                          <option value="done">{t('statusDone')}</option>
                         </select>
                       </div>
 
                       <div className="space-y-1.5">
-                        <Label className="text-xs font-semibold text-neutral-700">Prioritas</Label>
+                        <Label className="text-xs font-semibold text-neutral-700">{t('priorityLabel')}</Label>
                         <select
                           value={taskPriority}
                           onChange={(e) => setTaskPriority(e.target.value as TaskPriority)}
                           className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 outline-none focus:border-neutral-400"
                         >
-                          <option value="no_priority">Tanpa Prioritas</option>
-                          <option value="low">Rendah</option>
-                          <option value="medium">Sedang</option>
-                          <option value="high">Tinggi</option>
-                          <option value="urgent">Genting</option>
+                          <option value="no_priority">{t('priorityNone')}</option>
+                          <option value="low">{t('priorityLow')}</option>
+                          <option value="medium">{t('priorityMedium')}</option>
+                          <option value="high">{t('priorityHigh')}</option>
+                          <option value="urgent">{t('priorityUrgent')}</option>
                         </select>
                       </div>
                     </div>
@@ -647,14 +649,14 @@ export function EventDialog({
                     {/* Assignee */}
                     <div className="space-y-1.5">
                       <Label className="flex items-center gap-1.5 text-xs font-semibold text-neutral-700">
-                        <UsersIcon className="h-3.5 w-3.5 text-neutral-400" /> Penerima Tugas
+                        <UsersIcon className="h-3.5 w-3.5 text-neutral-400" /> {t('assigneeLabel')}
                       </Label>
                       <select
                         value={taskAssigneeId}
                         onChange={(e) => setTaskAssigneeId(e.target.value)}
                         className="h-10 w-full rounded-lg border border-neutral-200 bg-white px-3 text-xs font-medium text-neutral-800 outline-none focus:border-neutral-400"
                       >
-                        <option value="">Pilih Anggota Tim (opsional)</option>
+                        <option value="">{t('selectAssigneePlaceholder')}</option>
                         {members
                           .filter((m) => m.profile)
                           .map((m) => (
@@ -666,14 +668,14 @@ export function EventDialog({
                     </div>
 
                     <div className="space-y-1.5">
-                      <Label htmlFor="task-desc" className="text-xs font-semibold text-neutral-700">Deskripsi Tugas (opsional)</Label>
+                      <Label htmlFor="task-desc" className="text-xs font-semibold text-neutral-700">{t('taskDescLabel')}</Label>
                       <textarea
                         id="task-desc"
                         value={taskDescription}
                         onChange={(e) => setTaskDescription(e.target.value)}
                         rows={3}
                         className="w-full rounded-lg border border-neutral-200 bg-white px-3 py-2 text-xs text-neutral-800 placeholder-neutral-400 outline-none focus:border-neutral-400"
-                        placeholder="Tambahkan detail tugas..."
+                        placeholder={t('taskDescPlaceholder')}
                       />
                     </div>
                   </>
@@ -693,7 +695,7 @@ export function EventDialog({
                 className="gap-1.5 text-xs font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive h-9"
               >
                 {deleting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
-                Hapus
+                {t('deleteButton')}
               </Button>
             ) : (
               <span />
@@ -706,7 +708,7 @@ export function EventDialog({
                 onClick={() => onOpenChange(false)}
                 className="h-9 text-xs font-semibold"
               >
-                Batal
+                {t('cancelButton')}
               </Button>
               {activeTab === 'event' ? (
                 <Button
@@ -716,7 +718,7 @@ export function EventDialog({
                   className="gap-1.5 h-9 text-xs font-semibold"
                 >
                   {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  {isEdit ? 'Simpan' : 'Buat Acara'}
+                  {isEdit ? t('saveButton') : t('createEventSubmitButton')}
                 </Button>
               ) : (
                 <Button
@@ -726,7 +728,7 @@ export function EventDialog({
                   className="gap-1.5 h-9 text-xs font-semibold"
                 >
                   {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                  Buat Tugas
+                  {t('createTaskSubmitButton')}
                 </Button>
               )}
             </div>

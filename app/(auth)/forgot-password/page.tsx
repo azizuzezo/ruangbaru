@@ -10,14 +10,18 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 import { Loader2 } from 'lucide-react';
+import { useT } from '@/lib/i18n/useT';
 
-const forgotPasswordSchema = z.object({
-  email: z.string().email('Masukkan alamat email yang valid'),
-});
+function getForgotPasswordSchema(t: (key: string) => string) {
+  return z.object({
+    email: z.string().email(t('emailInvalidError')),
+  });
+}
 
-type ForgotPasswordFormValues = z.infer<typeof forgotPasswordSchema>;
+type ForgotPasswordFormValues = { email: string };
 
 export default function ForgotPasswordPage() {
+  const t = useT('auth');
   const [loading, setLoading] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
@@ -26,7 +30,7 @@ export default function ForgotPasswordPage() {
     handleSubmit,
     formState: { errors },
   } = useForm<ForgotPasswordFormValues>({
-    resolver: zodResolver(forgotPasswordSchema),
+    resolver: zodResolver(getForgotPasswordSchema(t)),
     defaultValues: {
       email: '',
     },
@@ -41,10 +45,10 @@ export default function ForgotPasswordPage() {
         body: JSON.stringify({ email: data.email }),
       });
       // Always show success to avoid email enumeration
-      setSuccessMsg('Jika email Anda terdaftar, tautan reset kata sandi sudah dikirim. Periksa inbox Anda.');
-      toast.success('Tautan pemulihan dikirim!');
+      setSuccessMsg(t('forgotPasswordSuccessMessage'));
+      toast.success(t('forgotPasswordSuccessToast'));
     } catch {
-      toast.error('Terjadi kesalahan. Coba lagi.');
+      toast.error(t('genericErrorToast'));
     } finally {
       setLoading(false);
     }
@@ -57,14 +61,14 @@ export default function ForgotPasswordPage() {
           🔑
         </div>
         <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-          Periksa Inbox Anda
+          {t('checkInboxHeading')}
         </h1>
         <p className="text-sm text-muted-foreground leading-relaxed">
           {successMsg}
         </p>
         <div className="pt-4">
           <Link href="/login">
-            <Button className="w-full">Kembali ke Halaman Masuk</Button>
+            <Button className="w-full">{t('backToLoginPageButton')}</Button>
           </Link>
         </div>
       </div>
@@ -75,20 +79,20 @@ export default function ForgotPasswordPage() {
     <div className="space-y-6">
       <div className="space-y-2">
         <h1 className="font-display text-2xl font-bold tracking-tight text-foreground">
-          Lupa Kata Sandi?
+          {t('forgotPasswordHeading')}
         </h1>
         <p className="text-sm text-muted-foreground">
-          Masukkan alamat email terdaftar Anda dan kami akan mengirimkan tautan pemulihan.
+          {t('forgotPasswordSubheading')}
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t('emailLabel')}</Label>
           <Input
             id="email"
             type="email"
-            placeholder="nama@perusahaan.com"
+            placeholder={t('emailPlaceholder')}
             disabled={loading}
             {...register('email')}
           />
@@ -101,18 +105,18 @@ export default function ForgotPasswordPage() {
           {loading ? (
             <>
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Mengirim Tautan...
+              {t('sendingLinkLabel')}
             </>
           ) : (
-            'Kirim Tautan Pemulihan'
+            t('sendResetLinkButton')
           )}
         </Button>
       </form>
 
       <p className="text-center text-sm text-muted-foreground">
-        Sudah ingat kata sandi Anda?{' '}
+        {t('rememberPasswordText')}{' '}
         <Link href="/login" className="font-semibold text-primary hover:underline">
-          Masuk Kembali
+          {t('loginAgainLink')}
         </Link>
       </p>
     </div>

@@ -7,22 +7,24 @@ import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useUIStore } from '@/lib/stores/ui-store';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, FolderKanban, CheckSquare, CalendarDays, Plus } from 'lucide-react';
+import { useT } from '@/lib/i18n/useT';
 
 /**
  * Mobile-only bottom navigation with a centered floating action button.
  * Hidden on lg+ where the sidebar takes over.
  */
 export function BottomNav() {
+  const t = useT('appLayout');
   const pathname = usePathname();
   const { currentWorkspace } = useWorkspaceStore();
   const { setCommandPaletteOpen } = useUIStore();
   const slug = currentWorkspace?.slug || 'dashboard';
 
   const items = [
-    { label: 'Beranda', href: `/${slug}/dashboard`, icon: LayoutDashboard },
-    { label: 'Proyek', href: `/${slug}/projects`, icon: FolderKanban },
-    { label: 'Tugas', href: `/${slug}/tasks`, icon: CheckSquare },
-    { label: 'Kalender', href: `/${slug}/calendar`, icon: CalendarDays },
+    { label: t('bottomNavHome'), href: `/${slug}/dashboard`, icon: LayoutDashboard },
+    { label: t('bottomNavProjects'), href: `/${slug}/projects`, icon: FolderKanban },
+    { label: t('bottomNavTasks'), href: `/${slug}/tasks`, icon: CheckSquare },
+    { label: t('bottomNavCalendar'), href: `/${slug}/calendar`, icon: CalendarDays },
   ];
 
   return (
@@ -37,7 +39,7 @@ export function BottomNav() {
           <motion.button
             whileTap={{ scale: 0.9 }}
             onClick={() => setCommandPaletteOpen(true)}
-            aria-label="Aksi cepat"
+            aria-label={t('bottomNavQuickAction')}
             className="-mt-7 h-14 w-14 rounded-2xl gradient-brand text-white shadow-lg shadow-primary/30 flex items-center justify-center ring-4 ring-background"
           >
             <Plus className="h-6 w-6" />

@@ -20,12 +20,14 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 import { useCustomFields } from '@/lib/hooks/useCustomFields';
+import { useT } from '@/lib/i18n/useT';
 
 export default function TasksPage() {
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setTaskDetailOpen } = useUIStore();
   const { statuses, doneKeys, defaultKey } = useTaskStatuses(currentWorkspace?.id);
   const { fields: customFields } = useCustomFields(currentWorkspace?.id);
+  const t = useT('tasks');
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
@@ -164,15 +166,17 @@ export default function TasksPage() {
         await supabase.from('notifications').insert({
           user_id: assigneeId,
           type: 'task_assigned',
-          title: 'Tugas Baru Ditugaskan',
-          body: `"${title}" telah ditugaskan kepada Anda oleh ${currentUser.full_name || currentUser.email}`,
+          title: t('assignNotificationTitle'),
+          body: t('assignNotificationBody')
+            .replace('{title}', title)
+            .replace('{name}', currentUser.full_name || currentUser.email),
           link: `/${currentWorkspace.slug}/tasks`,
           actor_id: currentUser.id,
           workspace_id: currentWorkspace.id,
         });
       }
 
-      toast.success('Tugas baru berhasil dibuat!');
+      toast.success(t('createSuccessToast'));
       setTasks((prev) => [data as Task, ...prev]);
       setCreateOpen(false);
       setTitle('');
@@ -183,7 +187,7 @@ export default function TasksPage() {
       setDescription('');
       setFieldValues({});
     } catch (err: any) {
-      toast.error(err.message || 'Gagal membuat tugas');
+      toast.error(err.message || t('createErrorToast'));
     } finally {
       setCreating(false);
     }
@@ -200,7 +204,7 @@ export default function TasksPage() {
         completed_at: doneKeys.has(status) ? new Date().toISOString() : null,
       })
       .eq('id', taskId);
-    if (error) toast.error('Gagal memindahkan tugas');
+    if (error) toast.error(t('moveErrorToast'));
   };
 
   const filteredTasks = tasks.filter((t) =>
@@ -213,33 +217,33 @@ export default function TasksPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight sm:text-3xl">
-            Tugas Tim & Anggota
+            {t('pageTitle')}
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Lihat seluruh tugas terbuka Anda di seluruh proyek workspace saat ini.
+            {t('pageSubtitle')}
           </p>
         </div>
 
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button variant="gradient" size="sm" className="gap-1" disabled={projects.length === 0}>
-              <Plus className="h-4 w-4" /> Tugas Baru
+              <Plus className="h-4 w-4" /> {t('newTaskButton')}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CheckSquare className="h-5 w-5 text-primary" />
-                Buat Tugas Baru
+                {t('createDialogTitle')}
               </DialogTitle>
               <DialogDescription>
-                Beri judul tugas dan tentukan proyek terkait untuk memulai pelacakan.
+                {t('createDialogDescription')}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateTask} className="space-y-4 pt-2">
               <div className="space-y-1.5">
                 <Input
-                  placeholder="Judul tugas..."
+                  placeholder={t('createTitlePlaceholder')}
                   value={title}
                   onChange={(e) => setTitle(e.target.value)}
                   disabled={creating}
@@ -250,7 +254,7 @@ export default function TasksPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">Proyek</label>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">{t('projectLabel')}</label>
                   <select
                     value={projectId}
                     onChange={(e) => setProjectId(e.target.value)}
@@ -265,7 +269,7 @@ export default function TasksPage() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">Tenggat Waktu</label>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">{t('dueDateLabel')}</label>
                   <Input
                     type="date"
                     value={dueDate}
@@ -276,45 +280,34 @@ export default function TasksPage() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">Status</label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    {statuses.map((s) => (
-                      <option key={s.key} value={s.key}>{s.name}</option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">Prioritas</label>
-                  <select
-                    value={priority}
-                    onChange={(e) => setPriority(e.target.value as any)}
-                    className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
-                  >
-                    <option value="no_priority">No Priority</option>
-                    <option value="urgent">Urgent</option>
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
-                  </select>
-                </div>
+              {/* No status field here — every new task starts in this
+                  workspace's first column (Backlog by default) automatically;
+                  status only changes afterward, from the board or the task
+                  detail sheet. */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">{t('priorityLabel')}</label>
+                <select
+                  value={priority}
+                  onChange={(e) => setPriority(e.target.value as any)}
+                  className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="no_priority">No Priority</option>
+                  <option value="urgent">Urgent</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
+                </select>
               </div>
 
               {/* Assignee Selection */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">Penerima Tugas</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase">{t('assigneeLabel')}</label>
                 <select
                   value={assigneeId}
                   onChange={(e) => setAssigneeId(e.target.value)}
                   className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  <option value="">Pilih Anggota Tim (opsional)</option>
+                  <option value="">{t('assigneeSelectPlaceholder')}</option>
                   {members.filter(m => m.profile).map((m) => (
                     <option key={m.user_id} value={m.user_id}>
                       {m.profile?.full_name || m.profile?.email}
@@ -325,9 +318,9 @@ export default function TasksPage() {
 
               {/* Description */}
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">Deskripsi Tugas</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase">{t('descriptionLabel')}</label>
                 <textarea
-                  placeholder="Tambahkan detail tugas..."
+                  placeholder={t('descriptionPlaceholder')}
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
                   disabled={creating}
@@ -348,7 +341,7 @@ export default function TasksPage() {
                           onChange={(e) => setFieldValues((v) => ({ ...v, [f.id]: e.target.value }))}
                           className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                          <option value="">Pilih...</option>
+                          <option value="">{t('selectPlaceholder')}</option>
                           {f.options.map((opt) => (
                             <option key={opt} value={opt}>{opt}</option>
                           ))}
@@ -371,12 +364,12 @@ export default function TasksPage() {
                 {creating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Memproses...
+                    {t('creatingButton')}
                   </>
                 ) : (
                   <>
                     <Plus className="mr-2 h-4 w-4" />
-                    Buat Tugas
+                    {t('createButton')}
                   </>
                 )}
               </Button>
@@ -390,7 +383,7 @@ export default function TasksPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Cari tugas..."
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-9"
@@ -404,7 +397,7 @@ export default function TasksPage() {
               view === 'list' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            <ListTodo className="h-3.5 w-3.5" /> Daftar
+            <ListTodo className="h-3.5 w-3.5" /> {t('viewListLabel')}
           </button>
           <button
             onClick={() => changeView('board')}
@@ -413,7 +406,7 @@ export default function TasksPage() {
               view === 'board' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            <LayoutGrid className="h-3.5 w-3.5" /> Papan
+            <LayoutGrid className="h-3.5 w-3.5" /> {t('viewBoardLabel')}
           </button>
         </div>
       </div>
@@ -435,11 +428,11 @@ export default function TasksPage() {
       ) : filteredTasks.length === 0 ? (
         <EmptyState
           icon={CheckSquare}
-          title="Belum ada tugas"
-          description="Tidak ada tugas yang cocok. Buat tugas baru untuk mulai melacak pekerjaan tim Anda."
+          title={t('emptyStateTitle')}
+          description={t('emptyStateDescription')}
           action={
             <Button variant="gradient" size="sm" className="gap-1" onClick={() => setCreateOpen(true)} disabled={projects.length === 0}>
-              <Plus className="h-4 w-4" /> Tugas Baru
+              <Plus className="h-4 w-4" /> {t('newTaskButton')}
             </Button>
           }
           className="max-w-md mx-auto"

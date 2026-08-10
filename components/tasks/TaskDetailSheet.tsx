@@ -18,12 +18,14 @@ import { formatRelativeTime } from '@/lib/utils';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 import { useCustomFields } from '@/lib/hooks/useCustomFields';
 import type { TaskCustomFieldValue } from '@/types';
+import { useT } from '@/lib/i18n/useT';
 
 export function TaskDetailSheet() {
   const { taskDetailOpen, taskDetailId, setTaskDetailOpen } = useUIStore();
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { statuses, doneKeys } = useTaskStatuses(currentWorkspace?.id);
   const { fields: customFields } = useCustomFields(currentWorkspace?.id);
+  const t = useT('tasks');
 
   const [task, setTask] = useState<Task | null>(null);
   const [loading, setLoading] = useState(false);
@@ -107,7 +109,7 @@ export function TaskDetailSheet() {
         setFieldValues(fv);
       } catch (err: any) {
         console.error('Error loading task details:', err);
-        toast.error('Gagal memuat detail tugas');
+        toast.error(t('loadErrorToast'));
       } finally {
         setLoading(false);
       }
@@ -147,11 +149,11 @@ export function TaskDetailSheet() {
         await supabase.from('task_custom_field_values').upsert(rows, { onConflict: 'task_id,field_id' });
       }
 
-      toast.success('Tugas diperbarui');
+      toast.success(t('saveSuccessToast'));
       // Trigger a window event or update parent list indirectly
       window.dispatchEvent(new Event('task-updated'));
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menyimpan pembaruan');
+      toast.error(err.message || t('saveErrorToast'));
     } finally {
       setSaving(false);
     }
@@ -182,9 +184,9 @@ export function TaskDetailSheet() {
       commentRef.current = { json: null, text: '' };
       setCommentEmpty(true);
       setCommentKey((k) => k + 1); // reset composer
-      toast.success('Komentar ditambahkan');
+      toast.success(t('commentSuccessToast'));
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menambahkan komentar');
+      toast.error(err.message || t('commentErrorToast'));
     } finally {
       setPostingComment(false);
     }
@@ -201,18 +203,18 @@ export function TaskDetailSheet() {
           <div className="space-y-6">
             <SheetHeader className="text-left border-b border-border pb-4">
               <SheetTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
-                <CheckSquare className="h-4 w-4 text-primary" /> Detail Tugas
+                <CheckSquare className="h-4 w-4 text-primary" /> {t('sheetTitle')}
               </SheetTitle>
               <SheetDescription className="text-[10px]">
-                Diperbarui {formatRelativeTime(task.updated_at)}
+                {t('detailUpdatedAtPrefix')} {formatRelativeTime(task.updated_at)}
               </SheetDescription>
             </SheetHeader>
 
             {/* Form editors */}
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase">Judul Tugas</label>
-                <Input 
+                <label className="text-[10px] font-bold text-muted-foreground uppercase">{t('detailTitleLabel')}</label>
+                <Input
                   value={title} 
                   onChange={(e) => setTitle(e.target.value)} 
                   className="font-bold" 
@@ -221,7 +223,7 @@ export function TaskDetailSheet() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Status</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">{t('statusLabel')}</label>
                   <select
                     value={status}
                     onChange={(e) => setStatus(e.target.value)}
@@ -234,7 +236,7 @@ export function TaskDetailSheet() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Prioritas</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">{t('priorityLabel')}</label>
                   <select
                     value={priority}
                     onChange={(e) => setPriority(e.target.value)}
@@ -251,8 +253,8 @@ export function TaskDetailSheet() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Tenggat Waktu</label>
-                  <Input 
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">{t('dueDateLabel')}</label>
+                  <Input
                     type="date" 
                     value={dueDate} 
                     onChange={(e) => setDueDate(e.target.value)} 
@@ -261,13 +263,13 @@ export function TaskDetailSheet() {
                 </div>
 
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-muted-foreground uppercase">Penerima Tugas</label>
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase">{t('assigneeLabel')}</label>
                   <select
                     value={assigneeId}
                     onChange={(e) => setAssigneeId(e.target.value)}
                     className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                   >
-                    <option value="">Belum Ditugaskan</option>
+                    <option value="">{t('unassignedOption')}</option>
                     {members.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.full_name}
@@ -278,11 +280,11 @@ export function TaskDetailSheet() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-[10px] font-bold text-muted-foreground uppercase">Deskripsi Pekerjaan</label>
+                <label className="text-[10px] font-bold text-muted-foreground uppercase">{t('workDescriptionLabel')}</label>
                 <RichTextEditor
                   key={`desc-${task.id}`}
                   content={task.description ?? null}
-                  placeholder="Beri detail langkah pekerjaan tugas ini..."
+                  placeholder={t('workDescriptionPlaceholder')}
                   onChange={(value) => { descriptionRef.current = value; }}
                 />
               </div>
@@ -299,7 +301,7 @@ export function TaskDetailSheet() {
                           onChange={(e) => setFieldValues((v) => ({ ...v, [f.id]: e.target.value }))}
                           className="w-full rounded-lg border border-input bg-background px-3 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-ring"
                         >
-                          <option value="">Pilih...</option>
+                          <option value="">{t('selectPlaceholder')}</option>
                           {f.options.map((opt) => (
                             <option key={opt} value={opt}>{opt}</option>
                           ))}
@@ -319,14 +321,14 @@ export function TaskDetailSheet() {
 
               <Button onClick={handleSave} disabled={saving} className="w-full h-9 text-xs">
                 {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
-                Simpan Perubahan
+                {t('saveButton')}
               </Button>
             </div>
 
             {/* Comments log */}
             <div className="border-t border-border pt-4 space-y-4">
               <h4 className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                <MessageSquare className="h-3.5 w-3.5" /> Kolaborasi & Komentar ({comments.length})
+                <MessageSquare className="h-3.5 w-3.5" /> {t('commentsHeader')} ({comments.length})
               </h4>
               
               <div className="space-y-3 max-h-48 overflow-y-auto divide-y divide-border/40 pr-1">
@@ -337,7 +339,7 @@ export function TaskDetailSheet() {
                     </div>
                     <div>
                       <div className="flex items-center gap-1.5 font-bold text-foreground">
-                        <span>{c.user?.full_name || 'Rekan'}</span>
+                        <span>{c.user?.full_name || t('commentAuthorFallback')}</span>
                         <span className="text-[8px] text-muted-foreground font-normal">{formatRelativeTime(c.created_at)}</span>
                       </div>
                       <p className="text-muted-foreground leading-relaxed mt-0.5 text-[11px]">{c.body_text}</p>
@@ -351,7 +353,7 @@ export function TaskDetailSheet() {
                 <RichTextEditor
                   key={`comment-${commentKey}`}
                   content={null}
-                  placeholder="Tulis balasan komentar… (Ctrl+Enter untuk kirim)"
+                  placeholder={t('commentPlaceholder')}
                   showToolbar={false}
                   onChange={(value) => {
                     commentRef.current = value;
@@ -370,7 +372,7 @@ export function TaskDetailSheet() {
                     className="h-8 text-xs gap-1.5"
                   >
                     {postingComment ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
-                    Kirim
+                    {t('sendButton')}
                   </Button>
                 </div>
               </div>
@@ -378,7 +380,7 @@ export function TaskDetailSheet() {
           </div>
         ) : (
           <div className="p-8 text-center text-xs text-muted-foreground">
-            Tugas tidak tersedia
+            {t('taskNotFound')}
           </div>
         )}
       </SheetContent>

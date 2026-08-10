@@ -14,8 +14,10 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Project } from '@/types';
 import Link from 'next/link';
+import { useT } from '@/lib/i18n/useT';
 
 export default function ProjectsPage() {
+  const t = useT('projects');
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
@@ -78,14 +80,14 @@ export default function ProjectsPage() {
 
       if (error) throw error;
 
-      toast.success(`Proyek "${name}" berhasil dibuat!`);
+      toast.success(t('createSuccessToast').replace('{name}', name));
       setProjects((prev) => [data as Project, ...prev]);
       setCreateOpen(false);
       setName('');
       setDescription('');
       setColor('#106CD8');
     } catch (err: any) {
-      toast.error(err.message || 'Gagal membuat proyek');
+      toast.error(err.message || t('createErrorToast'));
     } finally {
       setCreating(false);
     }
@@ -98,9 +100,9 @@ export default function ProjectsPage() {
       const { error } = await supabase.from('projects').update({ status: next }).eq('id', id);
       if (error) throw error;
       setProjects((prev) => prev.map((p) => (p.id === id ? { ...p, status: next as Project['status'] } : p)));
-      toast.success(next === 'archived' ? 'Proyek diarsipkan' : 'Proyek dipulihkan');
+      toast.success(next === 'archived' ? t('archiveSuccessToast') : t('restoreSuccessToast'));
     } catch (err: any) {
-      toast.error(err.message || 'Gagal memperbarui proyek');
+      toast.error(err.message || t('updateErrorToast'));
     }
   };
 
@@ -113,10 +115,10 @@ export default function ProjectsPage() {
         .eq('id', id);
 
       if (error) throw error;
-      toast.success('Proyek berhasil dihapus');
+      toast.success(t('deleteSuccessToast'));
       setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menghapus proyek');
+      toast.error(err.message || t('deleteErrorToast'));
     }
   };
 
@@ -135,34 +137,34 @@ export default function ProjectsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight sm:text-3xl">
-            Proyek Kerja Tim
+            {t('pageTitle')}
           </h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Lihat, kelola, dan selenggarakan seluruh proyek di dalam workspace Anda.
+            {t('pageSubtitle')}
           </p>
         </div>
 
         <Dialog open={createOpen} onOpenChange={setCreateOpen}>
           <DialogTrigger asChild>
             <Button variant="gradient" size="sm" className="gap-1">
-              <Plus className="h-4 w-4" /> Proyek Baru
+              <Plus className="h-4 w-4" /> {t('newButton')}
             </Button>
           </DialogTrigger>
           <DialogContent className="sm:max-w-md">
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Folder className="h-5 w-5 text-primary" />
-                Buat Proyek Baru
+                {t('createDialogTitle')}
               </DialogTitle>
               <DialogDescription>
-                Beri judul dan deskripsi singkat untuk proyek kerja baru ini.
+                {t('createDialogDesc')}
               </DialogDescription>
             </DialogHeader>
             <form onSubmit={handleCreateProject} className="space-y-4 pt-2">
               {/* Project Name */}
               <Input
                 id="name"
-                placeholder="Nama Proyek..."
+                placeholder={t('namePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 disabled={creating}
@@ -171,7 +173,7 @@ export default function ProjectsPage() {
               />
               {/* Description */}
               <Input
-                placeholder="Deskripsi singkat proyek... (opsional)"
+                placeholder={t('descPlaceholder')}
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 disabled={creating}
@@ -179,7 +181,7 @@ export default function ProjectsPage() {
               />
               {/* Color picker */}
               <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-muted-foreground">Warna:</span>
+                <span className="text-xs font-semibold text-muted-foreground">{t('colorLabel')}</span>
                 {COLOR_OPTIONS.map((c) => (
                   <button
                     key={c}
@@ -198,14 +200,14 @@ export default function ProjectsPage() {
               <div className="flex items-center gap-2.5 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: color }} />
                 <span className="text-sm font-semibold text-foreground truncate">
-                  {name || 'Nama Proyek'}
+                  {name || t('namePreviewFallback')}
                 </span>
               </div>
               <Button type="submit" className="w-full h-10 mt-2" disabled={creating || !name.trim()}>
                 {creating ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />Memproses...</>
+                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{t('submitLoading')}</>
                 ) : (
-                  <><Plus className="mr-2 h-4 w-4" />Buat Proyek</>
+                  <><Plus className="mr-2 h-4 w-4" />{t('submitCreate')}</>
                 )}
               </Button>
             </form>
@@ -218,7 +220,7 @@ export default function ProjectsPage() {
         <div className="relative flex-1 max-w-sm">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder="Cari nama proyek..."
+            placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 h-9"
@@ -231,7 +233,7 @@ export default function ProjectsPage() {
           className="gap-1.5 text-xs"
         >
           <Archive className="h-3.5 w-3.5" />
-          {showArchived ? 'Lihat Aktif' : `Arsip${archivedCount ? ` (${archivedCount})` : ''}`}
+          {showArchived ? t('viewActiveButton') : `${t('archiveButton')}${archivedCount ? ` (${archivedCount})` : ''}`}
         </Button>
       </div>
 
@@ -245,12 +247,12 @@ export default function ProjectsPage() {
       ) : filteredProjects.length === 0 ? (
         <EmptyState
           icon={FolderOpen}
-          title={showArchived ? 'Tidak ada proyek diarsipkan' : 'Belum Ada Proyek'}
-          description="Buat proyek baru untuk mulai mengatur tugas, tenggat, dan kolaborasi tim Anda."
+          title={showArchived ? t('emptyArchivedTitle') : t('emptyTitle')}
+          description={t('emptyDesc')}
           action={
             !showArchived ? (
               <Button variant="gradient" size="sm" className="gap-1" onClick={() => setCreateOpen(true)} disabled={false}>
-                <Plus className="h-4 w-4" /> Buat Proyek Pertama
+                <Plus className="h-4 w-4" /> {t('emptyCreateButton')}
               </Button>
             ) : undefined
           }
@@ -276,13 +278,13 @@ export default function ProjectsPage() {
                     <DropdownMenuContent align="end" className="w-40">
                       <DropdownMenuItem onClick={() => handleArchiveProject(project.id, project.status)}>
                         {project.status === 'archived' ? (
-                          <><ArchiveRestore className="h-4 w-4 mr-2" /> Pulihkan</>
+                          <><ArchiveRestore className="h-4 w-4 mr-2" /> {t('restoreMenuItem')}</>
                         ) : (
-                          <><Archive className="h-4 w-4 mr-2" /> Arsipkan</>
+                          <><Archive className="h-4 w-4 mr-2" /> {t('archiveMenuItem')}</>
                         )}
                       </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => handleDeleteProject(project.id)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                        <Trash className="h-4 w-4 mr-2" /> Hapus
+                        <Trash className="h-4 w-4 mr-2" /> {t('deleteMenuItem')}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

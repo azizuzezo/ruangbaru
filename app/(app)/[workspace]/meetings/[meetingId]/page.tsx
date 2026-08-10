@@ -24,6 +24,7 @@ import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import type { Meeting } from '@/types';
+import { useT } from '@/lib/i18n/useT';
 
 type State = 'loading' | 'ready' | 'not_configured' | 'error' | 'not_found';
 
@@ -32,6 +33,7 @@ export default function MeetingRoomPage() {
   const router = useRouter();
   const { currentUser } = useWorkspaceStore();
   const supabase = createClient();
+  const t = useT('meetings');
 
   const [state, setState] = useState<State>('loading');
   const [meeting, setMeeting] = useState<Meeting | null>(null);
@@ -99,9 +101,9 @@ export default function MeetingRoomPage() {
         body: JSON.stringify({ meetingId: meeting.id }),
       });
       if (!res.ok) throw new Error();
-      toast.success('Rapat diakhiri untuk semua peserta.');
+      toast.success(t('meetingRoomEndedToast'));
     } catch {
-      toast.error('Gagal mengakhiri rapat.');
+      toast.error(t('meetingRoomEndErrorToast'));
     }
     router.push(backHref);
   };
@@ -109,9 +111,9 @@ export default function MeetingRoomPage() {
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(window.location.href);
-      toast.success('Tautan rapat disalin — bagikan untuk mengundang.');
+      toast.success(t('meetingsLinkCopiedToast'));
     } catch {
-      toast.error('Tidak dapat menyalin tautan.');
+      toast.error(t('meetingsCopyLinkErrorToast'));
     }
   };
 
@@ -123,7 +125,7 @@ export default function MeetingRoomPage() {
       <RoomShell title={meeting?.title} backHref={backHref}>
         <div className="flex h-full flex-col items-center justify-center gap-3 text-muted-foreground">
           <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <p className="text-sm">Menyiapkan rapat…</p>
+          <p className="text-sm">{t('meetingRoomPreparingText')}</p>
         </div>
       </RoomShell>
     );
@@ -131,9 +133,9 @@ export default function MeetingRoomPage() {
 
   if (state === 'not_found') {
     return (
-      <RoomShell title="Rapat tidak ditemukan" backHref={backHref}>
-        <CenterCard icon={<VideoOff className="h-7 w-7" />} title="Rapat tidak ditemukan" desc="Rapat ini mungkin sudah dihapus atau Anda tidak memiliki akses.">
-          <Link href={backHref}><Button variant="outline" size="sm">Kembali ke daftar rapat</Button></Link>
+      <RoomShell title={t('meetingRoomNotFoundTitle')} backHref={backHref}>
+        <CenterCard icon={<VideoOff className="h-7 w-7" />} title={t('meetingRoomNotFoundTitle')} desc={t('meetingRoomNotFoundDesc')}>
+          <Link href={backHref}><Button variant="outline" size="sm">{t('meetingRoomBackToListButton')}</Button></Link>
         </CenterCard>
       </RoomShell>
     );
@@ -142,9 +144,9 @@ export default function MeetingRoomPage() {
   if (state === 'not_configured') {
     return (
       <RoomShell title={meeting?.title} backHref={backHref}>
-        <CenterCard icon={<Settings className="h-7 w-7" />} title="Rapat belum diaktifkan"
-          desc="Fitur rapat memerlukan kunci LiveKit. Admin perlu menambahkan LIVEKIT_API_SECRET di environment server, lalu memulai ulang aplikasi.">
-          <Link href={backHref}><Button variant="outline" size="sm">Kembali</Button></Link>
+        <CenterCard icon={<Settings className="h-7 w-7" />} title={t('meetingRoomNotConfiguredTitle')}
+          desc={t('meetingRoomNotConfiguredDesc')}>
+          <Link href={backHref}><Button variant="outline" size="sm">{t('meetingRoomBackButton')}</Button></Link>
         </CenterCard>
       </RoomShell>
     );
@@ -153,8 +155,8 @@ export default function MeetingRoomPage() {
   if (state === 'error') {
     return (
       <RoomShell title={meeting?.title} backHref={backHref}>
-        <CenterCard icon={<VideoOff className="h-7 w-7" />} title="Tidak dapat bergabung" desc="Terjadi kendala saat menyiapkan rapat. Coba muat ulang halaman.">
-          <Button variant="outline" size="sm" onClick={() => location.reload()}>Coba lagi</Button>
+        <CenterCard icon={<VideoOff className="h-7 w-7" />} title={t('meetingRoomErrorTitle')} desc={t('meetingRoomErrorDesc')}>
+          <Button variant="outline" size="sm" onClick={() => location.reload()}>{t('meetingRoomRetryButton')}</Button>
         </CenterCard>
       </RoomShell>
     );
@@ -187,6 +189,7 @@ export default function MeetingRoomPage() {
 }
 
 function CustomVideoConference() {
+  const t = useT('meetings');
   const tracks = useTracks(
     [
       { source: Track.Source.Camera, withPlaceholder: true },
@@ -220,7 +223,7 @@ function CustomVideoConference() {
       await localParticipant.setMicrophoneEnabled(!isMicrophoneEnabled);
     } catch (err) {
       console.error('Failed to toggle mic:', err);
-      toast.error('Gagal mengakses mikrofon.');
+      toast.error(t('meetingRoomMicErrorToast'));
     }
   };
 
@@ -230,7 +233,7 @@ function CustomVideoConference() {
       await localParticipant.setCameraEnabled(!isCameraEnabled);
     } catch (err) {
       console.error('Failed to toggle camera:', err);
-      toast.error('Gagal mengakses kamera.');
+      toast.error(t('meetingRoomCameraErrorToast'));
     }
   };
 
@@ -240,7 +243,7 @@ function CustomVideoConference() {
       await localParticipant.setScreenShareEnabled(!isScreenShareEnabled);
     } catch (err) {
       console.error('Failed to toggle screen share:', err);
-      toast.error('Gagal membagikan layar.');
+      toast.error(t('meetingRoomScreenShareErrorToast'));
     }
   };
 
@@ -301,7 +304,7 @@ function CustomVideoConference() {
         {showChat && (
           <div className="absolute md:relative inset-y-0 right-0 z-20 w-full md:w-80 h-full border-l border-neutral-850 bg-neutral-900 flex flex-col shrink-0 overflow-hidden rounded-2xl md:ml-3 shadow-2xl md:shadow-none">
             <div className="p-3.5 border-b border-neutral-850 flex justify-between items-center bg-neutral-900 shrink-0">
-              <span className="text-xs font-bold text-white">Chat Rapat</span>
+              <span className="text-xs font-bold text-white">{t('meetingRoomChatHeader')}</span>
               <button 
                 onClick={() => setShowChat(false)} 
                 className="text-neutral-400 hover:text-white p-1.5 rounded-lg hover:bg-neutral-800 transition-colors"
@@ -320,7 +323,7 @@ function CustomVideoConference() {
       <div className="mt-3 flex justify-center items-center gap-3 bg-neutral-900/80 border border-neutral-800/40 backdrop-blur-md px-5 py-3 rounded-2xl mx-auto max-w-fit shadow-xl z-10">
         <button
           onClick={toggleMic}
-          aria-label={!isMicrophoneEnabled ? 'Nyalakan mikrofon' : 'Matikan mikrofon'}
+          aria-label={!isMicrophoneEnabled ? t('meetingRoomMicOnAria') : t('meetingRoomMicOffAria')}
           className={cn(
             "p-3 rounded-xl transition-all duration-200 active:scale-95",
             !isMicrophoneEnabled ? "bg-rose-500 text-white" : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200"
@@ -331,7 +334,7 @@ function CustomVideoConference() {
 
         <button
           onClick={toggleCam}
-          aria-label={!isCameraEnabled ? 'Nyalakan kamera' : 'Matikan kamera'}
+          aria-label={!isCameraEnabled ? t('meetingRoomCameraOnAria') : t('meetingRoomCameraOffAria')}
           className={cn(
             "p-3 rounded-xl transition-all duration-200 active:scale-95",
             !isCameraEnabled ? "bg-rose-500 text-white" : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200"
@@ -342,7 +345,7 @@ function CustomVideoConference() {
 
         <button
           onClick={toggleScreen}
-          aria-label={isScreenShareEnabled ? 'Hentikan berbagi layar' : 'Mulai berbagi layar'}
+          aria-label={isScreenShareEnabled ? t('meetingRoomScreenShareStopAria') : t('meetingRoomScreenShareStartAria')}
           className={cn(
             "p-3 rounded-xl transition-all duration-200 active:scale-95",
             isScreenShareEnabled ? "bg-emerald-500 text-white animate-pulse" : "bg-neutral-800 hover:bg-neutral-700 text-neutral-200"
@@ -354,7 +357,7 @@ function CustomVideoConference() {
         {/* Chat Toggle Button */}
         <button
           onClick={() => setShowChat(!showChat)}
-          aria-label="Buka obrolan"
+          aria-label={t('meetingRoomChatToggleAria')}
           className={cn(
             "p-3 rounded-xl transition-all duration-200 active:scale-95",
             showChat ? "bg-primary text-white" : "bg-neutral-800 hover:bg-neutral-750 text-neutral-200"
@@ -368,6 +371,7 @@ function CustomVideoConference() {
 }
 
 function CustomChat() {
+  const t = useT('meetings');
   const { send, chatMessages } = useChat();
   const [messageText, setMessageText] = useState('');
   const chatEndRef = useRef<HTMLDivElement>(null);
@@ -384,7 +388,7 @@ function CustomChat() {
         setMessageText('');
       } catch (err) {
         console.error('Failed to send message:', err);
-        toast.error('Gagal mengirim pesan.');
+        toast.error(t('meetingRoomChatSendErrorToast'));
       }
     }
   };
@@ -395,11 +399,11 @@ function CustomChat() {
       <div className="flex-1 overflow-y-auto p-4 space-y-3.5 min-h-0">
         {chatMessages.length === 0 ? (
           <div className="flex h-full items-center justify-center text-xs text-neutral-500">
-            Belum ada pesan. Mulai obrolan!
+            {t('meetingRoomChatEmptyText')}
           </div>
         ) : (
           chatMessages.map((msg) => {
-            const senderName = msg.from?.name || msg.from?.identity || 'Anggota';
+            const senderName = msg.from?.name || msg.from?.identity || t('meetingRoomChatDefaultSender');
             const isSelf = msg.from?.isLocal;
             return (
               <div key={msg.id || msg.timestamp} className={cn("flex flex-col", isSelf ? "items-end" : "items-start")}>
@@ -427,7 +431,7 @@ function CustomChat() {
           type="text"
           value={messageText}
           onChange={(e) => setMessageText(e.target.value)}
-          placeholder="Tulis pesan..."
+          placeholder={t('meetingRoomChatInputPlaceholder')}
           className="flex-1 min-w-0 bg-neutral-950 border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white placeholder-neutral-500 outline-none focus:border-primary transition-colors"
         />
         <button
@@ -435,7 +439,7 @@ function CustomChat() {
           disabled={!messageText.trim()}
           className="bg-primary hover:bg-primary/90 disabled:opacity-50 text-white px-3.5 py-2 rounded-xl text-xs font-bold transition-all active:scale-95 shrink-0"
         >
-          Kirim
+          {t('meetingRoomChatSendButton')}
         </button>
       </form>
     </div>
@@ -443,6 +447,7 @@ function CustomChat() {
 }
 
 function VideoTile({ track, isPinned, onPinToggle }: { track: any; isPinned: boolean; onPinToggle: () => void }) {
+  const t = useT('meetings');
   const isVideoEnabled = track.participant.isCameraEnabled || track.source === Track.Source.ScreenShare;
   const isAudioMuted = !track.participant.isMicrophoneEnabled;
   const initials = track.participant.identity.slice(0, 2).toUpperCase();
@@ -467,7 +472,7 @@ function VideoTile({ track, isPinned, onPinToggle }: { track: any; isPinned: boo
       <div className="absolute bottom-3 left-3 bg-neutral-950/60 border border-neutral-800/40 backdrop-blur-sm px-2.5 py-1 rounded-xl flex items-center gap-2 max-w-[calc(100%-2rem)]">
         <span className="text-[10px] font-bold text-white truncate">
           {track.participant.name || track.participant.identity}
-          {track.source === Track.Source.ScreenShare && ' (Presentasi)'}
+          {track.source === Track.Source.ScreenShare && t('meetingRoomPresentingSuffix')}
         </span>
         {isAudioMuted && (
           <MicOff className="h-3 w-3 text-rose-500 shrink-0" />
@@ -477,7 +482,7 @@ function VideoTile({ track, isPinned, onPinToggle }: { track: any; isPinned: boo
       {/* Hover Pin Button */}
       <button
         onClick={onPinToggle}
-        aria-label={isPinned ? 'Lepas pin video' : 'Pin video'}
+        aria-label={isPinned ? t('meetingRoomUnpinAria') : t('meetingRoomPinAria')}
         className={cn(
           "absolute top-3 right-3 p-2 rounded-xl border backdrop-blur-sm transition-all duration-200 active:scale-95",
           isPinned
@@ -492,6 +497,7 @@ function VideoTile({ track, isPinned, onPinToggle }: { track: any; isPinned: boo
 }
 
 function RoomShell({ title, backHref, onLeave, onCopy, onEnd, children }: { title?: string; backHref: string; onLeave?: () => void; onCopy?: () => void; onEnd?: () => void; children: React.ReactNode }) {
+  const t = useT('meetings');
   return (
     <div className="absolute inset-0 z-30 flex flex-col bg-neutral-950">
       {/* Top bar */}
@@ -502,21 +508,21 @@ function RoomShell({ title, backHref, onLeave, onCopy, onEnd, children }: { titl
           </Link>
           <div className="flex items-center gap-2 min-w-0">
             <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><Video className="h-3.5 w-3.5" /></span>
-            <span className="truncate text-sm font-bold text-foreground">{title || 'Rapat'}</span>
+            <span className="truncate text-sm font-bold text-foreground">{title || t('meetingRoomDefaultTitle')}</span>
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {onCopy && (
             <Button size="sm" variant="outline" onClick={onCopy} className="gap-1.5">
-              <Link2 className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Salin tautan</span>
+              <Link2 className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t('meetingRoomCopyLinkButton')}</span>
             </Button>
           )}
           {onLeave && (
-            <Button size="sm" variant={onEnd ? 'outline' : 'destructive'} onClick={onLeave} className="gap-1.5">Keluar</Button>
+            <Button size="sm" variant={onEnd ? 'outline' : 'destructive'} onClick={onLeave} className="gap-1.5">{t('meetingRoomLeaveButton')}</Button>
           )}
           {onEnd && (
             <Button size="sm" variant="destructive" onClick={onEnd} className="gap-1.5">
-              <PhoneOff className="h-3.5 w-3.5" /> <span className="hidden sm:inline">Akhiri rapat</span>
+              <PhoneOff className="h-3.5 w-3.5" /> <span className="hidden sm:inline">{t('meetingRoomEndButton')}</span>
             </Button>
           )}
         </div>

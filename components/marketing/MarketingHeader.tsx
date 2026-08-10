@@ -8,13 +8,15 @@ import { ArrowRight, Menu, X, Search } from 'lucide-react';
 import { Logo } from '@/components/brand/Logo';
 import { CommandPalette, useCommandPalette } from '@/components/landing/CommandPalette';
 import { ChatWidget } from '@/components/landing/ChatWidget';
+import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { useT } from '@/lib/i18n/useT';
 
 const BLUE = '#106CD8';
 
 const NAV_LINKS = [
-  { label: 'Fitur', href: '/fitur' },
-  { label: 'Cara Kerja', href: '/cara-kerja' },
-  { label: 'Harga', href: '/harga' },
+  { key: 'navFitur' as const, href: '/fitur' },
+  { key: 'navCaraKerja' as const, href: '/cara-kerja' },
+  { key: 'navHarga' as const, href: '/harga' },
 ];
 
 /**
@@ -26,6 +28,7 @@ export function MarketingHeader() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const { open: cmdOpen, setOpen: setCmdOpen } = useCommandPalette();
+  const t = useT('common');
 
   return (
     <>
@@ -34,7 +37,7 @@ export function MarketingHeader() {
         style={{ backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
       >
         <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-4 sm:px-6">
-          <Link href="/" className="flex items-center transition-transform hover:scale-[1.03]" aria-label="RuangBaru — beranda">
+          <Link href="/" className="flex items-center transition-transform hover:scale-[1.03]" aria-label={t('homeAriaLabel')}>
             <Logo variant="wordmark" height={36} priority />
           </Link>
 
@@ -52,7 +55,7 @@ export function MarketingHeader() {
                     background: active ? '#EBF3FD' : 'transparent',
                   }}
                 >
-                  {l.label}
+                  {t(l.key)}
                 </Link>
               );
             })}
@@ -61,18 +64,19 @@ export function MarketingHeader() {
           <div className="hidden items-center gap-2 md:flex">
             <button
               onClick={() => setCmdOpen(true)}
-              aria-label="Cari"
+              aria-label={t('navSearch')}
               className="flex items-center gap-1.5 rounded-lg border border-neutral-200 bg-white/60 px-2.5 py-1.5 text-xs font-medium text-neutral-400 transition-colors hover:border-neutral-300 hover:text-neutral-600"
             >
               <Search className="h-3.5 w-3.5" />
               <kbd className="font-sans text-[10px]">⌘K</kbd>
             </button>
+            <LanguageSwitcher />
             <Link
               href="/login"
               prefetch
               className="rounded-lg px-3 py-1.5 text-sm font-medium text-neutral-600 transition-colors hover:bg-neutral-100 hover:text-neutral-900"
             >
-              Masuk
+              {t('navLogin')}
             </Link>
             <Link
               href="/register"
@@ -80,12 +84,12 @@ export function MarketingHeader() {
               className="group inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md"
               style={{ background: BLUE }}
             >
-              Coba Gratis
+              {t('navSignup')}
               <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
             </Link>
           </div>
 
-          <button className="rounded-md p-1.5 text-neutral-600 md:hidden" onClick={() => setOpen((v) => !v)} aria-label="Menu">
+          <button className="rounded-md p-1.5 text-neutral-600 md:hidden" onClick={() => setOpen((v) => !v)} aria-label={t('navMenu')}>
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
         </div>
@@ -107,15 +111,18 @@ export function MarketingHeader() {
                     className="rounded-lg px-3 py-2.5 text-sm font-medium"
                     style={{ color: pathname === l.href ? BLUE : '#374151' }}
                   >
-                    {l.label}
+                    {t(l.key)}
                   </Link>
                 ))}
-                <div className="mt-2 flex gap-2 border-t border-neutral-100 pt-3">
+                <div className="mt-2 flex items-center justify-between gap-2 border-t border-neutral-100 pt-3">
+                  <LanguageSwitcher />
+                </div>
+                <div className="mt-2 flex gap-2">
                   <Link href="/login" className="flex-1">
-                    <button className="w-full rounded-lg border border-neutral-200 py-2 text-sm font-medium text-neutral-700">Masuk</button>
+                    <button className="w-full rounded-lg border border-neutral-200 py-2 text-sm font-medium text-neutral-700">{t('navLogin')}</button>
                   </Link>
                   <Link href="/register" className="flex-1">
-                    <button className="w-full rounded-lg py-2 text-sm font-semibold text-white" style={{ background: BLUE }}>Coba Gratis</button>
+                    <button className="w-full rounded-lg py-2 text-sm font-semibold text-white" style={{ background: BLUE }}>{t('navSignup')}</button>
                   </Link>
                 </div>
               </div>

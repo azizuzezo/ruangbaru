@@ -14,8 +14,10 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Note } from '@/types';
 import { Separator } from '@/components/ui/separator';
+import { useT } from '@/lib/i18n/useT';
 
 export default function NotesPage() {
+  const t = useT('notes');
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const [notes, setNotes] = useState<Note[]>([]);
   const [selectedNote, setSelectedNote] = useState<Note | null>(null);
@@ -89,11 +91,11 @@ export default function NotesPage() {
 
       if (error) throw error;
 
-      toast.success('Catatan baru dibuat!');
+      toast.success(t('notesCreateSuccess'));
       setNotes((prev) => [data as Note, ...prev]);
       handleSelectNote(data as Note);
     } catch (err: any) {
-      toast.error(err.message || 'Gagal membuat catatan');
+      toast.error(err.message || t('notesCreateError'));
     }
   };
 
@@ -116,11 +118,11 @@ export default function NotesPage() {
 
       if (error) throw error;
 
-      toast.success('Catatan disimpan');
+      toast.success(t('notesSaveSuccess'));
       setNotes((prev) => prev.map((n) => (n.id === selectedNote.id ? (data as Note) : n)));
       setSelectedNote(data as Note);
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menyimpan catatan');
+      toast.error(err.message || t('notesSaveError'));
     } finally {
       setSaving(false);
     }
@@ -132,7 +134,7 @@ export default function NotesPage() {
       const { error } = await supabase.from('notes').delete().eq('id', id);
       if (error) throw error;
 
-      toast.success('Catatan dihapus');
+      toast.success(t('notesDeleteSuccess'));
       const updatedNotes = notes.filter((n) => n.id !== id);
       setNotes(updatedNotes);
       if (selectedNote?.id === id) {
@@ -143,7 +145,7 @@ export default function NotesPage() {
         }
       }
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menghapus catatan');
+      toast.error(err.message || t('notesDeleteError'));
     }
   };
 
@@ -157,7 +159,7 @@ export default function NotesPage() {
       <div className="w-72 border-r border-border flex flex-col bg-background/40">
         <div className="p-4 space-y-3">
           <div className="flex items-center justify-between">
-            <span className="text-xs font-bold text-foreground uppercase tracking-wider">Catatan Dokumen</span>
+            <span className="text-xs font-bold text-foreground uppercase tracking-wider">{t('notesListTitle')}</span>
             <Button size="icon-sm" variant="outline-brand" onClick={handleCreateNote}>
               <Plus className="h-4 w-4" />
             </Button>
@@ -165,7 +167,7 @@ export default function NotesPage() {
           <div className="relative">
             <Search className="absolute left-2.5 top-2 h-3.5 w-3.5 text-muted-foreground" />
             <Input
-              placeholder="Cari dokumen..."
+              placeholder={t('notesSearchPlaceholder')}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-8 h-8 text-xs"
@@ -184,7 +186,7 @@ export default function NotesPage() {
             </div>
           ) : filteredNotes.length === 0 ? (
             <div className="text-center py-8 text-[11px] text-muted-foreground">
-              Tidak ada catatan
+              {t('notesEmptyList')}
             </div>
           ) : (
             filteredNotes.map((note) => (
@@ -223,7 +225,7 @@ export default function NotesPage() {
             {/* Action Header */}
             <div className="h-14 border-b border-border px-6 flex items-center justify-between bg-card/30">
               <span className="text-[10px] text-muted-foreground font-semibold flex items-center gap-1">
-                <Globe className="h-3.5 w-3.5 text-muted-foreground/60" /> Catatan internal tim Anda
+                <Globe className="h-3.5 w-3.5 text-muted-foreground/60" /> {t('notesInternalLabel')}
               </span>
               <Button size="sm" onClick={handleSaveNote} disabled={saving} className="gap-1.5 h-8">
                 {saving ? (
@@ -231,7 +233,7 @@ export default function NotesPage() {
                 ) : (
                   <Save className="h-3.5 w-3.5" />
                 )}
-                <span>Simpan</span>
+                <span>{t('notesSaveButton')}</span>
               </Button>
             </div>
 
@@ -241,13 +243,13 @@ export default function NotesPage() {
                 type="text"
                 value={editorTitle}
                 onChange={(e) => setEditorTitle(e.target.value)}
-                placeholder="Judul Catatan..."
+                placeholder={t('notesTitlePlaceholder')}
                 className="w-full bg-transparent border-0 text-2xl font-display font-semibold tracking-tight focus:outline-none focus:ring-0 text-foreground placeholder:text-muted-foreground/40"
               />
               <RichTextEditor
                 key={selectedNote.id}
                 content={selectedNote.content ?? null}
-                placeholder="Tulis gagasan, panduan kerja, atau catatan rapat tim Anda di sini..."
+                placeholder={t('notesEditorPlaceholder')}
                 onChange={(value) => { editorValueRef.current = value; }}
                 className="min-h-[calc(100%-80px)]"
               />
@@ -256,9 +258,9 @@ export default function NotesPage() {
         ) : (
           <div className="flex-1 flex flex-col items-center justify-center p-12 text-center">
             <BookOpen className="h-10 w-10 text-muted-foreground/60 mb-3" />
-            <h3 className="font-bold text-foreground text-sm">Pilih Dokumen</h3>
+            <h3 className="font-bold text-foreground text-sm">{t('notesEmptyStateTitle')}</h3>
             <p className="text-xs text-muted-foreground mt-2 max-w-xs leading-relaxed">
-              Klik catatan di panel kiri untuk membuka editor, atau klik tambah untuk merancang dokumen baru.
+              {t('notesEmptyStateDesc')}
             </p>
           </div>
         )}

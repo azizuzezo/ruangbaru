@@ -10,21 +10,24 @@ import { signUp } from '@/lib/supabase/actions';
 import { toast } from 'sonner';
 import { Loader2, Eye, EyeOff, Mail, ArrowRight, Check, X, FolderKanban } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useT } from '@/lib/i18n/useT';
 
 const BLUE = '#106CD8';
 const E    = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
-const schema = z
-  .object({
-    email:           z.string().email('Masukkan alamat email yang valid'),
-    password:        z.string().min(6, 'Kata sandi minimal 6 karakter'),
-    confirmPassword: z.string().min(1, 'Ulangi kata sandi Anda'),
-  })
-  .refine((v) => v.password === v.confirmPassword, {
-    message: 'Kata sandi tidak sama',
-    path: ['confirmPassword'],
-  });
-type Values = z.infer<typeof schema>;
+function getSchema(t: (key: string) => string) {
+  return z
+    .object({
+      email:           z.string().email(t('emailInvalidError')),
+      password:        z.string().min(6, t('passwordMin6Error')),
+      confirmPassword: z.string().min(1, t('confirmPasswordRequiredError')),
+    })
+    .refine((v) => v.password === v.confirmPassword, {
+      message: t('passwordMismatchError'),
+      path: ['confirmPassword'],
+    });
+}
+type Values = { email: string; password: string; confirmPassword: string };
 
 function StrengthBar({ password }: { password: string }) {
   const len = password.length;
@@ -49,6 +52,7 @@ export default function RegisterPage() {
 }
 
 function RegisterForm() {
+  const t = useT('auth');
   const searchParams = useSearchParams();
   // Preserved through signup → email confirmation → /auth/callback, so a
   // user who registers via an invitation link lands directly in that
@@ -61,7 +65,7 @@ function RegisterForm() {
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
   const { register, handleSubmit, watch, formState: { errors } } = useForm<Values>({
-    resolver: zodResolver(schema),
+    resolver: zodResolver(getSchema(t)),
     mode: 'onTouched',
     defaultValues: { email: '', password: '', confirmPassword: '' },
   });
@@ -88,7 +92,7 @@ function RegisterForm() {
         setSuccessMsg(result.success);
       }
     } catch {
-      toast.error('Terjadi kesalahan. Coba lagi.');
+      toast.error(t('genericErrorToast'));
     } finally {
       setLoading(false);
     }
@@ -107,11 +111,11 @@ function RegisterForm() {
           <Mail className="h-6 w-6 text-neutral-700" />
         </motion.div>
         <div>
-          <h1 className="text-xl font-semibold text-neutral-900">Cek email Anda</h1>
+          <h1 className="text-xl font-semibold text-neutral-900">{t('checkEmailHeading')}</h1>
           <p className="mt-2 text-sm leading-6 text-neutral-500">{successMsg}</p>
         </div>
         <div className="rounded-lg border border-neutral-100 bg-neutral-50 p-4 text-left">
-          <p className="text-xs text-neutral-500">Tidak menerima email? Periksa folder spam, atau hubungi kami di{' '}
+          <p className="text-xs text-neutral-500">{t('noEmailReceivedText')}{' '}
             <a href="mailto:halo@ruangbaru.my.id" className="font-medium underline underline-offset-2" style={{ color: BLUE }}>
               halo@ruangbaru.my.id
             </a>
@@ -120,7 +124,7 @@ function RegisterForm() {
         <Link href="/login">
           <motion.button className="w-full rounded-lg border border-neutral-200 bg-white py-2.5 text-sm font-semibold text-neutral-700 shadow-sm"
             whileHover={{ borderColor: '#9CA3AF' }} whileTap={{ scale: 0.97 }}>
-            Kembali ke halaman masuk
+            {t('backToLoginButton')}
           </motion.button>
         </Link>
       </motion.div>
@@ -135,10 +139,10 @@ function RegisterForm() {
       {/* Heading */}
       <div>
         <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">
-          Buat akun RuangBaru
+          {t('registerHeading')}
         </h1>
         <p className="mt-1.5 text-sm text-neutral-500">
-          Gratis untuk tim hingga 5 anggota. Tidak perlu kartu kredit.
+          {t('registerSubheading')}
         </p>
       </div>
 
@@ -150,19 +154,18 @@ function RegisterForm() {
       >
         <FolderKanban className="mt-0.5 h-4 w-4 shrink-0" style={{ color: BLUE }} />
         <p className="text-xs leading-5 text-neutral-600">
-          Cukup email dan kata sandi dulu. Nama Anda dan nama ruang kerja
-          diisi belakangan, tepat waktu Anda membuat ruang kerja pertama.
+          {t('registerInfoBox')}
         </p>
       </motion.div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         {/* Email */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.1, ease: E }}>
-          <label htmlFor="reg-email" className="mb-1.5 block text-sm font-semibold text-neutral-700">Email</label>
+          <label htmlFor="reg-email" className="mb-1.5 block text-sm font-semibold text-neutral-700">{t('emailLabel')}</label>
           <input
             id="reg-email"
             type="email"
-            placeholder="nama@perusahaan.com"
+            placeholder={t('emailPlaceholder')}
             disabled={loading}
             autoFocus
             {...register('email')}
@@ -179,12 +182,12 @@ function RegisterForm() {
 
         {/* Password */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.15, ease: E }}>
-          <label htmlFor="reg-password" className="mb-1.5 block text-sm font-semibold text-neutral-700">Kata Sandi</label>
+          <label htmlFor="reg-password" className="mb-1.5 block text-sm font-semibold text-neutral-700">{t('passwordLabel')}</label>
           <div className="relative">
             <input
               id="reg-password"
               type={showPw ? 'text' : 'password'}
-              placeholder="Min. 6 karakter"
+              placeholder={t('passwordMinCharsPlaceholder')}
               disabled={loading}
               {...register('password')}
               className="w-full rounded-lg border border-neutral-200 bg-white py-2.5 pl-3.5 pr-10 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-all focus:border-[#106CD8] focus:ring-2 focus:ring-blue-100 disabled:opacity-60"
@@ -200,12 +203,12 @@ function RegisterForm() {
 
         {/* Confirm password */}
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3, delay: 0.2, ease: E }}>
-          <label htmlFor="reg-password-2" className="mb-1.5 block text-sm font-semibold text-neutral-700">Ulangi Kata Sandi</label>
+          <label htmlFor="reg-password-2" className="mb-1.5 block text-sm font-semibold text-neutral-700">{t('confirmPasswordLabel')}</label>
           <div className="relative">
             <input
               id="reg-password-2"
               type={showPw2 ? 'text' : 'password'}
-              placeholder="Ketik ulang kata sandi"
+              placeholder={t('confirmPasswordPlaceholder')}
               disabled={loading}
               {...register('confirmPassword')}
               className={`w-full rounded-lg border bg-white py-2.5 pl-3.5 pr-16 text-sm text-neutral-900 placeholder-neutral-400 outline-none transition-all focus:ring-2 disabled:opacity-60 ${
@@ -248,28 +251,28 @@ function RegisterForm() {
           className="flex w-full items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition-colors disabled:opacity-60"
           style={{ background: BLUE }}>
           {loading
-            ? <><Loader2 className="h-4 w-4 animate-spin" /> Membuat akun...</>
-            : <>Buat Akun <ArrowRight className="h-4 w-4" /></>}
+            ? <><Loader2 className="h-4 w-4 animate-spin" /> {t('registerSubmittingLabel')}</>
+            : <>{t('registerSubmitLabel')} <ArrowRight className="h-4 w-4" /></>}
         </motion.button>
       </form>
 
       {/* Terms note */}
       <p className="text-center text-xs text-neutral-400 leading-5">
-        Dengan mendaftar, Anda menyetujui{' '}
-        <Link href="/terms-of-service" className="underline underline-offset-2 hover:text-neutral-600">ketentuan layanan</Link>
-        {' '}dan{' '}
-        <Link href="/privacy-policy" className="underline underline-offset-2 hover:text-neutral-600">kebijakan privasi</Link>{' '}kami.
+        {t('termsAgreementPrefix')}{' '}
+        <Link href="/terms-of-service" className="underline underline-offset-2 hover:text-neutral-600">{t('termsOfServiceLink')}</Link>
+        {' '}{t('andConnector')}{' '}
+        <Link href="/privacy-policy" className="underline underline-offset-2 hover:text-neutral-600">{t('privacyPolicyLink')}</Link>{' '}{t('termsAgreementSuffix')}
       </p>
 
       {/* Login link */}
       <p className="text-center text-sm text-neutral-500">
-        Sudah punya akun?{' '}
+        {t('haveAccountText')}{' '}
         <Link
           href={redirectTo ? `/login?redirectTo=${encodeURIComponent(redirectTo)}` : '/login'}
           className="font-semibold transition-colors hover:opacity-80"
           style={{ color: BLUE }}
         >
-          Masuk di sini
+          {t('loginHereLink')}
         </Link>
       </p>
     </motion.div>

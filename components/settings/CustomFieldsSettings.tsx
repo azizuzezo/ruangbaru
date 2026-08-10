@@ -8,9 +8,10 @@ import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import { SlidersHorizontal, Plus, Trash2, Loader2 } from 'lucide-react';
 import type { TaskCustomFieldDef, TaskFieldType } from '@/types';
+import { useT } from '@/lib/i18n/useT';
 
-const TYPE_LABELS: Record<TaskFieldType, string> = {
-  text: 'Teks', number: 'Angka', date: 'Tanggal', select: 'Pilihan',
+const TYPE_LABEL_KEYS: Record<TaskFieldType, string> = {
+  text: 'fieldTypeText', number: 'fieldTypeNumber', date: 'fieldTypeDate', select: 'fieldTypeSelect',
 };
 
 export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
@@ -18,6 +19,10 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
   fields: TaskCustomFieldDef[];
   onChanged: () => void;
 }) {
+  const t = useT('settings');
+  const TYPE_LABELS: Record<TaskFieldType, string> = {
+    text: t(TYPE_LABEL_KEYS.text), number: t(TYPE_LABEL_KEYS.number), date: t(TYPE_LABEL_KEYS.date), select: t(TYPE_LABEL_KEYS.select),
+  };
   const supabase = createClient();
   const [name, setName] = useState('');
   const [type, setType] = useState<TaskFieldType>('text');
@@ -33,7 +38,7 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
         ? options.split(',').map((o) => o.trim()).filter(Boolean)
         : [];
       if (type === 'select' && opts.length === 0) {
-        toast.error('Isi minimal satu pilihan, dipisah koma');
+        toast.error(t('customFieldMinOneOption'));
         return;
       }
       const maxPos = fields.length ? Math.max(...fields.map((f) => f.position)) : -1;
@@ -41,11 +46,11 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
         workspace_id: workspaceId, name: name.trim(), field_type: type, options: opts, position: maxPos + 1,
       });
       if (error) throw error;
-      toast.success(`Field "${name.trim()}" ditambahkan`);
+      toast.success(t('customFieldAdded').replace('{name}', name.trim()));
       setName(''); setOptions(''); setType('text');
       onChanged();
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menambah field');
+      toast.error(err.message || t('customFieldAddFailed'));
     } finally {
       setAdding(false);
     }
@@ -56,10 +61,10 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
     try {
       const { error } = await supabase.from('task_custom_fields').delete().eq('id', f.id);
       if (error) throw error;
-      toast.success('Field dihapus');
+      toast.success(t('customFieldDeleted'));
       onChanged();
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menghapus field');
+      toast.error(err.message || t('customFieldDeleteFailed'));
     } finally {
       setBusyId(null);
     }
@@ -69,10 +74,10 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
     <Card className="border border-border/80 bg-card/60 backdrop-blur-sm">
       <CardHeader className="pb-3 border-b border-border">
         <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
-          <SlidersHorizontal className="h-4 w-4 text-primary" /> Field Kustom Tugas
+          <SlidersHorizontal className="h-4 w-4 text-primary" /> {t('customFieldsCardTitle')}
         </CardTitle>
         <CardDescription className="text-[11px]">
-          Field tambahan yang muncul saat membuat atau membuka tugas — berlaku untuk semua proyek di workspace ini.
+          {t('customFieldsCardDescription')}
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6 space-y-2">
@@ -88,7 +93,7 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
               onClick={() => removeField(f)}
               disabled={busyId === f.id}
               className="p-1 text-muted-foreground hover:text-destructive transition-colors shrink-0"
-              title="Hapus field"
+              title={t('customFieldDeleteTitle')}
             >
               {busyId === f.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
             </button>
@@ -100,7 +105,7 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
-              placeholder="cth. Estimasi Biaya"
+              placeholder={t('customFieldNamePlaceholder')}
               className="h-9 text-xs"
               disabled={adding}
             />
@@ -119,14 +124,14 @@ export function CustomFieldsSettings({ workspaceId, fields, onChanged }: {
             <Input
               value={options}
               onChange={(e) => setOptions(e.target.value)}
-              placeholder="Pilihan, dipisah koma — cth. Rendah, Sedang, Tinggi"
+              placeholder={t('customFieldOptionsPlaceholder')}
               className="h-9 text-xs"
               disabled={adding}
             />
           )}
           <Button type="button" size="sm" onClick={addField} disabled={adding || !name.trim()} className="gap-1.5 h-9 text-xs w-full">
             {adding ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Plus className="h-3.5 w-3.5" />}
-            Tambah Field
+            {t('addFieldButton')}
           </Button>
         </div>
       </CardContent>

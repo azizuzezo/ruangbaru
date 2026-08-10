@@ -8,23 +8,26 @@ import {
   Search, FolderKanban, CreditCard, Workflow, LogIn, UserPlus,
   Home, Mail, ArrowRight,
 } from 'lucide-react';
+import { useT } from '@/lib/i18n/useT';
 
 const BLUE = '#106CD8';
 const E = [0.22, 1, 0.36, 1] as [number, number, number, number];
 
+// `label` and `group` hold translation keys (resolved with t() at render
+// time) rather than display text, so the palette updates with the locale.
 type Item = { icon: React.ElementType; label: string; href: string; group: string; keywords?: string };
 
 const ITEMS: Item[] = [
-  { icon: Home, label: 'Beranda', href: '/', group: 'Navigasi' },
-  { icon: FolderKanban, label: 'Fitur', href: '/fitur', group: 'Navigasi', keywords: 'features kanban tugas' },
-  { icon: Workflow, label: 'Cara Kerja', href: '/cara-kerja', group: 'Navigasi', keywords: 'how it works langkah' },
-  { icon: CreditCard, label: 'Harga', href: '/harga', group: 'Navigasi', keywords: 'pricing paket biaya' },
-  { icon: Mail, label: 'Kontak', href: '/contact', group: 'Navigasi' },
-  { icon: LogIn, label: 'Masuk ke workspace', href: '/login', group: 'Aksi', keywords: 'login sign in' },
-  { icon: UserPlus, label: 'Buat akun gratis', href: '/register', group: 'Aksi', keywords: 'daftar register sign up' },
+  { icon: Home, label: 'cmdBeranda', href: '/', group: 'cmdGroupNavigasi' },
+  { icon: FolderKanban, label: 'cmdFitur', href: '/fitur', group: 'cmdGroupNavigasi', keywords: 'features kanban tugas' },
+  { icon: Workflow, label: 'cmdCaraKerja', href: '/cara-kerja', group: 'cmdGroupNavigasi', keywords: 'how it works langkah' },
+  { icon: CreditCard, label: 'cmdHarga', href: '/harga', group: 'cmdGroupNavigasi', keywords: 'pricing paket biaya' },
+  { icon: Mail, label: 'cmdKontak', href: '/contact', group: 'cmdGroupNavigasi' },
+  { icon: LogIn, label: 'cmdLogin', href: '/login', group: 'cmdGroupAksi', keywords: 'login sign in' },
+  { icon: UserPlus, label: 'cmdSignup', href: '/register', group: 'cmdGroupAksi', keywords: 'daftar register sign up' },
 ];
 
-const GROUPS = ['Navigasi', 'Aksi'];
+const GROUPS = ['cmdGroupNavigasi', 'cmdGroupAksi'];
 
 const OPEN_EVENT = 'ruangbaru:open-command';
 
@@ -57,6 +60,7 @@ export function useCommandPalette() {
 }
 
 export function CommandPalette({ open, setOpen }: { open: boolean; setOpen: (v: boolean) => void }) {
+  const t = useT('landing');
   const router = useRouter();
 
   // Prefetch destinations so navigation feels instant.
@@ -80,7 +84,7 @@ export function CommandPalette({ open, setOpen }: { open: boolean; setOpen: (v: 
           className="fixed inset-0 z-[100] flex items-start justify-center px-4 pt-[12vh]"
         >
           <button
-            aria-label="Tutup"
+            aria-label={t('cmdCloseAria')}
             className="absolute inset-0 bg-neutral-950/30 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
@@ -96,26 +100,26 @@ export function CommandPalette({ open, setOpen }: { open: boolean; setOpen: (v: 
                 <Search className="h-4 w-4 text-neutral-400" />
                 <Command.Input
                   autoFocus
-                  placeholder="Cari halaman atau aksi…"
+                  placeholder={t('cmdInputPlaceholder')}
                   className="h-12 flex-1 bg-transparent text-sm text-neutral-900 outline-none placeholder:text-neutral-400"
                 />
                 <kbd className="rounded border border-neutral-200 bg-neutral-50 px-1.5 py-0.5 text-[10px] font-medium text-neutral-400">ESC</kbd>
               </div>
               <Command.List className="max-h-[320px] overflow-y-auto p-2">
                 <Command.Empty className="px-3 py-6 text-center text-sm text-neutral-400">
-                  Tidak ada hasil.
+                  {t('cmdNoResults')}
                 </Command.Empty>
                 {GROUPS.map((group) => (
-                  <Command.Group key={group} heading={group}>
+                  <Command.Group key={group} heading={t(group)}>
                     {ITEMS.filter((i) => i.group === group).map((item) => (
                       <Command.Item
                         key={item.href}
-                        value={`${item.label} ${item.keywords ?? ''}`}
+                        value={`${t(item.label)} ${item.keywords ?? ''}`}
                         onSelect={() => go(item.href)}
                         className="group flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-neutral-700 aria-selected:bg-[#EBF3FD] aria-selected:text-[#106CD8]"
                       >
                         <item.icon className="h-4 w-4 text-neutral-400 group-aria-selected:text-[#106CD8]" />
-                        <span className="flex-1">{item.label}</span>
+                        <span className="flex-1">{t(item.label)}</span>
                         <ArrowRight className="h-3.5 w-3.5 opacity-0 transition-opacity group-aria-selected:opacity-100" style={{ color: BLUE }} />
                       </Command.Item>
                     ))}

@@ -5,35 +5,29 @@ import { motion } from 'framer-motion';
 import { ArrowRight, Heart, Building2, MessageSquare } from 'lucide-react';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { SiteFooter } from '@/components/landing/SiteFooter';
+import { useT } from '@/lib/i18n/useT';
 
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
 
-const SECTIONS = [
-  {
-    h: 'Kenapa RuangBaru ada',
-    body: [
-      'Banyak tim kecil dan UMKM di Indonesia kehilangan waktu bukan karena kurang bekerja keras, tetapi karena pekerjaan mereka tersebar di banyak alat yang berbeda. Daftar tugas ada di satu aplikasi, catatan rapat di tempat lain, jadwal di kalender pribadi, dan diskusi tim berpindah-pindah antara chat dan email.',
-      'RuangBaru hadir untuk menyatukan semuanya. Proyek, tugas, kalender, catatan, dan tim berada dalam satu ruang yang sama, sehingga semua orang tahu apa yang sedang dikerjakan, oleh siapa, dan kapan harus selesai — tanpa harus berpindah-pindah aplikasi sepanjang hari.',
-    ],
-  },
-  {
-    h: 'Filosofi produk',
-    body: [
-      'Kami percaya alat kerja yang baik seharusnya mengurangi kebisingan, bukan menambahnya. Karena itu RuangBaru kami rancang agar sederhana dan tenang: lebih sedikit tab, lebih sedikit notifikasi yang tidak perlu, dan tampilan yang membantu Anda fokus pada pekerjaan, bukan pada cara mengoperasikan aplikasinya.',
-      'Seluruh antarmuka menggunakan Bahasa Indonesia karena tim yang menggunakannya berbahasa Indonesia. Kami juga berkomitmen pada harga yang masuk akal untuk tim lokal — bukan harga yang dibuat untuk pasar luar negeri lalu sekadar dikonversi ke rupiah.',
-    ],
-  },
-  {
-    h: 'Fokus pada tim Indonesia',
-    body: [
-      'RuangBaru dibangun untuk cara kerja tim dan UMKM Indonesia, bukan sebagai terjemahan dari produk asing. Antarmuka dan dukungan kami sepenuhnya dalam Bahasa Indonesia, sehingga setiap anggota tim bisa langsung paham tanpa hambatan bahasa.',
-      'Kami mendengarkan kebutuhan nyata tim lokal dan mengutamakannya dalam pengembangan, mulai dari hal-hal kecil sehari-hari sampai cara tim berkolaborasi dan membagi tanggung jawab.',
-    ],
-  },
-];
-
 export default function AboutPage() {
+  const t = useT('marketingPages');
+
+  const SECTIONS = [
+    {
+      h: t('aboutSection1Title'),
+      body: [t('aboutSection1Body1'), t('aboutSection1Body2')],
+    },
+    {
+      h: t('aboutSection2Title'),
+      body: [t('aboutSection2Body1'), t('aboutSection2Body2')],
+    },
+    {
+      h: t('aboutSection3Title'),
+      body: [t('aboutSection3Body1'), t('aboutSection3Body2')],
+    },
+  ];
+
   return (
     <div className="min-h-screen bg-white antialiased">
       <MarketingHeader />
@@ -46,18 +40,16 @@ export default function AboutPage() {
             transition={{ duration: 0.5 }}
           >
             <p className="text-sm font-semibold" style={{ color: BLUE }}>
-              Tentang RuangBaru
+              {t('aboutEyebrow')}
             </p>
             <h1
               className="mt-3 text-3xl font-semibold tracking-tight text-neutral-950 sm:text-4xl"
               style={{ letterSpacing: '-0.02em' }}
             >
-              Satu ruang kerja untuk tim Indonesia
+              {t('aboutHeroTitle')}
             </h1>
             <p className="mt-5 text-base leading-7 text-neutral-600">
-              RuangBaru adalah ruang kerja kolaboratif yang menyatukan proyek, tugas, kalender,
-              catatan, dan tim Anda di satu tempat. Kami masih berada di tahap awal pengembangan,
-              dan kami membangunnya secara terbuka bersama tim-tim yang menggunakannya.
+              {t('aboutHeroBody')}
             </p>
           </motion.div>
         </section>
@@ -102,22 +94,20 @@ export default function AboutPage() {
           >
             <div className="flex items-center gap-2.5 text-sm font-semibold" style={{ color: TEAL }}>
               <Building2 className="h-4 w-4" />
-              Tentang Duacincin
+              {t('aboutDuacincinEyebrow')}
             </div>
             <h2
               className="mt-4 text-xl font-semibold tracking-tight text-neutral-950 sm:text-2xl"
               style={{ letterSpacing: '-0.02em' }}
             >
-              RuangBaru dibuat oleh Duacincin
+              {t('aboutDuacincinTitle')}
             </h2>
             <div className="mt-4 space-y-4">
               <p className="text-sm leading-7 text-neutral-600 sm:text-base">
-                RuangBaru adalah produk yang dibuat oleh Duacincin. Sebagai pembuat produk, Duacincin
-                bertanggung jawab atas pengembangan, pemeliharaan, dan arah RuangBaru ke depan.
+                {t('aboutDuacincinBody1')}
               </p>
               <p className="text-sm leading-7 text-neutral-600 sm:text-base">
-                Untuk mengenal lebih jauh siapa yang berada di balik produk ini, Anda bisa
-                mengunjungi situs resmi Duacincin.
+                {t('aboutDuacincinBody2')}
               </p>
             </div>
             <a
@@ -127,7 +117,7 @@ export default function AboutPage() {
               className="mt-6 inline-flex items-center gap-1.5 text-sm font-semibold transition-colors hover:opacity-80"
               style={{ color: BLUE }}
             >
-              Kunjungi duacincin.id
+              {t('aboutDuacincinLink')}
               <ArrowRight className="h-3.5 w-3.5" />
             </a>
           </motion.div>
@@ -150,11 +140,10 @@ export default function AboutPage() {
               className="mt-5 text-2xl font-semibold tracking-tight text-neutral-950 sm:text-3xl"
               style={{ letterSpacing: '-0.02em' }}
             >
-              Coba RuangBaru bersama tim Anda
+              {t('aboutCtaTitle')}
             </h2>
             <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-neutral-600">
-              Mulai gratis dan rasakan bagaimana pekerjaan tim terasa lebih ringan saat semuanya
-              berada di satu ruang. Punya pertanyaan? Kami senang mendengar dari Anda.
+              {t('aboutCtaBody')}
             </p>
             <div className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Link
@@ -162,7 +151,7 @@ export default function AboutPage() {
                 className="inline-flex items-center gap-1.5 rounded-full px-5 py-2.5 text-sm font-semibold text-white shadow-sm transition-all hover:shadow-md"
                 style={{ background: BLUE }}
               >
-                Coba Gratis
+                {t('aboutCtaButton')}
                 <ArrowRight className="h-3.5 w-3.5" />
               </Link>
               <a

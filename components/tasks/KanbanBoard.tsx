@@ -13,6 +13,7 @@ import { CSS } from '@dnd-kit/utilities';
 import { Calendar, GripVertical } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Task, TaskStatus, TaskStatusDef } from '@/types';
+import { useT } from '@/lib/i18n/useT';
 
 const PRIORITY_STYLES: Record<string, string> = {
   urgent: 'bg-rose-500/10 text-rose-600',
@@ -90,6 +91,7 @@ function Column({ id, title, color, tasks, onTaskClick }: {
   id: string; title: string; color: string; tasks: Task[]; onTaskClick: (id: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id, data: { type: 'column', status: id } });
+  const t = useT('tasks');
   return (
     <div
       ref={setNodeRef}
@@ -111,7 +113,7 @@ function Column({ id, title, color, tasks, onTaskClick }: {
             <SortableTaskCard key={task.id} task={task} onClick={() => onTaskClick(task.id)} />
           ))}
           {tasks.length === 0 && (
-            <div className="text-center py-6 text-[11px] text-muted-foreground/70 select-none">Kosong</div>
+            <div className="text-center py-6 text-[11px] text-muted-foreground/70 select-none">{t('columnEmptyState')}</div>
           )}
         </div>
       </SortableContext>

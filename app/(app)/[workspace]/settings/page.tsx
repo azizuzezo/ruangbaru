@@ -19,11 +19,13 @@ import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 import { useCustomFields } from '@/lib/hooks/useCustomFields';
 import { KanbanColumnsSettings } from '@/components/settings/KanbanColumnsSettings';
 import { CustomFieldsSettings } from '@/components/settings/CustomFieldsSettings';
+import { useT } from '@/lib/i18n/useT';
 
 type Prefs = { default_view: 'kanban' | 'list'; email_notifications: boolean; push_notifications: boolean };
 const DEFAULT_PREFS: Prefs = { default_view: 'kanban', email_notifications: true, push_notifications: true };
 
 export default function SettingsPage() {
+  const t = useT('settings');
   const router = useRouter();
   const { currentWorkspace, currentUser, setCurrentWorkspace, setCurrentUser, workspaces, setWorkspaces } = useWorkspaceStore();
   const isOwner = !!currentWorkspace && !!currentUser && currentWorkspace.owner_id === currentUser.id;
@@ -57,11 +59,11 @@ export default function SettingsPage() {
     const file = e.target.files?.[0];
     if (!file || !currentUser) return;
     if (!file.type.startsWith('image/')) {
-      toast.error('File harus berupa gambar');
+      toast.error(t('avatarMustBeImage'));
       return;
     }
     if (file.size > 2 * 1024 * 1024) {
-      toast.error('Ukuran gambar maksimal 2 MB');
+      toast.error(t('avatarMaxSize'));
       return;
     }
     setUploadingAvatar(true);
@@ -84,9 +86,9 @@ export default function SettingsPage() {
       if (error) throw error;
 
       setCurrentUser(data);
-      toast.success('Foto profil diperbarui!');
+      toast.success(t('avatarUpdated'));
     } catch (err: any) {
-      toast.error(err.message || 'Gagal mengunggah foto');
+      toast.error(err.message || t('avatarUploadFailed'));
     } finally {
       setUploadingAvatar(false);
     }
@@ -144,7 +146,7 @@ export default function SettingsPage() {
         .upsert({ user_id: currentUser.id, ...next }, { onConflict: 'user_id' });
       if (error) throw error;
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menyimpan preferensi');
+      toast.error(err.message || t('prefsSaveFailed'));
     } finally {
       setSavingPref(null);
     }
@@ -162,11 +164,11 @@ export default function SettingsPage() {
         .select()
         .single();
       if (error) throw error;
-      toast.success('Pengaturan workspace berhasil disimpan!');
+      toast.success(t('workspaceSaveSuccess'));
       setCurrentWorkspace(data);
       setWorkspaces(workspaces.map((w) => (w.id === currentWorkspace.id ? data : w)));
     } catch (err: any) {
-      toast.error(err.message || 'Gagal menyimpan pengaturan workspace');
+      toast.error(err.message || t('workspaceSaveFailed'));
     } finally {
       setSavingWs(false);
     }
@@ -184,10 +186,10 @@ export default function SettingsPage() {
         .select()
         .single();
       if (error) throw error;
-      toast.success('Profil Anda berhasil diperbarui!');
+      toast.success(t('profileUpdateSuccess'));
       setCurrentUser(data);
     } catch (err: any) {
-      toast.error(err.message || 'Gagal memperbarui profil');
+      toast.error(err.message || t('profileUpdateFailed'));
     } finally {
       setSavingProfile(false);
     }
@@ -207,7 +209,7 @@ export default function SettingsPage() {
       if (isOwner) {
         const { error } = await supabase.from('workspaces').delete().eq('id', currentWorkspace.id);
         if (error) throw error;
-        toast.success('Workspace berhasil dihapus.');
+        toast.success(t('workspaceDeletedSuccess'));
       } else {
         const { error } = await supabase
           .from('workspace_members')
@@ -215,7 +217,7 @@ export default function SettingsPage() {
           .eq('workspace_id', currentWorkspace.id)
           .eq('user_id', currentUser.id);
         if (error) throw error;
-        toast.success('Anda telah keluar dari workspace.');
+        toast.success(t('workspaceLeftSuccess'));
       }
       const remaining = workspaces.filter((w) => w.id !== currentWorkspace.id);
       setWorkspaces(remaining);
@@ -223,7 +225,7 @@ export default function SettingsPage() {
       setConfirmOpen(false);
       router.replace(remaining[0] ? `/${remaining[0].slug}/dashboard` : '/welcome');
     } catch (err: any) {
-      toast.error(err.message || 'Gagal memproses permintaan');
+      toast.error(err.message || t('dangerActionFailed'));
     } finally {
       setConfirmBusy(false);
     }
@@ -233,10 +235,10 @@ export default function SettingsPage() {
     <div className="space-y-6 max-w-3xl">
       <div>
         <h1 className="font-display text-2xl font-semibold text-foreground tracking-tight sm:text-3xl">
-          Pengaturan
+          {t('settingsPageTitle')}
         </h1>
         <p className="text-xs text-muted-foreground mt-1">
-          Kelola profil Anda, workspace, dan preferensi kerja tim.
+          {t('settingsPageSubtitle')}
         </p>
       </div>
 
@@ -245,37 +247,37 @@ export default function SettingsPage() {
         <Card className="border border-border/80 bg-card/60 backdrop-blur-sm">
           <CardHeader className="pb-3 border-b border-border">
             <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
-              <Layers className="h-4 w-4 text-primary" /> Pengaturan Workspace
+              <Layers className="h-4 w-4 text-primary" /> {t('workspaceCardTitle')}
             </CardTitle>
-            <CardDescription className="text-[11px]">Kelola identitas publik dan nama ruang kerja tim Anda.</CardDescription>
+            <CardDescription className="text-[11px]">{t('workspaceCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <form onSubmit={handleSaveWorkspace} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">Nama Workspace</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase">{t('workspaceNameLabel')}</label>
                 <Input
                   value={wsName}
                   onChange={(e) => setWsName(e.target.value)}
-                  placeholder="cth. Ruang Kerja Marketing"
+                  placeholder={t('workspaceNamePlaceholder')}
                   disabled={savingWs}
                   required
                 />
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase">
-                  Deskripsi <span className="font-normal text-muted-foreground/60">(opsional)</span>
+                  {t('workspaceDescriptionLabel')} <span className="font-normal text-muted-foreground/60">{t('workspaceDescriptionOptional')}</span>
                 </label>
                 <textarea
                   value={wsDescription}
                   onChange={(e) => setWsDescription(e.target.value)}
-                  placeholder="Ceritakan singkat tentang tim atau workspace ini..."
+                  placeholder={t('workspaceDescriptionPlaceholder')}
                   disabled={savingWs}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none h-20"
                 />
               </div>
               {currentWorkspace && (
                 <div className="space-y-1.5">
-                  <label className="text-xs font-semibold text-muted-foreground uppercase">Tautan Workspace</label>
+                  <label className="text-xs font-semibold text-muted-foreground uppercase">{t('workspaceLinkLabel')}</label>
                   <div className="flex items-center gap-2 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
                     <span className="flex-1 truncate text-xs text-muted-foreground">
                       {typeof window !== 'undefined' ? window.location.origin : ''}/{currentWorkspace.slug}
@@ -288,7 +290,7 @@ export default function SettingsPage() {
               )}
               <Button type="submit" disabled={savingWs || !wsName.trim()} className="gap-1.5 h-9 text-xs">
                 {savingWs ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                <span>Simpan Perubahan</span>
+                <span>{t('saveChangesButton')}</span>
               </Button>
             </form>
           </CardContent>
@@ -298,9 +300,9 @@ export default function SettingsPage() {
         <Card className="border border-border/80 bg-card/60 backdrop-blur-sm">
           <CardHeader className="pb-3 border-b border-border">
             <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
-              <User className="h-4 w-4 text-primary" /> Profil Pengguna
+              <User className="h-4 w-4 text-primary" /> {t('profileCardTitle')}
             </CardTitle>
-            <CardDescription className="text-[11px]">Ubah detail informasi personal Anda di sistem ini.</CardDescription>
+            <CardDescription className="text-[11px]">{t('profileCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="p-6">
             <div className="flex items-center gap-4 pb-5 mb-5 border-b border-border/60">
@@ -319,42 +321,42 @@ export default function SettingsPage() {
                 )}
                 <label
                   className="absolute -bottom-1 -right-1 h-7 w-7 rounded-full bg-primary text-primary-foreground flex items-center justify-center cursor-pointer shadow-sm hover:opacity-90 transition-opacity"
-                  title="Ganti foto"
+                  title={t('changePhotoTitle')}
                 >
                   {uploadingAvatar ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Camera className="h-3.5 w-3.5" />}
                   <input type="file" accept="image/*" className="sr-only" disabled={uploadingAvatar} onChange={handleAvatarUpload} />
                 </label>
               </div>
               <div className="min-w-0">
-                <p className="text-sm font-bold text-foreground truncate">{currentUser?.full_name || 'Pengguna'}</p>
+                <p className="text-sm font-bold text-foreground truncate">{currentUser?.full_name || t('defaultUserName')}</p>
                 <p className="text-xs text-muted-foreground truncate">{currentUser?.email}</p>
-                <p className="text-[10px] text-muted-foreground mt-1">JPG, PNG maks. 2 MB</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{t('avatarSizeHint')}</p>
               </div>
             </div>
             <form onSubmit={handleSaveProfile} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">Nama Lengkap</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase">{t('fullNameLabel')}</label>
                 <Input
                   value={profileName}
                   onChange={(e) => setProfileName(e.target.value)}
-                  placeholder="cth. Budi Santoso"
+                  placeholder={t('fullNamePlaceholder')}
                   disabled={savingProfile}
                   required
                 />
               </div>
               <div className="space-y-1.5">
-                <label className="text-xs font-semibold text-muted-foreground uppercase">Bio Singkat</label>
+                <label className="text-xs font-semibold text-muted-foreground uppercase">{t('bioLabel')}</label>
                 <textarea
                   value={profileBio}
                   onChange={(e) => setProfileBio(e.target.value)}
-                  placeholder="Tulis deskripsi peran Anda..."
+                  placeholder={t('bioPlaceholder')}
                   disabled={savingProfile}
                   className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring resize-none h-20"
                 />
               </div>
               <Button type="submit" disabled={savingProfile || !profileName.trim()} className="gap-1.5 h-9 text-xs">
                 {savingProfile ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Save className="h-3.5 w-3.5" />}
-                <span>Perbarui Profil</span>
+                <span>{t('updateProfileButton')}</span>
               </Button>
             </form>
           </CardContent>
@@ -364,13 +366,13 @@ export default function SettingsPage() {
         <Card className="border border-border/80 bg-card/60 backdrop-blur-sm">
           <CardHeader className="pb-3 border-b border-border">
             <CardTitle className="text-sm font-bold text-foreground flex items-center gap-2">
-              <SlidersHorizontal className="h-4 w-4 text-primary" /> Preferensi
+              <SlidersHorizontal className="h-4 w-4 text-primary" /> {t('preferencesCardTitle')}
             </CardTitle>
-            <CardDescription className="text-[11px]">Atur bagaimana RuangBaru bekerja untuk Anda.</CardDescription>
+            <CardDescription className="text-[11px]">{t('preferencesCardDescription')}</CardDescription>
           </CardHeader>
           <CardContent className="p-6 space-y-5">
             <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase">Tampilan Tugas Default</label>
+              <label className="text-xs font-semibold text-muted-foreground uppercase">{t('defaultTaskViewLabel')}</label>
               <div className="mt-2 inline-flex items-center rounded-lg border border-border bg-muted/30 p-0.5">
                 <button
                   type="button"
@@ -380,7 +382,7 @@ export default function SettingsPage() {
                     prefs.default_view === 'kanban' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
-                  <LayoutGrid className="h-3.5 w-3.5" /> Papan Kanban
+                  <LayoutGrid className="h-3.5 w-3.5" /> {t('kanbanBoardOption')}
                 </button>
                 <button
                   type="button"
@@ -390,19 +392,19 @@ export default function SettingsPage() {
                     prefs.default_view === 'list' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
-                  <ListTodo className="h-3.5 w-3.5" /> Daftar
+                  <ListTodo className="h-3.5 w-3.5" /> {t('listOption')}
                 </button>
                 {savingPref === 'view' && <Loader2 className="h-3 w-3 ml-2 animate-spin text-muted-foreground" />}
               </div>
-              <p className="mt-1.5 text-[11px] text-muted-foreground">Halaman Tugas akan terbuka dengan tampilan ini secara default.</p>
+              <p className="mt-1.5 text-[11px] text-muted-foreground">{t('defaultViewHint')}</p>
             </div>
 
             <div className="flex items-center justify-between border-t border-border/60 pt-4">
               <div className="flex items-start gap-2.5">
                 <Mail className="h-4 w-4 mt-0.5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Notifikasi Email</p>
-                  <p className="text-[11px] text-muted-foreground">Tugas baru, komentar, dan tenggat waktu lewat email.</p>
+                  <p className="text-sm font-semibold text-foreground">{t('emailNotificationsTitle')}</p>
+                  <p className="text-[11px] text-muted-foreground">{t('emailNotificationsDescription')}</p>
                 </div>
               </div>
               <Switch checked={prefs.email_notifications} onCheckedChange={(v) => savePref({ email_notifications: v }, 'email')} disabled={savingPref === 'email'} />
@@ -412,8 +414,8 @@ export default function SettingsPage() {
               <div className="flex items-start gap-2.5">
                 <Bell className="h-4 w-4 mt-0.5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Notifikasi Push</p>
-                  <p className="text-[11px] text-muted-foreground">Pemberitahuan langsung di browser saat sedang aktif.</p>
+                  <p className="text-sm font-semibold text-foreground">{t('pushNotificationsTitle')}</p>
+                  <p className="text-[11px] text-muted-foreground">{t('pushNotificationsDescription')}</p>
                 </div>
               </div>
               <Switch checked={prefs.push_notifications} onCheckedChange={(v) => savePref({ push_notifications: v }, 'push')} disabled={savingPref === 'push'} />
@@ -434,25 +436,23 @@ export default function SettingsPage() {
           <Card className="border border-destructive/30 bg-destructive/[0.03]">
             <CardHeader className="pb-3 border-b border-destructive/20">
               <CardTitle className="text-sm font-bold text-destructive flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4" /> Zona Berbahaya
+                <ShieldAlert className="h-4 w-4" /> {t('dangerZoneTitle')}
               </CardTitle>
-              <CardDescription className="text-[11px]">Tindakan di bawah ini tidak dapat dibatalkan.</CardDescription>
+              <CardDescription className="text-[11px]">{t('dangerZoneDescription')}</CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    {isOwner ? 'Hapus Workspace' : 'Keluar dari Workspace'}
+                    {isOwner ? t('deleteWorkspaceTitle') : t('leaveWorkspaceTitle')}
                   </p>
                   <p className="text-[11px] text-muted-foreground mt-0.5">
-                    {isOwner
-                      ? 'Menghapus workspace akan menghapus semua proyek, tugas, dan catatan di dalamnya secara permanen.'
-                      : 'Anda akan kehilangan akses ke semua proyek dan tugas di workspace ini.'}
+                    {isOwner ? t('deleteWorkspaceDescription') : t('leaveWorkspaceDescription')}
                   </p>
                 </div>
                 <Button variant="destructive" size="sm" className="gap-1.5 shrink-0" onClick={() => setConfirmOpen(true)}>
                   {isOwner ? <Trash2 className="h-3.5 w-3.5" /> : <LogOut className="h-3.5 w-3.5" />}
-                  {isOwner ? 'Hapus' : 'Keluar'}
+                  {isOwner ? t('deleteButton') : t('leaveButton')}
                 </Button>
               </div>
             </CardContent>
@@ -465,21 +465,21 @@ export default function SettingsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
               <ShieldAlert className="h-5 w-5" />
-              {isOwner ? 'Hapus workspace ini?' : 'Keluar dari workspace ini?'}
+              {isOwner ? t('deleteWorkspaceConfirmTitle') : t('leaveWorkspaceConfirmTitle')}
             </DialogTitle>
             <DialogDescription>
               {isOwner
-                ? `"${currentWorkspace?.name}" beserta semua proyek, tugas, dan catatannya akan dihapus permanen. Ini tidak dapat dibatalkan.`
-                : `Anda tidak akan bisa mengakses "${currentWorkspace?.name}" lagi kecuali diundang ulang.`}
+                ? t('deleteWorkspaceConfirmDescription').replace('{name}', currentWorkspace?.name || '')
+                : t('leaveWorkspaceConfirmDescription').replace('{name}', currentWorkspace?.name || '')}
             </DialogDescription>
           </DialogHeader>
           <div className="flex gap-2 pt-2">
             <Button variant="outline" className="flex-1" disabled={confirmBusy} onClick={() => setConfirmOpen(false)}>
-              Batal
+              {t('cancelButton')}
             </Button>
             <Button variant="destructive" className="flex-1 gap-1.5" disabled={confirmBusy} onClick={handleDangerConfirm}>
               {confirmBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
-              {isOwner ? 'Hapus Permanen' : 'Ya, Keluar'}
+              {isOwner ? t('deletePermanentlyButton') : t('confirmLeaveButton')}
             </Button>
           </div>
         </DialogContent>

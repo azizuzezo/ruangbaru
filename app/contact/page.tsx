@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Building2, Send, Check, MessageSquare } from 'lucide-react';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { SiteFooter } from '@/components/landing/SiteFooter';
+import { useT } from '@/lib/i18n/useT';
 
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
 
 export default function ContactPage() {
+  const t = useT('marketingPages');
   const [nama, setNama] = useState('');
   const [email, setEmail] = useState('');
   const [pesan, setPesan] = useState('');
@@ -19,11 +21,11 @@ export default function ContactPage() {
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!nama.trim() || !pesan.trim()) {
-      setError('Mohon lengkapi nama dan pesan Anda.');
+      setError(t('contactErrorRequired'));
       return;
     }
     if (!email.includes('@')) {
-      setError('Alamat email tidak valid.');
+      setError(t('contactErrorInvalidEmail'));
       return;
     }
     setError('');
@@ -44,18 +46,16 @@ export default function ContactPage() {
             transition={{ duration: 0.5 }}
           >
             <p className="text-sm font-semibold" style={{ color: BLUE }}>
-              Kontak
+              {t('contactEyebrow')}
             </p>
             <h1
               className="mt-3 text-3xl font-semibold tracking-tight text-neutral-950 sm:text-4xl"
               style={{ letterSpacing: '-0.02em' }}
             >
-              Hubungi Kami
+              {t('contactHeroTitle')}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-neutral-600">
-              Punya pertanyaan, masukan, atau ingin menjajaki kerja sama? Kami senang mendengar dari
-              Anda. RuangBaru masih di tahap awal pengembangan, jadi setiap masukan sangat berarti
-              untuk arah produk ke depan.
+              {t('contactHeroBody')}
             </p>
           </motion.div>
 
@@ -65,11 +65,10 @@ export default function ContactPage() {
               <div className="rounded-2xl border border-neutral-200 p-6">
                 <div className="flex items-center gap-2.5 text-sm font-semibold" style={{ color: BLUE }}>
                   <Mail className="h-4 w-4" />
-                  Dukungan
+                  {t('contactSupportTitle')}
                 </div>
                 <p className="mt-3 text-sm leading-7 text-neutral-600">
-                  Butuh bantuan menggunakan RuangBaru atau menemukan kendala? Kirim email ke tim
-                  dukungan kami dan kami akan membalas secepat yang kami bisa.
+                  {t('contactSupportBody')}
                 </p>
                 <a
                   href="mailto:halo@ruangbaru.my.id"
@@ -84,18 +83,17 @@ export default function ContactPage() {
               <div className="rounded-2xl border border-neutral-200 p-6">
                 <div className="flex items-center gap-2.5 text-sm font-semibold" style={{ color: TEAL }}>
                   <Building2 className="h-4 w-4" />
-                  Pertanyaan bisnis & kerja sama
+                  {t('contactBusinessTitle')}
                 </div>
                 <p className="mt-3 text-sm leading-7 text-neutral-600">
-                  Untuk pertanyaan bisnis, kemitraan, atau peluang kerja sama, hubungi kami juga
-                  melalui email yang sama. RuangBaru adalah produk yang dibuat oleh{' '}
+                  {t('contactBusinessBodyBefore')}{' '}
                   <a
                     href="https://duacincin.id"
                     target="_blank"
                     rel="noreferrer"
                     className="font-medium text-neutral-800 underline-offset-2 hover:underline"
                   >
-                    Duacincin (duacincin.id)
+                    {t('contactBusinessLinkText')}
                   </a>
                   .
                 </p>
@@ -116,10 +114,10 @@ export default function ContactPage() {
                 className="text-lg font-semibold tracking-tight text-neutral-950 sm:text-xl"
                 style={{ letterSpacing: '-0.02em' }}
               >
-                Kirim pesan
+                {t('contactFormTitle')}
               </h2>
               <p className="mt-2 text-sm leading-6 text-neutral-600">
-                Isi formulir di bawah ini dan kami akan menghubungi Anda kembali melalui email.
+                {t('contactFormSubtitle')}
               </p>
 
               <AnimatePresence mode="wait">
@@ -140,10 +138,10 @@ export default function ContactPage() {
                       <Check className="h-6 w-6" />
                     </motion.div>
                     <p className="mt-4 text-base font-semibold text-emerald-800">
-                      Terima kasih! Pesan Anda sudah kami terima.
+                      {t('contactFormSuccessTitle')}
                     </p>
                     <p className="mt-1.5 text-sm leading-6 text-emerald-700">
-                      Kami akan membalas melalui email yang Anda berikan secepatnya.
+                      {t('contactFormSuccessBody')}
                     </p>
                   </motion.div>
                 ) : (
@@ -157,39 +155,39 @@ export default function ContactPage() {
                   >
                     <div>
                       <label htmlFor="nama" className="mb-1.5 block text-sm font-medium text-neutral-700">
-                        Nama
+                        {t('contactFormNameLabel')}
                       </label>
                       <input
                         id="nama"
                         type="text"
                         value={nama}
                         onChange={(e) => setNama(e.target.value)}
-                        placeholder="Nama Anda"
+                        placeholder={t('contactFormNamePlaceholder')}
                         className={inputClass}
                       />
                     </div>
                     <div>
                       <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-neutral-700">
-                        Email
+                        {t('contactFormEmailLabel')}
                       </label>
                       <input
                         id="email"
                         type="email"
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="email@perusahaan.com"
+                        placeholder={t('contactFormEmailPlaceholder')}
                         className={inputClass}
                       />
                     </div>
                     <div>
                       <label htmlFor="pesan" className="mb-1.5 block text-sm font-medium text-neutral-700">
-                        Pesan
+                        {t('contactFormMessageLabel')}
                       </label>
                       <textarea
                         id="pesan"
                         value={pesan}
                         onChange={(e) => setPesan(e.target.value)}
-                        placeholder="Tuliskan pesan Anda di sini..."
+                        placeholder={t('contactFormMessagePlaceholder')}
                         rows={5}
                         className="w-full rounded-xl border border-neutral-200 px-3.5 py-2.5 text-sm focus:border-[#106CD8] focus:outline-none"
                       />
@@ -211,7 +209,7 @@ export default function ContactPage() {
                       style={{ background: BLUE }}
                     >
                       <Send className="h-4 w-4" />
-                      Kirim Pesan
+                      {t('contactFormSubmitButton')}
                     </button>
                   </motion.form>
                 )}

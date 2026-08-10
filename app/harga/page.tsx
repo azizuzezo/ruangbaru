@@ -6,6 +6,7 @@ import { motion, useInView } from 'framer-motion';
 import { ArrowRight, Check, Tag } from 'lucide-react';
 import { MarketingHeader } from '@/components/marketing/MarketingHeader';
 import { SiteFooter } from '@/components/landing/SiteFooter';
+import { useT } from '@/lib/i18n/useT';
 
 const BLUE = '#106CD8';
 const TEAL = '#10B29F';
@@ -29,61 +30,62 @@ function FadeIn({ children, delay = 0, className = '' }: {
 
 const PLANS = [
   {
-    name: 'Gratis',
-    price: 'Rp 0',
-    per: '/ selamanya',
+    name: 'pricingPlanFreeName',
+    price: 'pricingPlanFreePrice',
+    per: 'pricingPlanFreePer',
     highlight: false,
-    tagline: 'Untuk tim kecil memulai',
+    tagline: 'pricingPlanFreeTagline',
     features: [
-      'Hingga 5 anggota',
-      '3 proyek aktif',
-      'Tugas & catatan dasar',
-      'Kalender tim',
-      'Dukungan komunitas',
+      'pricingPlanFreeFeature1',
+      'pricingPlanFreeFeature2',
+      'pricingPlanFreeFeature3',
+      'pricingPlanFreeFeature4',
+      'pricingPlanFreeFeature5',
     ],
-    cta: 'Mulai gratis',
+    cta: 'pricingPlanFreeCta',
     href: '/register',
     note: null,
   },
   {
-    name: 'Pro',
-    price: 'Rp 99.000',
-    per: '/ bulan',
+    name: 'pricingPlanProName',
+    price: 'pricingPlanProPrice',
+    per: 'pricingPlanProPer',
     highlight: true,
-    tagline: 'Untuk tim yang sudah kepentok limit Gratis',
+    tagline: 'pricingPlanProTagline',
     features: [
-      'Anggota tidak terbatas',
-      'Proyek tidak terbatas',
-      'Semua fitur Gratis',
-      'Riwayat aktivitas lengkap',
-      'Ekspor data (CSV)',
-      'Prioritas respons dukungan',
+      'pricingPlanProFeature1',
+      'pricingPlanProFeature2',
+      'pricingPlanProFeature3',
+      'pricingPlanProFeature4',
+      'pricingPlanProFeature5',
+      'pricingPlanProFeature6',
     ],
-    cta: 'Coba Pro',
+    cta: 'pricingPlanProCta',
     href: '/register',
-    note: 'Harga dapat berubah selama tahap awal pengembangan',
+    note: 'pricingPlanProNote',
   },
   {
-    name: 'Khusus',
-    price: 'Hubungi',
-    per: 'kami',
+    name: 'pricingPlanCustomName',
+    price: 'pricingPlanCustomPrice',
+    per: 'pricingPlanCustomPer',
     highlight: false,
-    tagline: 'Untuk perusahaan & enterprise',
+    tagline: 'pricingPlanCustomTagline',
     features: [
-      'Semua fitur Pro',
-      'SLA dukungan dedikasi',
-      'Onboarding terdampingi',
-      'Pelatihan tim',
-      'Opsi privat deployment',
-      'Kontrak khusus',
+      'pricingPlanCustomFeature1',
+      'pricingPlanCustomFeature2',
+      'pricingPlanCustomFeature3',
+      'pricingPlanCustomFeature4',
+      'pricingPlanCustomFeature5',
+      'pricingPlanCustomFeature6',
     ],
-    cta: 'Hubungi kami',
+    cta: 'pricingPlanCustomCta',
     href: '/contact',
     note: null,
   },
 ];
 
 export default function HargaPage() {
+  const t = useT('marketingFeatures');
   return (
     <div className="min-h-screen bg-white antialiased">
       <MarketingHeader />
@@ -94,11 +96,10 @@ export default function HargaPage() {
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5, ease: E }}>
             <h1 className="text-[clamp(1.9rem,3.6vw,2.75rem)] font-semibold tracking-tight text-neutral-900" style={{ lineHeight: 1.2 }}>
-              Harga yang tidak butuh formulir "hubungi sales" cuma buat lihat angka.
+              {t('pricingHeroTitle')}
             </h1>
             <p className="mt-4 text-lg text-neutral-600 max-w-xl mx-auto">
-              Tiga plan, angkanya ada di halaman ini. Plan Gratis tidak punya
-              tanggal habis — Anda bayar lebih hanya kalau memang butuh lebih.
+              {t('pricingHeroSubtitle')}
             </p>
           </motion.div>
         </div>
@@ -119,21 +120,21 @@ export default function HargaPage() {
                   {plan.highlight && (
                     <span className="absolute -top-3.5 left-1/2 -translate-x-1/2 rounded-full px-4 py-1 text-xs font-bold text-white whitespace-nowrap"
                       style={{ background: BLUE }}>
-                      Direkomendasikan
+                      {t('pricingBadgeRecommended')}
                     </span>
                   )}
 
                   <div>
-                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">{plan.name}</p>
-                    <p className="mt-1 text-sm text-neutral-500">{plan.tagline}</p>
+                    <p className="text-xs font-bold uppercase tracking-wider text-neutral-400">{t(plan.name)}</p>
+                    <p className="mt-1 text-sm text-neutral-500">{t(plan.tagline)}</p>
                     <div className="mt-4 flex items-baseline gap-1.5">
                       <span className="text-4xl font-bold tracking-tight text-neutral-900">
-                        {plan.price}
+                        {t(plan.price)}
                       </span>
-                      <span className="text-sm text-neutral-500">{plan.per}</span>
+                      <span className="text-sm text-neutral-500">{t(plan.per)}</span>
                     </div>
                     {plan.note && (
-                      <p className="mt-1.5 text-[11px] text-neutral-400">* {plan.note}</p>
+                      <p className="mt-1.5 text-[11px] text-neutral-400">* {t(plan.note)}</p>
                     )}
                   </div>
 
@@ -141,7 +142,7 @@ export default function HargaPage() {
                     {plan.features.map((f) => (
                       <li key={f} className="flex items-start gap-2.5">
                         <Check className="mt-0.5 h-4 w-4 shrink-0" style={{ color: plan.highlight ? BLUE : TEAL }} />
-                        <span className="text-sm text-neutral-700">{f}</span>
+                        <span className="text-sm text-neutral-700">{t(f)}</span>
                       </li>
                     ))}
                   </ul>
@@ -157,7 +158,7 @@ export default function HargaPage() {
                         style={{ background: plan.highlight ? BLUE : undefined }}
                         whileHover={{ opacity: plan.highlight ? 0.9 : 1, scale: plan.highlight ? 1.01 : 1 }}
                         whileTap={{ scale: 0.99 }}>
-                        {plan.cta}
+                        {t(plan.cta)}
                       </motion.button>
                     </Link>
                   </div>
@@ -173,7 +174,7 @@ export default function HargaPage() {
         <div className="mx-auto max-w-4xl">
           <FadeIn className="mb-10 text-center">
             <h2 className="text-[clamp(1.3rem,2.2vw,1.7rem)] font-semibold text-neutral-900">
-              Baris per baris, biar tidak ada yang kelewat
+              {t('pricingTableSectionTitle')}
             </h2>
           </FadeIn>
           <FadeIn delay={0.1}>
@@ -181,31 +182,31 @@ export default function HargaPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-neutral-100">
-                    <th className="px-6 py-4 text-left font-semibold text-neutral-900">Fitur</th>
-                    {['Gratis', 'Pro', 'Khusus'].map(p => (
+                    <th className="px-6 py-4 text-left font-semibold text-neutral-900">{t('pricingTableColFeature')}</th>
+                    {['pricingPlanFreeName', 'pricingPlanProName', 'pricingPlanCustomName'].map(p => (
                       <th key={p} className="px-6 py-4 text-center font-semibold text-neutral-900"
-                        style={{ color: p === 'Pro' ? BLUE : undefined }}>{p}</th>
+                        style={{ color: p === 'pricingPlanProName' ? BLUE : undefined }}>{t(p)}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {[
-                    { label: 'Anggota tim', values: ['Maks. 5', 'Tidak terbatas', 'Tidak terbatas'] },
-                    { label: 'Proyek aktif', values: ['3', 'Tidak terbatas', 'Tidak terbatas'] },
-                    { label: 'Papan kanban', values: ['✓', '✓', '✓'] },
-                    { label: 'Catatan & editor', values: ['✓', '✓', '✓'] },
-                    { label: 'Kalender tim', values: ['✓', '✓', '✓'] },
-                    { label: 'Riwayat aktivitas', values: ['30 hari', 'Tidak terbatas', 'Tidak terbatas'] },
-                    { label: 'Ekspor data', values: ['—', 'CSV', 'CSV + JSON'] },
-                    { label: 'Dukungan', values: ['Komunitas', 'Prioritas', 'Dedikasi'] },
-                    { label: 'SLA', values: ['—', '—', '✓'] },
+                    { label: 'pricingTableRowMembersLabel', values: ['pricingTableMembersMax5', 'pricingTableUnlimited', 'pricingTableUnlimited'] },
+                    { label: 'pricingTableRowProjectsLabel', values: ['3', 'pricingTableUnlimited', 'pricingTableUnlimited'] },
+                    { label: 'pricingTableRowKanbanLabel', values: ['✓', '✓', '✓'] },
+                    { label: 'pricingTableRowNotesLabel', values: ['✓', '✓', '✓'] },
+                    { label: 'pricingTableRowCalendarLabel', values: ['✓', '✓', '✓'] },
+                    { label: 'pricingTableRowHistoryLabel', values: ['pricingTableHistory30Days', 'pricingTableUnlimited', 'pricingTableUnlimited'] },
+                    { label: 'pricingTableRowExportLabel', values: ['—', 'CSV', 'CSV + JSON'] },
+                    { label: 'pricingTableRowSupportLabel', values: ['pricingTableSupportCommunity', 'pricingTableSupportPriority', 'pricingTableSupportDedicated'] },
+                    { label: 'pricingTableRowSlaLabel', values: ['—', '—', '✓'] },
                   ].map((row, i) => (
                     <tr key={row.label} className={i % 2 === 0 ? 'bg-white' : 'bg-neutral-50/50'}>
-                      <td className="px-6 py-3.5 text-neutral-700">{row.label}</td>
+                      <td className="px-6 py-3.5 text-neutral-700">{t(row.label)}</td>
                       {row.values.map((v, vi) => (
                         <td key={vi} className="px-6 py-3.5 text-center"
                           style={{ color: v === '✓' ? TEAL : v === '—' ? '#D1D5DB' : '#374151', fontWeight: v === '✓' ? 700 : 400 }}>
-                          {v}
+                          {t(v)}
                         </td>
                       ))}
                     </tr>
@@ -222,13 +223,9 @@ export default function HargaPage() {
         <div className="mx-auto max-w-2xl">
           <FadeIn>
             <div className="rounded-2xl border border-neutral-200 bg-white p-8 text-center">
-              <p className="text-sm font-semibold uppercase tracking-wider text-neutral-400 mb-3">Kenapa harganya bisa berubah nanti</p>
+              <p className="text-sm font-semibold uppercase tracking-wider text-neutral-400 mb-3">{t('pricingHonestLabel')}</p>
               <p className="text-neutral-600 leading-7">
-                Rp 99.000/bulan untuk Pro adalah harga tahap awal — kami belum
-                tahu pasti berapa biaya server saat pengguna bertambah banyak.
-                Kalau naik, kami kabari minimal 30 hari sebelumnya, dan tim
-                yang gabung sekarang <strong>tetap di harga ini</strong>, bukan
-                ikut harga baru.
+                {t('pricingHonestText1')}<strong>{t('pricingHonestTextStrong')}</strong>{t('pricingHonestText2')}
               </p>
             </div>
           </FadeIn>
@@ -240,20 +237,20 @@ export default function HargaPage() {
         <div className="mx-auto max-w-2xl text-center">
           <FadeIn>
             <h2 className="text-[clamp(1.5rem,2.6vw,2.15rem)] font-semibold text-neutral-900">
-              Coba plan Gratis dulu — upgrade cuma kalau memang perlu.
+              {t('pricingCtaTitle')}
             </h2>
-            <p className="mt-3 text-neutral-600">Tidak perlu kartu kredit untuk mulai.</p>
+            <p className="mt-3 text-neutral-600">{t('pricingCtaSubtitle')}</p>
             <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
               <Link href="/register">
                 <motion.button
                   className="inline-flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-semibold text-white"
                   style={{ background: BLUE }}
                   whileHover={{ opacity: 0.88 }} whileTap={{ scale: 0.97 }}>
-                  Buat workspace gratis <ArrowRight className="h-4 w-4" />
+                  {t('pricingCtaButton')} <ArrowRight className="h-4 w-4" />
                 </motion.button>
               </Link>
               <Link href="/cara-kerja" className="text-sm font-medium text-neutral-500 hover:text-neutral-800 transition-colors">
-                Cara kerja RuangBaru →
+                {t('pricingCtaHowLink')}
               </Link>
             </div>
           </FadeIn>
