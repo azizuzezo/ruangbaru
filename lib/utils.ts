@@ -1,6 +1,7 @@
 import { type ClassValue, clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 import { format, formatDistanceToNow, isToday, isYesterday, isTomorrow } from 'date-fns';
+import { id as idLocale } from 'date-fns/locale';
 import type { TaskStatus, TaskPriority } from '@/types';
 
 export function cn(...inputs: ClassValue[]) {
@@ -25,9 +26,10 @@ export function formatDateTime(date: string | Date | null): string {
   return format(d, "MMM d, yyyy 'at' h:mm a");
 }
 
-export function formatRelativeTime(date: string | Date | null): string {
+/** "5 minutes ago". Pass the UI locale so Indonesian users read "5 menit yang lalu". */
+export function formatRelativeTime(date: string | Date | null, locale: 'id' | 'en' = 'en'): string {
   if (!date) return '';
-  return formatDistanceToNow(new Date(date), { addSuffix: true });
+  return formatDistanceToNow(new Date(date), { addSuffix: true, locale: locale === 'id' ? idLocale : undefined });
 }
 
 // File size formatter

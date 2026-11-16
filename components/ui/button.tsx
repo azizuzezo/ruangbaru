@@ -2,6 +2,7 @@ import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
+import { Spinner } from "@/components/ui/spinner"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-lg text-sm font-medium ring-offset-background transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0 active:scale-[0.98]",
@@ -44,17 +45,37 @@ export interface ButtonProps
   extends React.ButtonHTMLAttributes<HTMLButtonElement>,
     VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  /**
+   * Shows the shared spinner in place of the leading icon and blocks
+   * repeat clicks while an async action runs. Ignored with `asChild`.
+   */
+  loading?: boolean
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
+  ({ className, variant, size, asChild = false, loading = false, disabled, children, ...props }, ref) => {
+    if (asChild) {
+      return (
+        <Slot className={cn(buttonVariants({ variant, size, className }))} ref={ref} {...props}>
+          {children}
+        </Slot>
+      )
+    }
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+      <button
+        className={cn(
+          buttonVariants({ variant, size, className }),
+          // The spinner takes the leading icon's slot so the label does not jump.
+          loading && "[&>svg]:hidden"
+        )}
         ref={ref}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
         {...props}
-      />
+      >
+        {loading && <Spinner />}
+        {children}
+      </button>
     )
   }
 )

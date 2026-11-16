@@ -32,6 +32,8 @@
   --color-ring: var(--ring);
   --color-sidebar-bg: var(--sidebar-bg);
   --color-sidebar-border: var(--sidebar-border);
+  --color-hero: var(--hero);
+  --color-hero-foreground: var(--hero-foreground);
 }
 
 /* ============================================================
@@ -148,6 +150,11 @@
   --sidebar-border: oklch(0.91 0.004 264);
 
   --radius: 0.5rem;
+
+  /* Dashboard hero panel: the brand blue at full strength, white text
+     (5.0:1). Kept as its own token so dark mode can deepen it. */
+  --hero: #106CD8;
+  --hero-foreground: #FFFFFF;
 }
 
 /* ============================================================
@@ -187,6 +194,10 @@
 
   --sidebar-bg: #0D1627;
   --sidebar-border: #1E2C44;
+
+  /* Deep brand blue: white text stays above 9:1 on the dark shell. */
+  --hero: #0E3C78;
+  --hero-foreground: #FFFFFF;
 }
 
 /* One restrained brand wash on the shell gives the dark theme depth
@@ -199,9 +210,14 @@
 /* ============================================================
    BASE STYLES
    ============================================================ */
-* {
-  box-sizing: border-box;
-  border-color: var(--border);
+/* In the base layer so Tailwind's border-colour utilities (layered) can
+   override it. Unlayered, this default silently beat every
+   `border-primary/30`, `border-transparent`, `hover:border-*` in the app. */
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
 }
 
 html {
@@ -278,8 +294,10 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* Brand gradient background */
+/* Primary CTA weight: a shallow ramp inside the brand blue, never
+   the old blue-to-purple wash (off-brand, antislop R-01). */
 .gradient-brand {
-  background: linear-gradient(135deg, oklch(0.50 0.25 270), oklch(0.55 0.25 304));
+  background: linear-gradient(135deg, #2480E0, #0D59B4);
 }
 
 /* Glow effect */
@@ -334,6 +352,23 @@ h1, h2, h3, h4, h5, h6 {
 .kanban-scroll::-webkit-scrollbar-thumb:hover {
   background: var(--muted-foreground);
 }
+
+/* Kanban columns scroll on their own so every column lines up to the
+   same height and long columns never stretch the page. */
+.kanban-col-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+.kanban-col-scroll:hover { scrollbar-color: var(--border) transparent; }
+.kanban-col-scroll::-webkit-scrollbar { width: 6px; }
+.kanban-col-scroll::-webkit-scrollbar-thumb { background: transparent; border-radius: 9999px; }
+.kanban-col-scroll:hover::-webkit-scrollbar-thumb { background: var(--border); }
+
+/* Edge fade only on the side that still has hidden columns: it tells
+   the user the board continues without an extra control. */
+.board-fade-right { mask-image: linear-gradient(to right, #000 calc(100% - 48px), transparent); }
+.board-fade-left { mask-image: linear-gradient(to left, #000 calc(100% - 48px), transparent); }
+.board-fade-both { mask-image: linear-gradient(to right, transparent, #000 48px, #000 calc(100% - 48px), transparent); }
 
 /* Loading bar slide for dashboard section skeletons */
 @keyframes skeleton-slide {

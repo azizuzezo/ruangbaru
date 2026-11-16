@@ -3,19 +3,23 @@
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useUIStore } from '@/lib/stores/ui-store';
 import { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import {
-  CheckSquare, Search, Plus, Filter, LayoutGrid,
-  ListTodo, Loader2, ArrowUpDown, ChevronRight, Calendar
+  CheckSquare, Search, Plus, LayoutGrid, ListTodo, Calendar, Settings2,
 } from 'lucide-react';
+import { Spinner } from '@/components/ui/spinner';
+import { Segmented } from '@/components/ui/segmented';
+import { LinkPendingIcon } from '@/components/layout/NavFeedback';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { createClient } from '@/lib/supabase/client';
 import { toast } from 'sonner';
 import type { Task, Project, TaskStatus, TaskPriority } from '@/types';
-import { cn, extractMentionIds } from '@/lib/utils';
+import { extractMentionIds } from '@/lib/utils';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { KanbanBoard } from '@/components/tasks/KanbanBoard';
+import { KanbanBoard, KanbanSkeleton } from '@/components/tasks/KanbanBoard';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
@@ -28,7 +32,7 @@ import { notifyCollaborationEmail } from '@/lib/client/notify-email';
 export default function TasksPage() {
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setTaskDetailOpen } = useUIStore();
-  const { statuses, doneKeys, defaultKey } = useTaskStatuses(currentWorkspace?.id);
+  const { statuses, doneKeys, defaultKey, loading: statusesLoading } = useTaskStatuses(currentWorkspace?.id);
   const { fields: customFields } = useCustomFields(currentWorkspace?.id);
   const t = useT('tasks');
   const tc = useT('common');
@@ -40,12 +44,19 @@ export default function TasksPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  // Deep links from the dashboard: ?new=1 opens the create form, ?mine=1
+  // filters to the user's tasks, ?col=<key> brings that column into view.
+  // Params stay in the URL: they are part of the page's segment key, so
+  // stripping them would remount the page and undo what they just set.
+  const searchParams = useSearchParams();
+  const [onlyMine, setOnlyMine] = useState(() => searchParams.get('mine') === '1');
+  const [focusColumn] = useState<string | null>(() => searchParams.get('col'));
   // Kanban is the default view (matches user_preferences.default_view's own
   // DB default) — a per-user override to 'list' is read below if one exists.
   const [view, setView] = useState<'list' | 'board'>('board');
 
   // Create task modal form state
-  const [createOpen, setCreateOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(() => searchParams.get('new') === '1');
   const [title, setTitle] = useState('');
   const [projectId, setProjectId] = useState('');
   const [status, setStatus] = useState<TaskStatus>('');
@@ -75,6 +86,11 @@ export default function TasksPage() {
   }, [currentWorkspace]);
 
   const supabase = createClient();
+
+  const openCreateIn = (statusKey: TaskStatus) => {
+    setStatus(statusKey);
+    setCreateOpen(true);
+  };
 
   // Load tasks, projects and members
   const loadTasksAndProjects = async () => {
@@ -131,7 +147,8 @@ export default function TasksPage() {
       .eq('user_id', currentUser.id)
       .maybeSingle()
       .then(({ data }: { data: { default_view: string } | null }) => {
-        if (data?.default_view === 'list') setView('list');
+        // A ?col= deep link asked for the board; it wins over the saved view.
+        if (data?.default_view === 'list' && !focusColumn) setView('list');
       });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentUser]);
@@ -257,6 +274,8 @@ export default function TasksPage() {
       })
       .eq('id', taskId);
     if (error) {
+      // Put the card back where it was so the board never shows an unsaved move.
+      if (previous) setTasks((prev) => prev.map((t) => (t.id === taskId ? previous : t)));
       toast.error(t('moveErrorToast'));
       return;
     }
@@ -274,8 +293,10 @@ export default function TasksPage() {
   };
 
   const filteredTasks = tasks.filter((t) =>
-    t.title.toLowerCase().includes(searchQuery.toLowerCase())
+    t.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    (!onlyMine || (currentUser && t.assignee_id === currentUser.id))
   );
+  const boardLoading = loading || statusesLoading;
 
   return (
     <div className="space-y-6">
@@ -441,70 +462,93 @@ export default function TasksPage() {
                 </div>
               )}
 
-              <Button type="submit" className="w-full h-10 mt-2 text-xs font-bold" style={{ background: '#106CD8' }} disabled={creating || !title.trim()}>
-                {creating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    {t('creatingButton')}
-                  </>
-                ) : (
-                  <>
-                    <Plus className="mr-2 h-4 w-4" />
-                    {t('createButton')}
-                  </>
-                )}
+              <Button type="submit" className="mt-2 h-11 w-full rounded-xl text-sm font-semibold" loading={creating} disabled={!title.trim()}>
+                <Plus />
+                {creating ? t('creatingButton') : t('createButton')}
               </Button>
             </form>
           </DialogContent>
         </Dialog>
       </div>
 
-      {/* Filter, Search & View toggle */}
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <div className="relative flex-1 max-w-sm">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+      {/* Search, owner filter & view toggle */}
+      <div className="flex flex-wrap items-center gap-2.5">
+        <div className="relative basis-full sm:min-w-[200px] sm:max-w-sm sm:flex-1 sm:basis-auto">
+          <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
           <Input
+            type="search"
+            aria-label={t('searchPlaceholder')}
             placeholder={t('searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 h-9"
+            className="h-11 rounded-xl pl-10"
           />
         </div>
-        <div className="inline-flex items-center rounded-lg border border-border bg-card p-0.5">
-          <button
-            onClick={() => changeView('list')}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors',
-              view === 'list' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <ListTodo className="h-3.5 w-3.5" /> {t('viewListLabel')}
-          </button>
-          <button
-            onClick={() => changeView('board')}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-semibold transition-colors',
-              view === 'board' ? 'bg-primary/10 text-primary' : 'text-muted-foreground hover:text-foreground',
-            )}
-          >
-            <LayoutGrid className="h-3.5 w-3.5" /> {t('viewBoardLabel')}
-          </button>
-        </div>
+        <Segmented
+          id="owner"
+          value={onlyMine ? 'mine' : 'all'}
+          onChange={(v) => setOnlyMine(v === 'mine')}
+          options={[
+            { value: 'all', label: t('filterAll') },
+            { value: 'mine', label: t('filterMine') },
+          ]}
+        />
+        <Segmented
+          id="view"
+          className="ml-auto"
+          value={view}
+          onChange={(v) => changeView(v as 'list' | 'board')}
+          options={[
+            { value: 'board', label: t('viewBoardLabel'), icon: LayoutGrid },
+            { value: 'list', label: t('viewListLabel'), icon: ListTodo },
+          ]}
+        />
       </div>
 
-      {/* Tasks listing list */}
-      {loading ? (
-        <div className="space-y-3">
+      {/* Tasks: board or list */}
+      {view === 'board' && boardLoading ? (
+        <KanbanSkeleton />
+      ) : loading ? (
+        <div className="space-y-3" aria-busy="true">
+          <p className="flex items-center gap-2 text-xs font-semibold text-primary"><Spinner className="size-4" /> {t('boardLoading')}</p>
           {[...Array(5)].map((_, i) => (
-            <Skeleton key={i} className="h-16 rounded-xl" />
+            <Skeleton key={i} className="h-16 rounded-2xl" />
           ))}
         </div>
+      ) : view === 'board' && statuses.length === 0 ? (
+        <EmptyState
+          icon={LayoutGrid}
+          title={t('noColumnsTitle')}
+          description={t('noColumnsDesc')}
+          action={
+            <Button asChild variant="outline" size="sm" className="h-10 rounded-xl px-4">
+              <Link href={`/${currentWorkspace?.slug}/settings`}>
+                <LinkPendingIcon icon={Settings2} /> {t('noColumnsAction')}
+              </Link>
+            </Button>
+          }
+          className="mx-auto max-w-lg"
+        />
       ) : view === 'board' ? (
         <KanbanBoard
           tasks={filteredTasks}
           columns={statuses}
           onTaskClick={(id) => setTaskDetailOpen(true, id)}
           onMove={handleMove}
+          onAdd={projects.length > 0 ? openCreateIn : undefined}
+          focusColumn={focusColumn}
+        />
+      ) : filteredTasks.length === 0 && tasks.length > 0 ? (
+        <EmptyState
+          icon={Search}
+          title={t('noMatchTitle')}
+          description={t('noMatchDesc')}
+          action={
+            <Button variant="outline" size="sm" className="h-10 rounded-xl px-4" onClick={() => { setSearchQuery(''); setOnlyMine(false); }}>
+              {t('filterAll')}
+            </Button>
+          }
+          className="mx-auto max-w-md"
         />
       ) : filteredTasks.length === 0 ? (
         <EmptyState

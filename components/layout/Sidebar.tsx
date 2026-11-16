@@ -27,6 +27,7 @@ import { signOut } from '@/lib/supabase/actions';
 import { toast } from 'sonner';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
 import { useT } from '@/lib/i18n/useT';
+import { LinkPendingIcon } from '@/components/layout/NavFeedback';
 
 export function Sidebar() {
   const t = useT('appLayout');
@@ -173,7 +174,7 @@ export function Sidebar() {
                       transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                     />
                   )}
-                  <Icon className={cn("h-4 w-4 shrink-0 relative z-10", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
+                  <LinkPendingIcon icon={Icon} className={cn("h-4 w-4 shrink-0 relative z-10", isActive ? "text-primary" : "text-muted-foreground group-hover:text-foreground")} />
                   {!sidebarCollapsed && <span className="relative z-10">{item.label}</span>}
 
                   {/* Tooltip for collapsed mode */}

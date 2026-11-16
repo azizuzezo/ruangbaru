@@ -8,6 +8,7 @@ import { useUIStore } from '@/lib/stores/ui-store';
 import { cn } from '@/lib/utils';
 import { LayoutDashboard, FolderKanban, CheckSquare, CalendarDays, Plus } from 'lucide-react';
 import { useT } from '@/lib/i18n/useT';
+import { LinkPendingIcon } from '@/components/layout/NavFeedback';
 
 /**
  * Mobile-only bottom navigation with a centered floating action button.
@@ -69,7 +70,7 @@ function NavTab({
         active ? 'text-primary' : 'text-muted-foreground'
       )}
     >
-      <Icon className={cn('h-5 w-5', active && 'text-primary')} />
+      <LinkPendingIcon icon={Icon} className={cn('h-5 w-5', active && 'text-primary')} />
       <span>{label}</span>
     </Link>
   );

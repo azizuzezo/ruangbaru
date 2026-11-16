@@ -2,6 +2,7 @@
 
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Plus, Search, Folder, FolderOpen, Globe, ShieldAlert, Sparkles, Loader2, MoreVertical, Trash, Edit, Archive, ArchiveRestore } from 'lucide-react';
 import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -25,7 +26,11 @@ export default function ProjectsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showArchived, setShowArchived] = useState(false);
 
-  const [createOpen, setCreateOpen] = useState(false);
+  const searchParams = useSearchParams();
+  // "Proyek baru" on the dashboard links here with ?new=1. The param is left
+  // in the URL on purpose: search params are part of the page's segment key,
+  // so stripping them remounts the page and closes the form again.
+  const [createOpen, setCreateOpen] = useState(() => searchParams.get('new') === '1');
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [color, setColor] = useState('#106CD8');

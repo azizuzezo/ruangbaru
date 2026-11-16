@@ -1044,3 +1044,59 @@ them; matching each file's existing convention kept the diff smaller and
 the pattern consistent with code already there.
 
 **Verification:** `npx tsc --noEmit` and `npm run build` both clean.
+
+## 2026-11-17: Dashboard + Kanban redesign, section loading, click feedback
+
+Ask: make the dashboard look new, make the Kanban board much tidier and better
+designed, and add section loading and motion, since nothing showed a spinner on
+click.
+
+**Direction** (antislop, during): ENERGY 3 / RHYTHM 2 / MOTION 2, using the
+existing brand (Poppins, #106CD8 blue, teal, yellow only as a highlight).
+
+- **Identity motif: FlowBar** (`components/tasks/FlowBar.tsx`). The workspace's
+  Kanban columns as one segmented bar in each column's own colour. Used in the
+  dashboard hero tray (legend links to `/tasks?col=key`), above the board
+  (legend scrolls to the column) and thin on each project row.
+- **Dashboard** (`app/(app)/[workspace]/dashboard/page.tsx` + `components/dashboard/`).
+  Hero = the one full-strength blue surface (`--hero`/`--hero-foreground`
+  tokens; dark uses #0E3C78 so white text stays readable). Stats use `CountUp`
+  (respects reduced motion). The yellow pill appears only when the user has
+  overdue tasks. The "nested rooms" SVG motif sits behind the hero; stat tiles
+  are solid so it never shows through numbers. Sections: Fokus Saya (tick →
+  spring check → strike → row folds away), Linimasa, Proyek (FlowBar per
+  project), Rapat (only when there are any), Aktivitas (live rows slide in),
+  Tim. The old fabricated-demo dict keys were removed.
+- **Section loading**: `useSectionData(enabled, load, deps, initial)`. Loading
+  is derived from a settled key, so effects only set state from async
+  callbacks (React Compiler lint clean; uses React 19.2 `useEffectEvent`).
+  `SectionCard` swaps skeleton / error+retry / content with a crossfade and
+  spins the header icon while loading.
+- **Kanban** (`components/tasks/KanbanBoard.tsx`): `onMove` may return a promise
+  (the card shows a spinner until it resolves); `onAdd(status)` puts a "+" in
+  every column; `focusColumn` scrolls a column into view. dnd-kit's
+  `role/tabIndex` are stripped from the sortable wrapper (it made a second,
+  dead tab stop per card). The board reverts on drag cancel, and the tasks page
+  reverts the card when the save fails.
+- **Click feedback**: `Spinner`, `Button loading`, `NavFeedback`
+  (`useLinkStatus` icon swap in Sidebar/BottomNav/dashboard links +
+  `RouteProgress` 3px top bar started on same-origin link clicks), and
+  `[workspace]/loading.tsx` so dynamic routes paint immediately.
+- **Deep links**: `?new=1` (tasks/projects), `?mine=1`, `?col=`. They are read
+  into initial state via `useSearchParams`. Do NOT strip them with
+  `history.replaceState`: search params are part of the page segment key, so
+  the page remounts and the dialog closes again (found while verifying).
+- **Fixes found on the way**: global `* { border-color }` moved into
+  `@layer base` (it overrode every border-colour utility); `.gradient-brand`
+  was blue→purple, now a blue-only ramp; `formatRelativeTime(date, locale)`
+  gives Indonesian relative times; em dashes/emoji removed from dashboard copy.
+
+**Verification:** `tsc` clean, `next build` clean, no new lint problems (the
+remaining ones predate this change). Click-through with Playwright against the
+live workspace, all writes blocked or answered by the browser: section skeletons
++ spinners, forced 500 → section error → "Coba lagi" recovers, collapse, row →
+detail sheet, sidebar click → progress bar + icon spinner, hero "Tugas baru" /
+"Proyek baru" open their forms, legend scroll, arrows, "Tugas saya" filter,
+column "+" presets the column, list no-match state, keyboard Enter on a card,
+tick → row folds (mocked PATCH), drag → saving spinner → clears (mocked PATCH).
+Light/dark × desktop/mobile screenshots with no horizontal overflow.

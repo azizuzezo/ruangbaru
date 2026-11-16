@@ -9,6 +9,7 @@ export const commonDict = {
     navSignup: 'Coba Gratis',
     homeAriaLabel: 'RuangBaru — beranda',
     errorContactSupport: 'Terjadi kesalahan. Silakan hubungi dukungan kami.',
+    loadingPage: 'Membuka halaman…',
   },
   en: {
     navFitur: 'Features',
@@ -20,5 +21,6 @@ export const commonDict = {
     navSignup: 'Try Free',
     homeAriaLabel: 'RuangBaru — home',
     errorContactSupport: 'An error occurred. Please contact support.',
+    loadingPage: 'Opening page…',
   },
 };

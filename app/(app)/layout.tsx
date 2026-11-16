@@ -11,6 +11,7 @@ import { CommandPalette } from '@/components/layout/CommandPalette';
 import { TaskDetailSheet } from '@/components/tasks/TaskDetailSheet';
 import { PageTransition } from '@/components/layout/PageTransition';
 import { BottomNav } from '@/components/layout/BottomNav';
+import { RouteProgress } from '@/components/layout/NavFeedback';
 import { TourProvider } from '@/components/tour/TourProvider';
 import { createClient } from '@/lib/supabase/client';
 import { Loader2 } from 'lucide-react';
@@ -121,6 +122,9 @@ export default function AppLayout({
   return (
     <TourProvider>
     <div className="flex h-screen overflow-hidden bg-background">
+      {/* Page-change progress bar */}
+      <RouteProgress />
+
       {/* Sidebar navigation */}
       <Sidebar />
 

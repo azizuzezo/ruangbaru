@@ -5,7 +5,7 @@
 > without losing history. **Read this first.** Update it whenever you make a
 > meaningful change.
 
-Last updated: 2026-08-10 (session 23 — sanitized every error notification/response so raw backend/DB error text never reaches the client; session 22 — admin panel can now delete workspaces and user accounts (moderation/violations); session 21 — per-workspace API keys + public REST API + docs page, fixed a middleware bug redirecting /api/v1/* to /login; session 20 — loading-state audit across 13 async actions with zero click feedback; session 19 — admin-configurable default assignee; session 18 — task-level collaborators; session 17 — auto-backlog tasks, @mentions, task attachments, Team/Settings permission lockdown, workspace slug editing + ownership transfer, project collaborators, drag-and-drop cursor-offset fix; session 16 — full bilingual ID/EN support via header toggle, no URL routing, covers marketing + auth + entire authenticated app; session 15 — merged main back to the SaaS app and deployed to Vercel production; session 14 — custom Kanban columns + custom fields; session 13 — app redesign; session 12 — mock-client hang fix; session 11 — login/register redesign; session 10 — Go backend port; session 9 — landing site redesign. See ENGINEERING.md for the task-by-task log)
+Last updated: 2026-11-17 (session 24, dashboard + Kanban redesign, per-section loading, click/navigation spinners; session 23 — sanitized every error notification/response so raw backend/DB error text never reaches the client; session 22 — admin panel can now delete workspaces and user accounts (moderation/violations); session 21 — per-workspace API keys + public REST API + docs page, fixed a middleware bug redirecting /api/v1/* to /login; session 20 — loading-state audit across 13 async actions with zero click feedback; session 19 — admin-configurable default assignee; session 18 — task-level collaborators; session 17 — auto-backlog tasks, @mentions, task attachments, Team/Settings permission lockdown, workspace slug editing + ownership transfer, project collaborators, drag-and-drop cursor-offset fix; session 16 — full bilingual ID/EN support via header toggle, no URL routing, covers marketing + auth + entire authenticated app; session 15 — merged main back to the SaaS app and deployed to Vercel production; session 14 — custom Kanban columns + custom fields; session 13 — app redesign; session 12 — mock-client hang fix; session 11 — login/register redesign; session 10 — Go backend port; session 9 — landing site redesign. See ENGINEERING.md for the task-by-task log)
 
 ---
 
@@ -636,6 +636,16 @@ npm run build        # production build (keep green)
 Multiple lockfiles warning is benign (a stray `C:\Users\USer\package-lock.json`).
 
 ---
+
+### Done in session 24 (2026-11-17), Dashboard + Kanban redesign, loading and click feedback
+Full log in ENGINEERING.md. Summary:
+- **Dashboard** rebuilt from `components/dashboard/` (DashboardHero, SectionCard, panels). Solid brand-blue hero (`--hero` token, deeper in dark) with greeting, count-up stats and the **FlowBar** (`components/tasks/FlowBar.tsx`): tasks per Kanban column in each column's colour. FlowBar is the identity motif, reused above the board and on each project row.
+- **Per-section loading**: `lib/hooks/useSectionData.ts`, each section has its own query, skeleton, header spinner, error and "Coba lagi". One failing query no longer blanks the page.
+- **Kanban**: tinted columns of equal height that scroll internally (lg), "+" per column (opens the form preset to that column), title-first cards with due chips and priority flags, a saving spinner on a dropped card, a dashed drop slot, TouchSensor, `KanbanSkeleton`, and a no-columns empty state.
+- **Click feedback**: `components/ui/spinner.tsx` (the only spinner), `Button loading` prop, `components/layout/NavFeedback.tsx` (`LinkPendingIcon`/`LinkPendingHint` via `useLinkStatus` + `RouteProgress` top bar), `app/(app)/[workspace]/loading.tsx`.
+- **Deep links**: `/tasks?new=1|mine=1|col=<key>`, `/projects?new=1`. **Gotcha:** do not strip these with `history.replaceState`. Search params are part of the page segment key, so changing them remounts the page and undoes the state.
+- **Bug fixed:** the global `* { border-color }` was unlayered and beat every Tailwind border-colour utility; it now lives in `@layer base`.
+- Verified against the live workspace with a read-only Playwright click-through (writes were blocked or answered locally), `tsc` and `next build` clean.
 
 ## 8. Working agreement / preferences
 - Production-grade only: no mock data, no demo shortcuts. Choose the scalable option.
