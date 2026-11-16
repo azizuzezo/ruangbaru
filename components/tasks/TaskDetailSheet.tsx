@@ -460,27 +460,32 @@ export function TaskDetailSheet() {
           </div>
         ) : task ? (
           <div className="space-y-6">
-            <SheetHeader className="text-left border-b border-border pb-4">
-              <SheetTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
-                <CheckSquare className="h-4 w-4 text-primary" /> {t('sheetTitle')}
-              </SheetTitle>
-              <SheetDescription className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
-                <span className="flex items-center gap-1.5 font-semibold text-foreground">
-                  <Avatar className="h-4 w-4">
-                    <AvatarImage src={task.creator?.avatar_url || ''} />
-                    <AvatarFallback className="text-[7px]">{getInitials(task.creator?.full_name || task.creator?.email)}</AvatarFallback>
-                  </Avatar>
-                  {t('createdByPrefix')} {task.creator?.full_name || task.creator?.email || t('someoneFallback')}
+            <SheetHeader className="text-left border-b border-border pb-5">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <CheckSquare className="h-5 w-5" />
                 </span>
-                <span className="text-muted-foreground">· {t('detailUpdatedAtPrefix')} {formatRelativeTime(task.updated_at)}</span>
-              </SheetDescription>
+                <div className="min-w-0 flex-1">
+                  <SheetTitle className="text-base font-bold tracking-tight text-foreground">{t('sheetTitle')}</SheetTitle>
+                  <SheetDescription className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
+                    <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-2 py-0.5 font-semibold text-foreground">
+                      <Avatar className="h-4 w-4">
+                        <AvatarImage src={task.creator?.avatar_url || ''} />
+                        <AvatarFallback className="text-[7px]">{getInitials(task.creator?.full_name || task.creator?.email)}</AvatarFallback>
+                      </Avatar>
+                      {t('createdByPrefix')} {task.creator?.full_name || task.creator?.email || t('someoneFallback')}
+                    </span>
+                    <span className="text-muted-foreground">{t('detailUpdatedAtPrefix')} {formatRelativeTime(task.updated_at)}</span>
+                  </SheetDescription>
+                </div>
+              </div>
             </SheetHeader>
 
             {/* Collaborators — sits at the top of the task, above everything
                 else, since looping someone in is meant to be a one-click
                 action rather than buried under other fields. */}
-            <div className="flex items-center gap-2 pt-4">
-              <span className="text-[10px] font-bold text-muted-foreground uppercase">{t('collaboratorsLabel')}</span>
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/20 px-3 py-2.5">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">{t('collaboratorsLabel')}</span>
               <div className="flex items-center -space-x-2">
                 {collaborators.map((c) => (
                   <div key={c.id} className="group relative">
@@ -516,7 +521,7 @@ export function TaskDetailSheet() {
             </div>
 
             {/* Form editors */}
-            <div className="space-y-4">
+            <div className="space-y-4 rounded-2xl border border-border bg-card/50 p-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-muted-foreground uppercase">{t('detailTitleLabel')}</label>
                 <Input
@@ -684,28 +689,30 @@ export function TaskDetailSheet() {
                 </div>
               )}
 
-              <Button onClick={handleSave} disabled={saving} className="w-full h-9 text-xs">
-                {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1" /> : <Save className="h-3.5 w-3.5 mr-1" />}
+              <Button onClick={handleSave} disabled={saving} className="h-10 w-full text-xs font-bold shadow-sm">
+                {saving ? <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" /> : <Save className="mr-1 h-3.5 w-3.5" />}
                 {t('saveButton')}
               </Button>
             </div>
 
             {/* Comments log */}
-            <div className="border-t border-border pt-4 space-y-4">
-              <h4 className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-1">
-                <MessageSquare className="h-3.5 w-3.5" /> {t('commentsHeader')} ({comments.length})
+            <div className="space-y-4 rounded-2xl border border-border bg-card/50 p-4">
+              <h4 className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                <MessageSquare className="h-3.5 w-3.5 text-primary" /> {t('commentsHeader')} ({comments.length})
               </h4>
-              
-              <div className="space-y-3 max-h-48 overflow-y-auto divide-y divide-border/40 pr-1">
-                {comments.map((c) => (
-                  <div key={c.id} className="pt-2 text-xs flex gap-2.5 items-start">
-                    <div className="h-6 w-6 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-[9px] shrink-0 mt-0.5">
+
+              <div className="max-h-56 space-y-3 overflow-y-auto pr-1">
+                {comments.length === 0 ? (
+                  <p className="py-4 text-center text-[11px] text-muted-foreground/70">{t('commentPlaceholder')}</p>
+                ) : comments.map((c) => (
+                  <div key={c.id} className="flex gap-2.5 text-xs">
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-bold text-[9px] text-primary">
                       {c.user?.full_name ? c.user.full_name[0].toUpperCase() : '?'}
                     </div>
-                    <div>
+                    <div className="min-w-0 flex-1 rounded-xl border border-border bg-card px-3 py-2">
                       <div className="flex items-center gap-1.5 font-bold text-foreground">
                         <span>{c.user?.full_name || t('commentAuthorFallback')}</span>
-                        <span className="text-[8px] text-muted-foreground font-normal">{formatRelativeTime(c.created_at)}</span>
+                        <span className="text-[8px] font-normal text-muted-foreground">{formatRelativeTime(c.created_at)}</span>
                       </div>
                       <RichTextContent
                         content={c.body}
@@ -731,7 +738,7 @@ export function TaskDetailSheet() {
                     if (empty !== commentEmpty) setCommentEmpty(empty);
                   }}
                   onSubmit={() => handlePostComment()}
-                  className="border border-input"
+                  className="border border-input bg-card"
                   mentionUsers={mentionUsers}
                 />
                 <div className="flex justify-end">

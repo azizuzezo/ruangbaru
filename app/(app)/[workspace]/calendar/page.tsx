@@ -281,23 +281,23 @@ export default function CalendarPage() {
         transition={{ duration: 0.4, ease: E }}
         className="relative overflow-hidden rounded-2xl border border-border bg-card p-4 shadow-sm sm:p-5"
       >
-        <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full opacity-[0.07] blur-2xl" style={{ background: '#106CD8' }} />
+        <div aria-hidden className="pointer-events-none absolute -right-10 -top-16 h-40 w-40 rounded-full opacity-[0.07] blur-2xl" style={{ background: 'var(--primary)' }} />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-4">
           <div className="flex flex-col">
             <h1 className="font-display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl capitalize leading-none">
               {format(currentDate, 'MMMM', { locale: dfnsLocale })}
             </h1>
-            <span className="text-xs font-semibold text-neutral-400 mt-1 tracking-wider">
+            <span className="text-xs font-semibold text-muted-foreground mt-1 tracking-wider">
               {format(currentDate, 'yyyy')}
             </span>
           </div>
 
-          <div className="flex items-center gap-0.5 bg-neutral-50/70 rounded-xl border border-border p-1 shadow-sm">
+          <div className="flex items-center gap-0.5 bg-muted/50 rounded-xl border border-border p-1 shadow-sm">
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-lg text-neutral-500 hover:text-foreground hover:bg-white"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent"
               onClick={handlePrevMonth}
             >
               <ChevronLeft className="h-4 w-4" />
@@ -305,7 +305,7 @@ export default function CalendarPage() {
             <Button
               variant="ghost"
               size="sm"
-              className="h-8 rounded-lg font-semibold text-xs text-neutral-600 hover:text-foreground hover:bg-white px-2.5"
+              className="h-8 rounded-lg font-semibold text-xs text-foreground/80 hover:text-foreground hover:bg-accent px-2.5"
               onClick={handleToday}
             >
               {t('todayButton')}
@@ -313,7 +313,7 @@ export default function CalendarPage() {
             <Button
               variant="ghost"
               size="icon"
-              className="h-8 w-8 rounded-lg text-neutral-500 hover:text-foreground hover:bg-white"
+              className="h-8 w-8 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent"
               onClick={handleNextMonth}
             >
               <ChevronRight className="h-4 w-4" />
@@ -370,13 +370,13 @@ export default function CalendarPage() {
           >
             <span className={cn(
               'h-1.5 w-1.5 rounded-full transition-all',
-              showTasks ? 'bg-[#10B29F] scale-100' : 'bg-neutral-300 scale-75'
+              showTasks ? 'bg-[#10B29F] scale-100' : 'bg-muted-foreground/30 scale-75'
             )} />
             {t('tasksToggleLabel')}
           </button>
 
           {/* View Toggle */}
-          <div className="relative flex items-center rounded-xl border border-border bg-neutral-50/50 p-0.5">
+          <div className="relative flex items-center rounded-xl border border-border bg-muted/40 p-0.5">
             {(['month', 'agenda'] as const).map((v) => (
               <button
                 key={v}
@@ -390,7 +390,7 @@ export default function CalendarPage() {
                   <motion.div
                     layoutId="activeViewTab"
                     className="absolute inset-0 -z-10 rounded-lg"
-                    style={{ background: '#106CD8' }}
+                    style={{ background: 'var(--primary)' }}
                     transition={{ type: 'spring', stiffness: 380, damping: 30 }}
                   />
                 )}
@@ -402,7 +402,7 @@ export default function CalendarPage() {
           <Button
             size="sm"
             className="gap-1.5 rounded-xl font-bold shadow-sm hover:opacity-90"
-            style={{ background: '#106CD8' }}
+            style={{ background: 'var(--primary)' }}
             onClick={() => openCreate(new Date())}
           >
             <Plus className="h-4 w-4" /> {t('createEventButton')}
@@ -419,9 +419,9 @@ export default function CalendarPage() {
         }} onDragEnd={handleDragEnd}>
           <div className="overflow-hidden rounded-2xl border border-border bg-card shadow-sm">
             {/* Day of Week Header */}
-            <div className="grid grid-cols-7 border-b border-border bg-neutral-50/70 py-3 text-center text-[10px] font-semibold uppercase tracking-wider text-neutral-500">
+            <div className="grid grid-cols-7 border-b border-border bg-muted/50 py-3 text-center text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
               {DOW.map((d, i) => (
-                <div key={d} className={cn(i === 0 && 'text-red-500', i === 6 && 'text-neutral-500')}>{d}</div>
+                <div key={d} className={cn(i === 0 && 'text-red-500', i === 6 && 'text-muted-foreground')}>{d}</div>
               ))}
             </div>
             
@@ -460,8 +460,8 @@ export default function CalendarPage() {
                           isToday(day) 
                             ? 'bg-[#106CD8] text-white shadow-sm shadow-[#106CD8]/30 scale-105' 
                             : holiday || day.getDay() === 0 
-                              ? 'text-red-500 hover:bg-red-50' 
-                              : 'text-neutral-700 hover:bg-neutral-100'
+                              ? 'text-red-500 hover:bg-red-500/10' 
+                              : 'text-foreground hover:bg-neutral-100'
                         )}>
                           {format(day, 'd')}
                         </span>
@@ -470,7 +470,7 @@ export default function CalendarPage() {
                         <div className="flex flex-1 flex-col gap-1.5 overflow-hidden pr-8">
                           {/* Holiday indicator */}
                           {holiday && (
-                            <div className="mb-0.5 flex items-center gap-1.5 truncate rounded-md bg-red-50/80 px-2 py-0.5 border border-red-100/50 max-w-full" title={holiday}>
+                            <div className="mb-0.5 flex items-center gap-1.5 truncate rounded-md bg-red-500/10 px-2 py-0.5 border border-red-500/20 max-w-full" title={holiday}>
                               <span className="h-1 w-1 rounded-full bg-red-500 shrink-0" />
                               <span className="truncate text-[8px] font-semibold text-red-600 leading-tight uppercase tracking-wider">
                                 {holiday}
@@ -480,7 +480,7 @@ export default function CalendarPage() {
                           
                           {occ.slice(0, 3).map((o) => <EventChip key={o.key} occ={o} onClick={() => openEdit(o.event)} />)}
                           {occ.length > 3 && (
-                            <span className="px-2 text-[9px] font-bold text-neutral-400 bg-neutral-50 rounded py-0.5 self-start">
+                            <span className="px-2 text-[9px] font-bold text-muted-foreground bg-muted rounded py-0.5 self-start">
                               +{occ.length - 3} {t('moreEventsSuffix')}
                             </span>
                           )}
@@ -490,7 +490,7 @@ export default function CalendarPage() {
                               key={tk.id}
                               onClick={(e) => { e.stopPropagation(); setTaskDetailOpen(true, tk.id); }}
                               whileHover={{ y: -0.5, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}
-                              className="truncate rounded-md border border-dashed border-amber-200 bg-amber-50/30 hover:bg-amber-50/60 px-2 py-0.5 text-left text-[10px] font-bold text-amber-800 transition-all flex items-center gap-1.5"
+                              className="truncate rounded-md border border-dashed border-amber-500/20 bg-amber-500/5 hover:bg-amber-500/10 px-2 py-0.5 text-left text-[10px] font-bold text-amber-800 transition-all flex items-center gap-1.5"
                             >
                               <span className="h-1.5 w-1.5 rounded-full bg-amber-500 shrink-0" />
                               <span className="truncate flex-1">{tk.title}</span>
@@ -538,16 +538,16 @@ function DayCell({ dayKey, inMonth, today, weekend, onCreate, children }: {
   return (
     <div ref={setNodeRef} onClick={onCreate}
       className={cn(
-        'group relative flex min-h-[108px] cursor-pointer flex-col border-b border-r border-neutral-200/60 p-2 transition-all duration-200 hover:bg-neutral-50/50',
-        !inMonth && 'opacity-30 bg-neutral-50/10', 
-        weekend && inMonth && 'bg-neutral-50/20',
+        'group relative flex min-h-[108px] cursor-pointer flex-col border-b border-r border-border p-2 transition-all duration-200 hover:bg-muted/40',
+        !inMonth && 'opacity-30 bg-muted/10', 
+        weekend && inMonth && 'bg-muted/20',
         today && 'bg-[#106CD8]/[0.02] ring-1 ring-inset ring-[#106CD8]/10', 
         isOver && 'bg-[#106CD8]/10 ring-1 ring-inset ring-[#106CD8]/30'
       )}>
       {children}
       
       {/* Plus icon on hover */}
-      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex h-5 w-5 items-center justify-center rounded-lg bg-neutral-100 text-neutral-500 hover:bg-primary hover:text-white shadow-sm">
+      <div className="absolute bottom-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex h-5 w-5 items-center justify-center rounded-lg bg-muted text-muted-foreground hover:bg-primary hover:text-white shadow-sm">
         <Plus className="h-3.5 w-3.5" />
       </div>
     </div>
@@ -613,14 +613,14 @@ function AgendaView({ events, wsSlug, onEdit }: { events: CalendarEvent[]; wsSlu
         return (
           <div key={k} className="flex gap-6">
             <div className="w-16 shrink-0 text-right pt-1.5">
-              <p className={cn('text-[10px] font-semibold uppercase tracking-wider', isToday(d) ? 'text-primary' : 'text-neutral-400')}>{format(d, 'EEE', { locale: dfnsLocale })}</p>
-              <p className={cn('font-display text-2xl font-semibold mt-0.5', isToday(d) ? 'text-primary' : 'text-neutral-800')}>{format(d, 'd')}</p>
+              <p className={cn('text-[10px] font-semibold uppercase tracking-wider', isToday(d) ? 'text-primary' : 'text-muted-foreground')}>{format(d, 'EEE', { locale: dfnsLocale })}</p>
+              <p className={cn('font-display text-2xl font-semibold mt-0.5', isToday(d) ? 'text-primary' : 'text-foreground')}>{format(d, 'd')}</p>
             </div>
-            <div className="flex-1 space-y-3 border-l border-neutral-100 pl-6 relative pb-1">
+            <div className="flex-1 space-y-3 border-l border-border pl-6 relative pb-1">
               {/* Vertical timeline node */}
               <div className={cn(
-                'absolute -left-[5px] top-[18px] h-2.5 w-2.5 rounded-full border-2 border-white shadow-sm',
-                isToday(d) ? 'bg-[#106CD8] ring-4 ring-[#106CD8]/15' : 'bg-neutral-300'
+                'absolute -left-[5px] top-[18px] h-2.5 w-2.5 rounded-full border-2 border-card shadow-sm',
+                isToday(d) ? 'bg-[#106CD8] ring-4 ring-[#106CD8]/15' : 'bg-muted-foreground/30'
               )} />
               
               {items.map((o) => {
