@@ -25,9 +25,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <LocaleProvider>
         <ThemeProvider
           attribute="class"
-          defaultTheme="light"
-          forcedTheme="light"
-          enableSystem={false}
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
         >
           {children}
           <Toaster

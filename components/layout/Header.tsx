@@ -28,6 +28,7 @@ import type { Notification } from '@/types';
 import { formatRelativeTime } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LanguageSwitcher } from '@/components/i18n/LanguageSwitcher';
+import { ThemeToggle } from '@/components/ui/theme-toggle';
 import { useT } from '@/lib/i18n/useT';
 
 export function Header() {
@@ -230,8 +231,9 @@ export function Header() {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Language toggle */}
+        {/* Language + theme toggles */}
         <LanguageSwitcher className="hidden md:inline-flex" />
+        <ThemeToggle />
 
         {/* Workspace Quick Actions */}
         <Badge variant="success" className="gap-1 hidden md:inline-flex py-1 px-2.5">

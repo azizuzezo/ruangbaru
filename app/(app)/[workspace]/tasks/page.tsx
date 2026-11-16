@@ -20,6 +20,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 import { useCustomFields } from '@/lib/hooks/useCustomFields';
+import { useRealtimeTasks } from '@/lib/hooks/useRealtimeTasks';
 import { useT } from '@/lib/i18n/useT';
 import { RichTextEditor, type RichTextValue } from '@/components/editor/RichTextEditor';
 
@@ -32,6 +33,9 @@ export default function TasksPage() {
   const tc = useT('common');
 
   const [tasks, setTasks] = useState<Task[]>([]);
+  // Live-sync the board: a task created/moved/deleted by a teammate shows up
+  // immediately, no manual refresh needed.
+  useRealtimeTasks(currentWorkspace?.id, setTasks);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -315,10 +319,23 @@ export default function TasksPage() {
                 </div>
               </div>
 
-              {/* No status field here — every new task starts in this
-                  workspace's first column (Backlog by default) automatically;
-                  status only changes afterward, from the board or the task
-                  detail sheet. */}
+              {/* Status is selectable at creation time. It defaults to the
+                  workspace's first Kanban column (see the effect above) but
+                  can be changed here before submitting. */}
+              <div className="space-y-1.5">
+                <label className="text-xs font-semibold text-muted-foreground uppercase">{t('statusLabel')}</label>
+                <select
+                  value={status}
+                  onChange={(e) => setStatus(e.target.value as TaskStatus)}
+                  disabled={creating}
+                  className="w-full h-10 rounded-lg border border-input bg-background px-3 py-2 text-xs font-semibold text-neutral-850 focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {statuses.map((s) => (
+                    <option key={s.key} value={s.key}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className="space-y-1.5">
                 <label className="text-xs font-semibold text-muted-foreground uppercase">{t('priorityLabel')}</label>
                 <select
