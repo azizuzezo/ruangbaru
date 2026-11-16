@@ -2,6 +2,7 @@ export const tasksDict = {
   id: {
     // Shared field labels (page.tsx create form + TaskDetailSheet edit form)
     projectLabel: 'Proyek',
+    noProject: 'Tanpa proyek',
     statusLabel: 'Status',
     priorityLabel: 'Prioritas',
     dueDateLabel: 'Tenggat Waktu',
@@ -84,6 +85,7 @@ export const tasksDict = {
   en: {
     // Shared field labels (page.tsx create form + TaskDetailSheet edit form)
     projectLabel: 'Project',
+    noProject: 'No project',
     statusLabel: 'Status',
     priorityLabel: 'Priority',
     dueDateLabel: 'Due Date',

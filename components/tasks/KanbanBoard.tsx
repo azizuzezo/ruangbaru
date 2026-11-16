@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors,
   closestCorners, type DragStartEvent, type DragEndEvent, type DragOverEvent,
@@ -10,62 +10,92 @@ import {
 } from '@dnd-kit/sortable';
 import { useDroppable } from '@dnd-kit/core';
 import { CSS } from '@dnd-kit/utilities';
-import { Calendar, GripVertical } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, GripVertical, Inbox } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { Task, TaskStatus, TaskStatusDef } from '@/types';
 import { useT } from '@/lib/i18n/useT';
 
-const PRIORITY_STYLES: Record<string, string> = {
-  urgent: 'bg-rose-500/10 text-rose-600',
-  high: 'bg-orange-500/10 text-orange-600',
-  medium: 'bg-amber-500/10 text-amber-600',
-  low: 'bg-sky-500/10 text-sky-600',
+const PRIORITY_STYLES: Record<string, { dot: string; chip: string }> = {
+  urgent: { dot: 'bg-rose-500', chip: 'bg-rose-500/10 text-rose-600' },
+  high: { dot: 'bg-orange-500', chip: 'bg-orange-500/10 text-orange-600' },
+  medium: { dot: 'bg-amber-500', chip: 'bg-amber-500/10 text-amber-600' },
+  low: { dot: 'bg-sky-500', chip: 'bg-sky-500/10 text-sky-600' },
 };
 
 interface KanbanBoardProps {
   tasks: Task[];
-  /** This workspace's Kanban columns, in order — see useTaskStatuses(). */
   columns: TaskStatusDef[];
   onTaskClick: (taskId: string) => void;
-  /** Persist a move. Parent already applied the optimistic state update. */
   onMove: (taskId: string, status: TaskStatus, position: number) => void;
 }
 
-function TaskCard({ task, onClick, dragging }: { task: Task; onClick?: () => void; dragging?: boolean }) {
+function TaskCard({ task, onClick, dragging, overlay }: {
+  task: Task; onClick?: () => void; dragging?: boolean; overlay?: boolean;
+}) {
+  const t = useT('tasks');
+  const overdue = task.due_date && new Date(task.due_date) < new Date(new Date().setHours(0, 0, 0, 0));
+  const priority = task.priority && task.priority !== 'no_priority' ? PRIORITY_STYLES[task.priority] : null;
+
   return (
     <div
+      role={overlay ? undefined : 'button'}
+      tabIndex={overlay ? undefined : 0}
       onClick={onClick}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.(); }
+      }}
       className={cn(
-        'kanban-card group rounded-xl border border-border bg-card p-3 space-y-2 cursor-pointer',
-        dragging && 'opacity-50',
+        'group relative rounded-xl border border-border bg-card p-3.5 shadow-xs transition-all duration-150',
+        'hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-md',
+        'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-card',
+        dragging && 'opacity-40',
+        overlay && '-rotate-1 cursor-grabbing border-primary/40 shadow-xl',
       )}
     >
-      <div className="flex items-start gap-1.5">
-        <GripVertical className="h-3.5 w-3.5 text-muted-foreground/40 shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
-        <h4 className="text-xs font-bold text-foreground leading-snug flex-1">{task.title}</h4>
-      </div>
-      <div className="flex items-center justify-between gap-2 pl-5">
-        <div className="flex items-center gap-1.5">
-          {task.priority && task.priority !== 'no_priority' && (
-            <span className={cn('text-[9px] px-1.5 py-0.5 rounded font-bold uppercase', PRIORITY_STYLES[task.priority])}>
-              {task.priority}
-            </span>
-          )}
-          {task.due_date && (
-            <span className="text-[10px] text-muted-foreground inline-flex items-center gap-0.5">
-              <Calendar className="h-3 w-3" />
-              {new Date(task.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-            </span>
-          )}
-        </div>
-        {task.assignee?.avatar_url ? (
-          <img src={task.assignee.avatar_url} alt="" className="h-5 w-5 rounded-full border border-border object-cover" />
-        ) : task.assignee?.full_name ? (
-          <span className="h-5 w-5 rounded-full bg-primary/10 text-primary text-[9px] font-bold flex items-center justify-center">
-            {task.assignee.full_name[0].toUpperCase()}
+      {/* Project + priority: the project dot is the only colour marker here. */}
+      <div className="mb-2 flex items-center gap-1.5">
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: task.project?.color || '#106CD8' }} />
+        <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-muted-foreground">
+          {task.project?.name || t('noProject')}
+        </span>
+        {priority && (
+          <span className={cn('inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wide', priority.chip)}>
+            <span className={cn('h-1 w-1 rounded-full', priority.dot)} />
+            {task.priority}
           </span>
-        ) : null}
+        )}
       </div>
+
+      <h4 className="text-xs font-bold leading-snug text-foreground">{task.title}</h4>
+
+      <div className="mt-3 flex items-center justify-between gap-2">
+        {task.due_date ? (
+          <span className={cn('inline-flex items-center gap-1 text-[10px] font-medium', overdue ? 'text-rose-600' : 'text-muted-foreground')}>
+            <Calendar className="h-3 w-3" />
+            {new Date(task.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
+          </span>
+        ) : <span />}
+
+        <div className="flex items-center -space-x-1.5">
+          {task.creator && (
+            <span
+              title={`${t('createdByPrefix')} ${task.creator.full_name || task.creator.email}`}
+              className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-muted text-[8px] font-bold text-muted-foreground"
+            >
+              {(task.creator.full_name || task.creator.email || '?')[0].toUpperCase()}
+            </span>
+          )}
+          {task.assignee?.avatar_url ? (
+            <img src={task.assignee.avatar_url} alt="" title={task.assignee.full_name || ''} className="h-5 w-5 rounded-full border-2 border-card object-cover" />
+          ) : task.assignee?.full_name ? (
+            <span title={task.assignee.full_name} className="flex h-5 w-5 items-center justify-center rounded-full border-2 border-card bg-primary/10 text-[9px] font-bold text-primary">
+              {task.assignee.full_name[0].toUpperCase()}
+            </span>
+          ) : null}
+        </div>
+      </div>
+
+      <GripVertical className="absolute right-1 top-3 h-3.5 w-3.5 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
     </div>
   );
 }
@@ -96,24 +126,31 @@ function Column({ id, title, color, tasks, onTaskClick }: {
     <div
       ref={setNodeRef}
       className={cn(
-        'flex w-72 shrink-0 flex-col rounded-2xl border border-dashed border-border bg-muted/30 p-3 transition-colors min-h-[140px]',
-        isOver && 'border-primary/50 bg-primary/5',
+        'flex w-[264px] shrink-0 snap-start flex-col overflow-hidden rounded-2xl border border-border bg-muted/30 transition-colors sm:w-[280px]',
+        isOver && 'border-primary/40 bg-primary/5',
       )}
     >
-      <div className="flex items-center justify-between pb-2.5 mb-1">
-        <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full" style={{ background: color }} />
-          <span className="text-xs font-bold text-foreground">{title}</span>
+      {/* Column colour is a deliberate repeated motif, not decoration. */}
+      <div className="h-1 w-full" style={{ background: color }} />
+      <div className="flex items-center justify-between gap-2 px-3.5 py-3">
+        <div className="flex min-w-0 items-center gap-2">
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: color }} />
+          <span className="truncate text-xs font-bold text-foreground">{title}</span>
         </div>
-        <span className="text-[10px] bg-muted px-2 py-0.5 rounded-full text-muted-foreground font-bold">{tasks.length}</span>
+        <span className="shrink-0 rounded-md border border-border bg-card px-2 py-0.5 text-[10px] font-bold text-muted-foreground">
+          {tasks.length}
+        </span>
       </div>
-      <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
-        <div className="space-y-2.5 flex-1">
+      <SortableContext items={tasks.map((task) => task.id)} strategy={verticalListSortingStrategy}>
+        <div className="flex-1 space-y-2.5 px-2.5 pb-3">
           {tasks.map((task) => (
             <SortableTaskCard key={task.id} task={task} onClick={() => onTaskClick(task.id)} />
           ))}
           {tasks.length === 0 && (
-            <div className="text-center py-6 text-[11px] text-muted-foreground/70 select-none">{t('columnEmptyState')}</div>
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border px-3 py-8 text-center">
+              <Inbox className="h-5 w-5 text-muted-foreground/40" />
+              <span className="text-[11px] text-muted-foreground/70">{t('columnEmptyState')}</span>
+            </div>
           )}
         </div>
       </SortableContext>
@@ -124,12 +161,26 @@ function Column({ id, title, color, tasks, onTaskClick }: {
 export function KanbanBoard({ tasks, columns, onTaskClick, onMove }: KanbanBoardProps) {
   const [items, setItems] = useState<Task[]>(tasks);
   const [activeTask, setActiveTask] = useState<Task | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScroll, setCanScroll] = useState({ left: false, right: false });
 
-  // Keep local board in sync when parent task list changes (load/refetch).
   useEffect(() => setItems(tasks), [tasks]);
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+  // Reflect horizontal overflow so the arrow affordances only appear when useful.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const update = () => setCanScroll({
+      left: el.scrollLeft > 4,
+      right: el.scrollLeft + el.clientWidth < el.scrollWidth - 4,
+    });
+    update();
+    el.addEventListener('scroll', update, { passive: true });
+    window.addEventListener('resize', update);
+    return () => { el.removeEventListener('scroll', update); window.removeEventListener('resize', update); };
+  }, [columns.length]);
 
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
   const fallbackKey = columns[0]?.key ?? 'backlog';
 
   const byStatus = useMemo(() => {
@@ -138,8 +189,8 @@ export function KanbanBoard({ tasks, columns, onTaskClick, onMove }: KanbanBoard
     items
       .slice()
       .sort((a, b) => (a.position ?? 0) - (b.position ?? 0))
-      .forEach((t) => {
-        (map[t.status] ?? (map[fallbackKey] ??= [])).push(t);
+      .forEach((task) => {
+        (map[task.status] ?? (map[fallbackKey] ??= [])).push(task);
       });
     return map;
   }, [items, columns, fallbackKey]);
@@ -163,8 +214,6 @@ export function KanbanBoard({ tasks, columns, onTaskClick, onMove }: KanbanBoard
     const activeCol = columnForId(activeId);
     const overCol = columnForId(overId);
     if (!activeCol || !overCol || activeCol === overCol) return;
-
-    // Move card into the column it's hovering over (status changes live).
     setItems((prev) => prev.map((t) => (t.id === activeId ? { ...t, status: overCol } : t)));
   }
 
@@ -190,7 +239,6 @@ export function KanbanBoard({ tasks, columns, onTaskClick, onMove }: KanbanBoard
       });
     }
 
-    // Fractional position between neighbours so we only write one row.
     const idx = ordered.findIndex((t) => t.id === activeId);
     const prevPos = idx > 0 ? ordered[idx - 1].position ?? 0 : null;
     const nextPos = idx < ordered.length - 1 ? ordered[idx + 1].position ?? 0 : null;
@@ -204,6 +252,8 @@ export function KanbanBoard({ tasks, columns, onTaskClick, onMove }: KanbanBoard
     onMove(activeId, targetStatus, position);
   }
 
+  const scrollBy = (dir: -1 | 1) => scrollRef.current?.scrollBy({ left: dir * 300, behavior: 'smooth' });
+
   return (
     <DndContext
       sensors={sensors}
@@ -212,20 +262,43 @@ export function KanbanBoard({ tasks, columns, onTaskClick, onMove }: KanbanBoard
       onDragOver={handleDragOver}
       onDragEnd={handleDragEnd}
     >
-      <div className="flex gap-3 overflow-x-auto pb-2">
-        {columns.map((col) => (
-          <Column
-            key={col.key}
-            id={col.key}
-            title={col.name}
-            color={col.color}
-            tasks={byStatus[col.key] || []}
-            onTaskClick={onTaskClick}
-          />
-        ))}
+      <div className="space-y-2">
+        {/* Scroll affordance — only rendered when the board actually overflows. */}
+        {(canScroll.left || canScroll.right) && (
+          <div className="flex justify-end gap-1.5">
+            <button
+              onClick={() => scrollBy(-1)}
+              disabled={!canScroll.left}
+              aria-label="Geser ke kiri"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" />
+            </button>
+            <button
+              onClick={() => scrollBy(1)}
+              disabled={!canScroll.right}
+              aria-label="Geser ke kanan"
+              className="flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-primary/30 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-30"
+            >
+              <ChevronRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
+        )}
+        <div ref={scrollRef} className="kanban-scroll flex snap-x gap-3 overflow-x-auto pb-3 pt-1">
+          {columns.map((col) => (
+            <Column
+              key={col.key}
+              id={col.key}
+              title={col.name}
+              color={col.color}
+              tasks={byStatus[col.key] || []}
+              onTaskClick={onTaskClick}
+            />
+          ))}
+        </div>
       </div>
       <DragOverlay>
-        {activeTask ? <TaskCard task={activeTask} dragging /> : null}
+        {activeTask ? <div className="w-[264px]"><TaskCard task={activeTask} overlay /></div> : null}
       </DragOverlay>
     </DndContext>
   );

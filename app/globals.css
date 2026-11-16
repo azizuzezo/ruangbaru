@@ -319,6 +319,22 @@ h1, h2, h3, h4, h5, h6 {
   z-index: -1;
 }
 
+/* Slim, theme-aware scrollbar for the Kanban board */
+.kanban-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+  padding-bottom: 0.75rem;
+}
+.kanban-scroll::-webkit-scrollbar { height: 8px; }
+.kanban-scroll::-webkit-scrollbar-track { background: transparent; }
+.kanban-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 9999px;
+}
+.kanban-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-foreground);
+}
+
 /* Loading bar slide for dashboard section skeletons */
 @keyframes skeleton-slide {
   0% { transform: translateX(-100%); }
