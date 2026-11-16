@@ -115,7 +115,8 @@
    CSS VARIABLES — Light Mode
    ============================================================ */
 :root {
-  --background: oklch(0.99 0 0);
+  /* A faint cool tint keeps the light shell from reading as flat grey. */
+  --background: oklch(0.985 0.004 250);
   --foreground: oklch(0.13 0.01 264);
 
   --card: oklch(1 0 0);
@@ -143,7 +144,7 @@
   --input: oklch(0.91 0.004 264);
   --ring: #106CD8;
 
-  --sidebar-bg: oklch(0.975 0.003 264);
+  --sidebar-bg: oklch(0.975 0.004 250);
   --sidebar-border: oklch(0.91 0.004 264);
 
   --radius: 0.5rem;
@@ -151,38 +152,48 @@
 
 /* ============================================================
    CSS VARIABLES — Dark Mode
+   A deliberate deep-navy scale, not near-black grey. The blue is
+   carried by the surfaces themselves so the theme has identity and
+   text/accents stay legible (antislop R-21, R-25, R-29).
    ============================================================ */
 .dark {
-  --background: oklch(0.10 0.006 264);
-  --foreground: oklch(0.97 0.004 264);
+  --background: #0A1120;
+  --foreground: #E8EEF9;
 
-  --card: oklch(0.145 0.007 264);
-  --card-foreground: oklch(0.97 0.004 264);
+  --card: #121C2E;
+  --card-foreground: #E8EEF9;
 
-  --popover: oklch(0.145 0.007 264);
-  --popover-foreground: oklch(0.97 0.004 264);
+  --popover: #162135;
+  --popover-foreground: #E8EEF9;
 
-  --primary: #3B8FE8;
-  --primary-foreground: #FFFFFF;
+  --primary: #4C9AFF;
+  --primary-foreground: #061223;
 
-  --secondary: oklch(0.20 0.008 264);
-  --secondary-foreground: oklch(0.97 0.004 264);
+  --secondary: #1A2740;
+  --secondary-foreground: #D7E2F4;
 
-  --muted: oklch(0.20 0.008 264);
-  --muted-foreground: oklch(0.60 0.010 264);
+  --muted: #1A2740;
+  --muted-foreground: #9CAECB;
 
-  --accent: oklch(0.20 0.008 264);
-  --accent-foreground: oklch(0.97 0.004 264);
+  --accent: #1D2B45;
+  --accent-foreground: #E8EEF9;
 
-  --destructive: oklch(0.62 0.22 27);
-  --destructive-foreground: oklch(0.97 0.004 264);
+  --destructive: #FF6B6B;
+  --destructive-foreground: #1A0B0B;
 
-  --border: oklch(0.22 0.008 264);
-  --input: oklch(0.22 0.008 264);
-  --ring: #3B8FE8;
+  --border: #263650;
+  --input: #263650;
+  --ring: #4C9AFF;
 
-  --sidebar-bg: oklch(0.12 0.006 264);
-  --sidebar-border: oklch(0.20 0.008 264);
+  --sidebar-bg: #0D1627;
+  --sidebar-border: #1E2C44;
+}
+
+/* One restrained brand wash on the shell gives the dark theme depth
+   without the all-over glow/gradient slop pattern. */
+.dark body {
+  background-image: radial-gradient(70rem 34rem at 50% -12rem, rgb(76 154 255 / 0.10), transparent 62%);
+  background-attachment: fixed;
 }
 
 /* ============================================================
@@ -254,8 +265,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .dark .glass {
-  background: oklch(0.15 0.006 264 / 0.7);
-  border: 1px solid oklch(1 0 0 / 0.08);
+  background: rgb(18 28 46 / 0.7);
+  border: 1px solid rgb(152 174 203 / 0.12);
 }
 
 /* Gradient text */
@@ -308,6 +319,12 @@ h1, h2, h3, h4, h5, h6 {
   z-index: -1;
 }
 
+/* Loading bar slide for dashboard section skeletons */
+@keyframes skeleton-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
 /* Shimmer effect */
 @keyframes shimmer {
   from { background-position: -200% 0; }
@@ -329,7 +346,7 @@ h1, h2, h3, h4, h5, h6 {
   background: linear-gradient(
     90deg,
     var(--muted) 25%,
-    oklch(0.25 0.008 264) 50%,
+    #263650 50%,
     var(--muted) 75%
   );
   background-size: 200% 100%;

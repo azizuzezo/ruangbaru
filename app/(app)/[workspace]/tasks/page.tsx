@@ -23,6 +23,7 @@ import { useCustomFields } from '@/lib/hooks/useCustomFields';
 import { useRealtimeTasks } from '@/lib/hooks/useRealtimeTasks';
 import { useT } from '@/lib/i18n/useT';
 import { RichTextEditor, type RichTextValue } from '@/components/editor/RichTextEditor';
+import { notifyCollaborationEmail } from '@/lib/client/notify-email';
 
 export default function TasksPage() {
   const { currentWorkspace, currentUser } = useWorkspaceStore();
@@ -103,7 +104,7 @@ export default function TasksPage() {
       // Fetch workspace tasks
       const { data: tasksData } = await supabase
         .from('tasks')
-        .select('*, assignee:assignee_id(full_name, avatar_url), project:projects(name, color)')
+        .select('*, assignee:assignee_id(full_name, avatar_url), creator:created_by(id, full_name, avatar_url, email), project:projects(name, color)')
         .eq('workspace_id', currentWorkspace.id)
         .order('created_at', { ascending: false });
 
@@ -166,7 +167,7 @@ export default function TasksPage() {
           description: descriptionRef.current.json,
           description_text: descriptionRef.current.text || null,
         })
-        .select('*, assignee:assignee_id(full_name, avatar_url), project:projects(name, color)')
+        .select('*, assignee:assignee_id(full_name, avatar_url), creator:created_by(id, full_name, avatar_url, email), project:projects(name, color)')
         .single();
 
       if (error) throw error;
@@ -214,6 +215,17 @@ export default function TasksPage() {
         );
       }
 
+      if (mentionIds.length) {
+        notifyCollaborationEmail({
+          workspaceId: currentWorkspace.id,
+          taskId: data.id,
+          recipientIds: mentionIds,
+          kind: 'mention',
+          taskTitle: title.trim(),
+          location: 'description',
+        });
+      }
+
       toast.success(t('createSuccessToast'));
       setTasks((prev) => [data as Task, ...prev]);
       setCreateOpen(false);
@@ -234,6 +246,7 @@ export default function TasksPage() {
 
   // Persist a Kanban drag from the board view.
   const handleMove = async (taskId: string, status: TaskStatus, position: number) => {
+    const previous = tasks.find((t) => t.id === taskId);
     setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status, position } : t)));
     const { error } = await supabase
       .from('tasks')
@@ -243,7 +256,21 @@ export default function TasksPage() {
         completed_at: doneKeys.has(status) ? new Date().toISOString() : null,
       })
       .eq('id', taskId);
-    if (error) toast.error(t('moveErrorToast'));
+    if (error) {
+      toast.error(t('moveErrorToast'));
+      return;
+    }
+    // Let the creator know their task moved columns.
+    if (previous && previous.status !== status && currentWorkspace && previous.creator?.id && previous.creator.id !== currentUser?.id) {
+      notifyCollaborationEmail({
+        workspaceId: currentWorkspace.id,
+        taskId,
+        recipientIds: [previous.creator.id],
+        kind: 'status',
+        taskTitle: previous.title,
+        detail: statuses.find((s) => s.key === status)?.name || status,
+      });
+    }
   };
 
   const filteredTasks = tasks.filter((t) =>
@@ -513,6 +540,12 @@ export default function TasksPage() {
                             <Calendar className="h-3 w-3" />
                             {new Date(task.due_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
                           </span>
+                        </>
+                      )}
+                      {task.creator && (
+                        <>
+                          <span className="h-1 w-1 rounded-full bg-muted-foreground/30" />
+                          <span>{t('createdByPrefix')} {task.creator.full_name || task.creator.email}</span>
                         </>
                       )}
                     </p>

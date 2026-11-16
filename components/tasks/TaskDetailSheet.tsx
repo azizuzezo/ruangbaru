@@ -6,6 +6,8 @@ import { useEffect, useState, useRef } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { createClient } from '@/lib/supabase/client';
 import { RichTextEditor, type RichTextValue } from '@/components/editor/RichTextEditor';
+import { RichTextContent } from '@/components/editor/RichTextContent';
+import { notifyCollaborationEmail } from '@/lib/client/notify-email';
 import type { Task, Profile, TaskComment, TaskAttachment, TaskCollaborator } from '@/types';
 import {
   Loader2, Calendar, CheckSquare, Layers, Trash2,
@@ -86,7 +88,7 @@ export function TaskDetailSheet() {
         // 1. Load task data
         const { data: taskData, error: taskErr } = await supabase
           .from('tasks')
-          .select('*, assignee:assignee_id(id, full_name, avatar_url)')
+          .select('*, assignee:assignee_id(id, full_name, avatar_url), creator:created_by(id, full_name, avatar_url, email)')
           .eq('id', taskDetailId)
           .single();
 
@@ -211,6 +213,32 @@ export function TaskDetailSheet() {
       }
       prevDescriptionMentionIds.current = newMentionIds;
 
+      // Email the people who need to know: newly mentioned users, and the
+      // task creator when the status changed. In-app notifications above
+      // already handle the on-site bell.
+      if (currentWorkspace) {
+        if (addedMentionIds.length) {
+          notifyCollaborationEmail({
+            workspaceId: currentWorkspace.id,
+            taskId: task.id,
+            recipientIds: addedMentionIds,
+            kind: 'mention',
+            taskTitle: title,
+            location: 'description',
+          });
+        }
+        if (status !== task.status && task.creator && task.creator.id !== currentUser?.id) {
+          notifyCollaborationEmail({
+            workspaceId: currentWorkspace.id,
+            taskId: task.id,
+            recipientIds: [task.creator.id],
+            kind: 'status',
+            taskTitle: title,
+            detail: statuses.find((s) => s.key === status)?.name || status,
+          });
+        }
+      }
+
       toast.success(t('saveSuccessToast'));
       // Trigger a window event or update parent list indirectly
       window.dispatchEvent(new Event('task-updated'));
@@ -260,6 +288,31 @@ export function TaskDetailSheet() {
             workspace_id: currentWorkspace.id,
           }))
         );
+      }
+
+      // Email the creator about the reply, plus anyone newly @mentioned.
+      if (currentWorkspace) {
+        const creatorId = task.creator?.id;
+        if (creatorId && creatorId !== currentUser.id) {
+          notifyCollaborationEmail({
+            workspaceId: currentWorkspace.id,
+            taskId: task.id,
+            recipientIds: [creatorId],
+            kind: 'comment',
+            taskTitle: task.title,
+            detail: text.slice(0, 300),
+          });
+        }
+        if (commentMentionIds.length) {
+          notifyCollaborationEmail({
+            workspaceId: currentWorkspace.id,
+            taskId: task.id,
+            recipientIds: commentMentionIds,
+            kind: 'mention',
+            taskTitle: task.title,
+            location: 'comment',
+          });
+        }
       }
 
       commentRef.current = { json: null, text: '' };
@@ -411,8 +464,15 @@ export function TaskDetailSheet() {
               <SheetTitle className="flex items-center gap-2 text-sm font-bold text-foreground">
                 <CheckSquare className="h-4 w-4 text-primary" /> {t('sheetTitle')}
               </SheetTitle>
-              <SheetDescription className="text-[10px]">
-                {t('detailUpdatedAtPrefix')} {formatRelativeTime(task.updated_at)}
+              <SheetDescription className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
+                <span className="flex items-center gap-1.5 font-semibold text-foreground">
+                  <Avatar className="h-4 w-4">
+                    <AvatarImage src={task.creator?.avatar_url || ''} />
+                    <AvatarFallback className="text-[7px]">{getInitials(task.creator?.full_name || task.creator?.email)}</AvatarFallback>
+                  </Avatar>
+                  {t('createdByPrefix')} {task.creator?.full_name || task.creator?.email || t('someoneFallback')}
+                </span>
+                <span className="text-muted-foreground">· {t('detailUpdatedAtPrefix')} {formatRelativeTime(task.updated_at)}</span>
               </SheetDescription>
             </SheetHeader>
 
@@ -647,7 +707,12 @@ export function TaskDetailSheet() {
                         <span>{c.user?.full_name || t('commentAuthorFallback')}</span>
                         <span className="text-[8px] text-muted-foreground font-normal">{formatRelativeTime(c.created_at)}</span>
                       </div>
-                      <p className="text-muted-foreground leading-relaxed mt-0.5 text-[11px]">{c.body_text}</p>
+                      <RichTextContent
+                        content={c.body}
+                        mentionUsers={mentionUsers}
+                        hrefForMention={() => `/${currentWorkspace?.slug || 'dashboard'}/team`}
+                        className="mt-0.5 text-[11px] text-muted-foreground [&_p]:my-0"
+                      />
                     </div>
                   </div>
                 ))}

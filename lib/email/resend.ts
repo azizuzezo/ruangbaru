@@ -94,6 +94,65 @@ export async function sendWorkspaceInvitation(opts: {
   });
 }
 
+/** Someone was @mentioned in a task description or comment. */
+export async function sendMentionEmail(opts: {
+  to: string;
+  actorName: string;
+  taskTitle: string;
+  location: string;
+  link: string;
+}) {
+  if (!resend) throw new Error('RESEND_API_KEY not configured');
+  const actorName = escapeHtml(opts.actorName);
+  const taskTitle = escapeHtml(opts.taskTitle);
+  const location = escapeHtml(opts.location);
+  return resend.emails.send({
+    from: EMAIL_FROM,
+    to: opts.to,
+    subject: `${opts.actorName} menyebut Anda di RuangBaru`,
+    html: shell(
+      'Anda Disebut',
+      `<p><strong>${actorName}</strong> menyebut Anda dalam ${location} pada tugas <strong>${taskTitle}</strong>.</p>
+       <p>Buka tugas tersebut untuk melihat pesan lengkapnya dan membalas.</p>`,
+      { label: 'Buka Tugas', href: opts.link }
+    ),
+  });
+}
+
+/** The task creator is emailed when their task gets a reply or a status change. */
+export async function sendTaskActivityEmail(opts: {
+  to: string;
+  actorName: string;
+  taskTitle: string;
+  kind: 'mention' | 'comment' | 'status';
+  detail?: string;
+  link: string;
+}) {
+  if (!resend) throw new Error('RESEND_API_KEY not configured');
+  const actorName = escapeHtml(opts.actorName);
+  const taskTitle = escapeHtml(opts.taskTitle);
+  const detail = opts.detail ? escapeHtml(opts.detail) : '';
+  const isComment = opts.kind === 'comment';
+  return resend.emails.send({
+    from: EMAIL_FROM,
+    to: opts.to,
+    subject: isComment
+      ? `${opts.actorName} membalas tugas Anda: ${opts.taskTitle}`
+      : `Status tugas Anda berubah: ${opts.taskTitle}`,
+    html: shell(
+      isComment ? 'Ada Balasan pada Tugas Anda' : 'Status Tugas Berubah',
+      isComment
+        ? `<p><strong>${actorName}</strong> menambahkan balasan pada tugas yang Anda buat, <strong>${taskTitle}</strong>.</p>
+           ${detail ? `<div style="margin-top:14px;padding:12px 14px;border-left:3px solid #106CD8;background:#f7f9fc;border-radius:0 8px 8px 0;color:#3a3f4b;">${detail}</div>` : ''}
+           <p>Buka tugas untuk membaca dan membalas.</p>`
+        : `<p><strong>${actorName}</strong> mengubah status tugas yang Anda buat, <strong>${taskTitle}</strong>.</p>
+           ${detail ? `<p>Status baru: <strong>${detail}</strong></p>` : ''}
+           <p>Buka tugas untuk melihat detailnya.</p>`,
+      { label: 'Buka Tugas', href: opts.link }
+    ),
+  });
+}
+
 export async function sendTicketEmail(opts: {
   name: string;
   email: string;

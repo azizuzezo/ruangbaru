@@ -21,6 +21,7 @@ import { JourneyButton } from '@/components/tour/JourneyButton';
 import { usePresence, getPageLabel } from '@/lib/hooks/usePresence';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 import { useRealtimeTasks } from '@/lib/hooks/useRealtimeTasks';
+import { notifyCollaborationEmail } from '@/lib/client/notify-email';
 import { useT } from '@/lib/i18n/useT';
 import type { Task, Project, ActivityLog, Meeting } from '@/types';
 
@@ -202,7 +203,7 @@ export default function DashboardPage() {
         const [tasksRes, projectsRes, membersRes, activityRes, meetingsRes] = await Promise.all([
           supabase
             .from('tasks')
-            .select('id,title,status,priority,due_date,assignee_id,project_id,completed_at, assignee:assignee_id(id,full_name,avatar_url), project:projects(id,name,icon,color)')
+            .select('id,title,status,priority,due_date,assignee_id,project_id,completed_at, assignee:assignee_id(id,full_name,avatar_url), creator:created_by(id,full_name,avatar_url,email), project:projects(id,name,icon,color)')
             .eq('workspace_id', wsId)
             .order('due_date', { ascending: true })
             .limit(300),
@@ -310,9 +311,21 @@ export default function DashboardPage() {
     const { error: updateError } = await supabase.from('tasks').update({ status: doneStatus, completed_at: new Date().toISOString() }).eq('id', taskId);
     if (updateError) {
       setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: 'in_progress', completed_at: null } : t)));
+    } else {
+      const changed = tasks.find((t) => t.id === taskId);
+      if (changed?.creator?.id && changed.creator.id !== currentUser?.id && currentWorkspace) {
+        notifyCollaborationEmail({
+          workspaceId: currentWorkspace.id,
+          taskId,
+          recipientIds: [changed.creator.id],
+          kind: 'status',
+          taskTitle: changed.title,
+          detail: statuses.find((s) => s.is_done)?.name || doneStatus,
+        });
+      }
     }
     setTimeout(() => setCompleting((s) => { const n = new Set(s); n.delete(taskId); return n; }), 600);
-  }, [statuses]);
+  }, [statuses, tasks, currentUser, currentWorkspace]);
 
   if (loading) return <DashboardSkeleton />;
 
@@ -785,27 +798,84 @@ function ActivityRow({ name, action, resource, time, avatarUrl }: {
   );
 }
 
-// ─── Dashboard Skeleton ────────────────────────────────────────────────────────
+// ─── Loading sections ──────────────────────────────────────────────────────────
+// The skeleton mirrors the real section layout so the page does not jump when
+// data arrives, and a labeled progress strip makes the loading unmistakable.
+function SkeletonSection({ label, className, children }: { label: string; className?: string; children: ReactNode }) {
+  return (
+    <div className={cn('overflow-hidden rounded-2xl border border-border bg-card', className)}>
+      <div className="flex items-center gap-2 border-b border-border px-5 py-3.5">
+        <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
+        <span className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">{label}</span>
+      </div>
+      <div className="p-4">{children}</div>
+    </div>
+  );
+}
+
 function DashboardSkeleton() {
   return (
     <div className="space-y-5" aria-busy="true" aria-label="Memuat dashboard">
+      <div className="flex items-center gap-2 text-xs font-semibold text-primary" role="status">
+        <span className="relative flex h-2 w-2">
+          <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
+          <span className="relative inline-flex h-2 w-2 rounded-full bg-primary" />
+        </span>
+        Memuat dashboard…
+        <span className="ml-1 h-0.5 flex-1 overflow-hidden rounded-full bg-primary/10">
+          <span className="block h-full w-1/3 animate-[skeleton-slide_1.2s_ease-in-out_infinite] rounded-full bg-primary/60" />
+        </span>
+      </div>
+
+      {/* Greeting */}
       <div className="rounded-2xl border border-border bg-card px-6 py-5">
-        <Skeleton className="h-3 w-32" />
+        <Skeleton className="h-3 w-28" />
         <Skeleton className="mt-3 h-8 w-64" />
         <Skeleton className="mt-3 h-3 w-80" />
       </div>
+
+      {/* Pulse */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-20 rounded-2xl" />)}
+        {['Proyek aktif', 'Tugas terbuka', 'Selesai', 'Tim'].map((label) => (
+          <SkeletonSection key={label} label={label}>
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-9 w-9 rounded-xl" />
+              <div className="space-y-2"><Skeleton className="h-2.5 w-20" /><Skeleton className="h-6 w-10" /></div>
+            </div>
+          </SkeletonSection>
+        ))}
       </div>
+
+      {/* Main grid */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <div className="space-y-3 lg:col-span-2">
-          <Skeleton className="h-72 rounded-2xl" />
-          <Skeleton className="h-52 rounded-2xl" />
+        <div className="space-y-5 lg:col-span-2">
+          <SkeletonSection label="Fokus Saya">
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-9 rounded-lg" />)}
+            </div>
+          </SkeletonSection>
+          <SkeletonSection label="Linimasa Tim">
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10 rounded-lg" />)}
+            </div>
+          </SkeletonSection>
         </div>
-        <div className="space-y-3">
-          <Skeleton className="h-44 rounded-2xl" />
-          <Skeleton className="h-52 rounded-2xl" />
-          <Skeleton className="h-40 rounded-2xl" />
+        <div className="space-y-5">
+          <SkeletonSection label="Sedang Aktif">
+            <div className="space-y-3">
+              {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-8 rounded-lg" />)}
+            </div>
+          </SkeletonSection>
+          <SkeletonSection label="Aktivitas Tim">
+            <div className="space-y-3">
+              {[...Array(4)].map((_, i) => <Skeleton key={i} className="h-8 rounded-lg" />)}
+            </div>
+          </SkeletonSection>
+          <SkeletonSection label="Proyek">
+            <div className="space-y-3">
+              {[...Array(2)].map((_, i) => <Skeleton key={i} className="h-12 rounded-lg" />)}
+            </div>
+          </SkeletonSection>
         </div>
       </div>
     </div>
