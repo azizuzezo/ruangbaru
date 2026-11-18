@@ -1,6 +1,10 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { resolveApiKey, corsJson, corsOptionsResponse, unauthorized } from '@/lib/api/auth';
 
+// `creator` is who created the project (for projects created through the API,
+// the admin who owns the API key).
+const PROJECT_SELECT = 'id, name, description, color, icon, status, created_by, created_at, updated_at, creator:created_by(id, full_name, email)';
+
 export async function OPTIONS() {
   return corsOptionsResponse();
 }
@@ -13,7 +17,7 @@ export async function GET(request: Request) {
   const admin = createAdminClient();
   const { data, error } = await admin
     .from('projects')
-    .select('id, name, description, color, icon, status, created_at, updated_at')
+    .select(PROJECT_SELECT)
     .eq('workspace_id', ctx.workspaceId)
     .order('created_at', { ascending: false });
 
@@ -43,8 +47,9 @@ export async function POST(request: Request) {
       description: typeof body.description === 'string' ? body.description : null,
       color: typeof body.color === 'string' ? body.color : '#106CD8',
       status: 'active',
+      created_by: ctx.createdBy,
     })
-    .select('id, name, description, color, icon, status, created_at, updated_at')
+    .select(PROJECT_SELECT)
     .single();
 
   if (error) {

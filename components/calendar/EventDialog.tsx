@@ -19,6 +19,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import type { CalendarEvent, EventRecurrence, Workspace, Profile, Task, Project, TaskPriority } from '@/types';
 import { useT } from '@/lib/i18n/useT';
 import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
+import { taskPath } from '@/lib/tasks/meta';
 
 export type DialogMember = {
   user_id: string;
@@ -288,7 +289,7 @@ export function EventDialog({
           type: 'task_assigned',
           title: 'Tugas Baru Ditugaskan',
           body: `"${taskTitle}" telah ditugaskan kepada Anda oleh ${currentUser.full_name || currentUser.email}`,
-          link: `/${workspace.slug}/tasks`,
+          link: taskPath(workspace.slug, (data as Task).task_number),
           actor_id: currentUser.id,
           workspace_id: workspace.id,
         });

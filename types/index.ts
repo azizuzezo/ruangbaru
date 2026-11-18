@@ -103,6 +103,8 @@ export interface Task {
   id: string;
   project_id: string;
   workspace_id: string;
+  /** Per-workspace sequential number (#1, #2 ...), assigned by the DB. */
+  task_number: number;
   parent_task_id: string | null;
   title: string;
   description: Record<string, unknown> | null; // Tiptap JSON

@@ -62,3 +62,16 @@ export function dueLabel(info: DueInfo, t: (k: string) => string, locale = 'id-I
     default: return info.date.toLocaleDateString(locale, { day: 'numeric', month: 'short' });
   }
 }
+
+/**
+ * Every task has a per-workspace number (#1, #2 ...) and its own page at
+ * /<workspace-slug>/tasks/<number>. Emails, in-app notifications and the
+ * "copy link" button all build the link here so they never drift apart.
+ */
+export function taskRef(taskNumber: number | null | undefined): string {
+  return taskNumber ? `#${taskNumber}` : '';
+}
+
+export function taskPath(workspaceSlug: string, taskNumber: number | null | undefined): string {
+  return taskNumber ? `/${workspaceSlug}/tasks/${taskNumber}` : `/${workspaceSlug}/tasks`;
+}

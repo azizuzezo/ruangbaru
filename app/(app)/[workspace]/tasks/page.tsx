@@ -28,6 +28,7 @@ import { useRealtimeTasks } from '@/lib/hooks/useRealtimeTasks';
 import { useT } from '@/lib/i18n/useT';
 import { RichTextEditor, type RichTextValue } from '@/components/editor/RichTextEditor';
 import { notifyCollaborationEmail } from '@/lib/client/notify-email';
+import { taskPath, taskRef } from '@/lib/tasks/meta';
 
 export default function TasksPage() {
   const { currentWorkspace, currentUser } = useWorkspaceStore();
@@ -206,7 +207,7 @@ export default function TasksPage() {
           body: t('assignNotificationBody')
             .replace('{title}', title)
             .replace('{name}', currentUser.full_name || currentUser.email),
-          link: `/${currentWorkspace.slug}/tasks`,
+          link: taskPath(currentWorkspace.slug, data.task_number),
           actor_id: currentUser.id,
           workspace_id: currentWorkspace.id,
         });
@@ -225,7 +226,7 @@ export default function TasksPage() {
             body: t('mentionNotificationBody')
               .replace('{name}', currentUser.full_name || currentUser.email)
               .replace('{title}', title),
-            link: `/${currentWorkspace.slug}/tasks`,
+            link: taskPath(currentWorkspace.slug, data.task_number),
             actor_id: currentUser.id,
             workspace_id: currentWorkspace.id,
           }))
@@ -292,8 +293,11 @@ export default function TasksPage() {
     }
   };
 
+  // Search matches the title, or the task number ("#12" or "12").
+  const q = searchQuery.trim().toLowerCase();
+  const numberQuery = /^#?\d+$/.test(q) ? Number(q.replace('#', '')) : null;
   const filteredTasks = tasks.filter((t) =>
-    t.title.toLowerCase().includes(searchQuery.toLowerCase()) &&
+    (!q || t.title.toLowerCase().includes(q) || (numberQuery !== null && t.task_number === numberQuery)) &&
     (!onlyMine || (currentUser && t.assignee_id === currentUser.id))
   );
   const boardLoading = loading || statusesLoading;
@@ -574,7 +578,10 @@ export default function TasksPage() {
                 <div className="flex items-center gap-3 min-w-0">
                   <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: task.project?.color || '#106CD8' }} />
                   <div className="min-w-0">
-                    <p className="text-xs font-bold text-foreground truncate">{task.title}</p>
+                    <p className="text-xs font-bold text-foreground truncate">
+                      {task.task_number ? <span className="mr-1.5 font-mono font-semibold tabular-nums text-muted-foreground">{taskRef(task.task_number)}</span> : null}
+                      {task.title}
+                    </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5 flex items-center gap-1.5 font-medium">
                       <span>{task.project?.name}</span>
                       {task.due_date && (

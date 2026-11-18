@@ -2,7 +2,7 @@
 
 import { useWorkspaceStore } from '@/lib/stores/workspace-store';
 import { useUIStore } from '@/lib/stores/ui-store';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { cn, getInitials } from '@/lib/utils';
 import {
@@ -34,6 +34,7 @@ import { useT } from '@/lib/i18n/useT';
 export function Header() {
   const t = useT('appLayout');
   const pathname = usePathname();
+  const router = useRouter();
   const { currentWorkspace, currentUser } = useWorkspaceStore();
   const { setCommandPaletteOpen, notificationPanelOpen, setNotificationPanelOpen, setIsLoggingOut } = useUIStore();
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -100,6 +101,17 @@ export function Header() {
     } finally {
       setMarkingAllRead(false);
     }
+  };
+
+  // Clicking a notification marks it read and opens what it points at
+  // (a task's own page, a project, a meeting ...).
+  const handleOpenNotification = (n: Notification) => {
+    if (!n.read) {
+      setNotifications((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
+      setUnreadCount((c) => Math.max(0, c - 1));
+      supabase.from('notifications').update({ read: true }).eq('id', n.id).then(() => {});
+    }
+    if (n.link) router.push(n.link);
   };
 
   // Derive page breadcrumbs from path
@@ -211,8 +223,9 @@ export function Header() {
                 </div>
               ) : (
                 notifications.map((n) => (
-                  <DropdownMenuItem 
-                    key={n.id} 
+                  <DropdownMenuItem
+                    key={n.id}
+                    onSelect={() => handleOpenNotification(n)}
                     className={cn(
                       "p-3.5 focus:bg-accent/40 flex flex-col items-start gap-1 cursor-pointer",
                       !n.read && "bg-primary/5 hover:bg-primary/10"

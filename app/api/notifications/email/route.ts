@@ -1,12 +1,14 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { sendMentionEmail, sendTaskActivityEmail, resend } from '@/lib/email/resend';
+import { taskPath, taskRef } from '@/lib/tasks/meta';
 
 /**
  * Sends collaboration emails (mentions, replies, status changes) for a task.
  *
  * Nothing identifying is trusted from the client: the actor is read from the
- * session, the workspace link is built from the workspace slug in the DB, and
+ * session, the link to the task's own page is built from the workspace slug and
+ * the task number in the DB (the task must belong to that workspace), and
  * recipient addresses come from profiles that must belong to the same
  * workspace. The caller must be a member of that workspace.
  */
@@ -67,8 +69,20 @@ export async function POST(request: Request) {
     .eq('id', user.id)
     .maybeSingle();
 
+  // The task must belong to this workspace; its number gives it its own link.
+  const { data: taskRow } = await supabase
+    .from('tasks')
+    .select('task_number, title')
+    .eq('id', body.taskId)
+    .eq('workspace_id', workspaceId)
+    .maybeSingle();
+  if (!taskRow) return NextResponse.json({ sent: 0 });
+
   const appUrl = process.env.NEXT_PUBLIC_APP_URL || '';
-  const link = `${appUrl}/${workspace?.slug || workspaceId}/tasks`;
+  const link = `${appUrl}${taskPath(workspace?.slug || workspaceId, taskRow.task_number)}`;
+  // "#12 Judul tugas", so the number shows up in the subject and body.
+  const ref = taskRef(taskRow.task_number);
+  const labelledTitle = ref ? `${ref} ${taskTitle}` : taskTitle;
   const actorName = actor?.full_name || actor?.email || 'Rekan tim';
 
   // Only profiles of members of THIS workspace can receive mail.
@@ -96,14 +110,14 @@ export async function POST(request: Request) {
           ? sendMentionEmail({
               to: p.email,
               actorName,
-              taskTitle,
+              taskTitle: labelledTitle,
               location: body.location === 'comment' ? 'komentar' : 'deskripsi tugas',
               link,
             })
           : sendTaskActivityEmail({
               to: p.email,
               actorName,
-              taskTitle,
+              taskTitle: labelledTitle,
               kind: finalKind,
               detail,
               link,

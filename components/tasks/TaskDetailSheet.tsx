@@ -12,7 +12,7 @@ import type { Task, Profile, TaskComment, TaskAttachment, TaskCollaborator } fro
 import {
   Loader2, Calendar, CheckSquare, Layers, Trash2,
   User, MessageSquare, Send, Save, CheckCircle,
-  Paperclip, Download, FileIcon, Plus, UserPlus, X,
+  Paperclip, Download, FileIcon, Plus, UserPlus, X, Link2, RotateCcw,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,13 +24,14 @@ import { useTaskStatuses } from '@/lib/hooks/useTaskStatuses';
 import { useCustomFields } from '@/lib/hooks/useCustomFields';
 import type { TaskCustomFieldValue } from '@/types';
 import { useT } from '@/lib/i18n/useT';
+import { taskPath, taskRef } from '@/lib/tasks/meta';
 
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024; // 10MB
 
 export function TaskDetailSheet() {
   const { taskDetailOpen, taskDetailId, setTaskDetailOpen } = useUIStore();
   const { currentWorkspace, currentUser } = useWorkspaceStore();
-  const { statuses, doneKeys } = useTaskStatuses(currentWorkspace?.id);
+  const { statuses, doneKeys, defaultKey } = useTaskStatuses(currentWorkspace?.id);
   const { fields: customFields } = useCustomFields(currentWorkspace?.id);
   const t = useT('tasks');
   const tc = useT('common');
@@ -46,6 +47,7 @@ export function TaskDetailSheet() {
   const [dueDate, setDueDate] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [saving, setSaving] = useState(false);
+  const [completing, setCompleting] = useState(false);
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
 
   // Comments states
@@ -205,7 +207,7 @@ export function TaskDetailSheet() {
             body: t('mentionNotificationBody')
               .replace('{name}', currentUser.full_name || currentUser.email)
               .replace('{title}', title),
-            link: `/${currentWorkspace.slug}/tasks`,
+            link: taskPath(currentWorkspace.slug, task.task_number),
             actor_id: currentUser.id,
             workspace_id: currentWorkspace.id,
           }))
@@ -249,6 +251,60 @@ export function TaskDetailSheet() {
     }
   };
 
+  // One-click shortcut to the workspace's "done" column (and back again).
+  const isDone = !!task && doneKeys.has(task.status);
+  const handleToggleComplete = async () => {
+    if (!task) return;
+    const next = isDone
+      ? (statuses.find((s) => !s.is_done)?.key ?? defaultKey)
+      : statuses.find((s) => s.is_done)?.key;
+    if (!next) {
+      toast.error(t('noDoneColumnToast'));
+      return;
+    }
+    setCompleting(true);
+    try {
+      const completedAt = isDone ? null : new Date().toISOString();
+      const { error } = await supabase
+        .from('tasks')
+        .update({ status: next, completed_at: completedAt })
+        .eq('id', task.id);
+      if (error) throw error;
+
+      setTask({ ...task, status: next, completed_at: completedAt });
+      setStatus(next);
+
+      if (currentWorkspace && task.creator && task.creator.id !== currentUser?.id) {
+        notifyCollaborationEmail({
+          workspaceId: currentWorkspace.id,
+          taskId: task.id,
+          recipientIds: [task.creator.id],
+          kind: 'status',
+          taskTitle: task.title,
+          detail: statuses.find((s) => s.key === next)?.name || next,
+        });
+      }
+
+      toast.success(isDone ? t('reopenToast') : t('markCompleteToast'));
+      window.dispatchEvent(new Event('task-updated'));
+    } catch {
+      toast.error(tc('errorContactSupport'));
+    } finally {
+      setCompleting(false);
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!task || !currentWorkspace) return;
+    const url = `${window.location.origin}${taskPath(currentWorkspace.slug, task.task_number)}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast.success(t('copyLinkToast'));
+    } catch {
+      toast.error(tc('errorContactSupport'));
+    }
+  };
+
   // Post comment
   const handlePostComment = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -283,7 +339,7 @@ export function TaskDetailSheet() {
             body: t('mentionCommentNotificationBody')
               .replace('{name}', currentUser.full_name || currentUser.email)
               .replace('{title}', task.title),
-            link: `/${currentWorkspace.slug}/tasks`,
+            link: taskPath(currentWorkspace.slug, task.task_number),
             actor_id: currentUser.id,
             workspace_id: currentWorkspace.id,
           }))
@@ -420,7 +476,7 @@ export function TaskDetailSheet() {
           body: t('collaboratorNotificationBody')
             .replace('{name}', currentUser.full_name || currentUser.email)
             .replace('{title}', task.title),
-          link: `/${currentWorkspace.slug}/tasks`,
+          link: taskPath(currentWorkspace.slug, task.task_number),
           actor_id: currentUser.id,
           workspace_id: currentWorkspace.id,
         });
@@ -466,7 +522,14 @@ export function TaskDetailSheet() {
                   <CheckSquare className="h-5 w-5" />
                 </span>
                 <div className="min-w-0 flex-1">
-                  <SheetTitle className="text-base font-bold tracking-tight text-foreground">{t('sheetTitle')}</SheetTitle>
+                  <SheetTitle className="flex items-center gap-2 text-base font-bold tracking-tight text-foreground">
+                    {task.task_number ? (
+                      <span className="rounded-md bg-muted px-1.5 py-0.5 font-mono text-xs font-semibold tabular-nums text-muted-foreground">
+                        {taskRef(task.task_number)}
+                      </span>
+                    ) : null}
+                    {t('sheetTitle')}
+                  </SheetTitle>
                   <SheetDescription className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px]">
                     <span className="inline-flex items-center gap-1.5 rounded-full bg-muted/60 px-2 py-0.5 font-semibold text-foreground">
                       <Avatar className="h-4 w-4">
@@ -478,6 +541,24 @@ export function TaskDetailSheet() {
                     <span className="text-muted-foreground">{t('detailUpdatedAtPrefix')} {formatRelativeTime(task.updated_at)}</span>
                   </SheetDescription>
                 </div>
+              </div>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={isDone ? 'outline' : 'default'}
+                  onClick={handleToggleComplete}
+                  loading={completing}
+                  className={isDone ? 'h-8 gap-1.5 text-xs' : 'h-8 gap-1.5 bg-emerald-600 text-xs text-white hover:bg-emerald-700'}
+                >
+                  {isDone ? <RotateCcw /> : <CheckCircle />}
+                  {isDone ? t('reopenButton') : t('markCompleteButton')}
+                </Button>
+                {task.task_number ? (
+                  <Button type="button" size="sm" variant="ghost" onClick={handleCopyLink} className="h-8 gap-1.5 text-xs">
+                    <Link2 /> {t('copyLinkButton')}
+                  </Button>
+                ) : null}
               </div>
             </SheetHeader>
 

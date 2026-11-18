@@ -1,12 +1,13 @@
 import { createAdminClient } from '@/lib/supabase/admin';
 import { resolveApiKey, corsJson, corsOptionsResponse, unauthorized } from '@/lib/api/auth';
+import { API_TASK_SELECT, presentTask, type Row } from '@/lib/api/tasks';
 
 export async function OPTIONS() {
   return corsOptionsResponse();
 }
 
 // GET /api/v1/tasks — list this workspace's tasks. Optional ?project_id=,
-// ?status= query params filter the result.
+// ?status=, ?created_by= query params filter the result.
 export async function GET(request: Request) {
   const ctx = await resolveApiKey(request);
   if (!ctx) return unauthorized();
@@ -14,27 +15,30 @@ export async function GET(request: Request) {
   const url = new URL(request.url);
   const projectId = url.searchParams.get('project_id');
   const status = url.searchParams.get('status');
+  const createdBy = url.searchParams.get('created_by');
 
   const admin = createAdminClient();
   let query = admin
     .from('tasks')
-    .select('id, project_id, title, description_text, status, priority, assignee_id, due_date, created_at, updated_at')
+    .select(API_TASK_SELECT)
     .eq('workspace_id', ctx.workspaceId)
     .order('created_at', { ascending: false });
 
   if (projectId) query = query.eq('project_id', projectId);
   if (status) query = query.eq('status', status);
+  if (createdBy) query = query.eq('created_by', createdBy);
 
   const { data, error } = await query;
   if (error) {
     console.error('[GET /api/v1/tasks]', error);
     return corsJson({ error: 'Internal server error. Please contact support.' }, { status: 500 });
   }
-  return corsJson({ data });
+  return corsJson({ data: ((data ?? []) as Row[]).map((row) => presentTask(row, request, ctx.workspaceSlug)) });
 }
 
 // POST /api/v1/tasks — create a task.
 // Body: { title, project_id, status?, priority?, due_date?, assignee_id?, description? }
+// The task is attributed (created_by) to the admin who created the API key.
 export async function POST(request: Request) {
   const ctx = await resolveApiKey(request);
   if (!ctx) return unauthorized();
@@ -71,13 +75,14 @@ export async function POST(request: Request) {
       due_date: typeof body.due_date === 'string' ? body.due_date : null,
       assignee_id: typeof body.assignee_id === 'string' ? body.assignee_id : null,
       description_text: typeof body.description === 'string' ? body.description : null,
+      created_by: ctx.createdBy,
     })
-    .select('id, project_id, title, description_text, status, priority, assignee_id, due_date, created_at, updated_at')
+    .select(API_TASK_SELECT)
     .single();
 
   if (error) {
     console.error('[POST /api/v1/tasks]', error);
     return corsJson({ error: 'Internal server error. Please contact support.' }, { status: 500 });
   }
-  return corsJson({ data }, { status: 201 });
+  return corsJson({ data: presentTask(data as Row, request, ctx.workspaceSlug) }, { status: 201 });
 }

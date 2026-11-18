@@ -193,7 +193,7 @@ export default function ApiDocsPage() {
               path="/projects"
               title={t('projectsListTitle')}
               description={t('projectsListDesc')}
-              response={`{\n  "data": [\n    {\n      "id": "a1b2...",\n      "name": "Website Redesign",\n      "description": null,\n      "color": "#106CD8",\n      "status": "active",\n      "created_at": "2026-02-01T00:00:00.000Z",\n      "updated_at": "2026-02-01T00:00:00.000Z"\n    }\n  ]\n}`}
+              response={`{\n  "data": [\n    {\n      "id": "a1b2...",\n      "name": "Website Redesign",\n      "description": null,\n      "color": "#106CD8",\n      "status": "active",\n      "created_by": "9e8f...",\n      "creator": { "id": "9e8f...", "full_name": "Rina Saputra", "email": "rina@acme.id" },\n      "created_at": "2026-02-01T00:00:00.000Z",\n      "updated_at": "2026-02-01T00:00:00.000Z"\n    }\n  ]\n}`}
             />
             <Endpoint
               method="POST"
@@ -201,18 +201,36 @@ export default function ApiDocsPage() {
               title={t('projectsCreateTitle')}
               description={t('projectsCreateDesc')}
               request={`{\n  "name": "Website Redesign",\n  "description": "Q1 marketing site refresh",\n  "color": "#106CD8"\n}`}
-              response={`{\n  "data": {\n    "id": "a1b2...",\n    "name": "Website Redesign",\n    "description": "Q1 marketing site refresh",\n    "color": "#106CD8",\n    "status": "active",\n    "created_at": "2026-02-01T00:00:00.000Z",\n    "updated_at": "2026-02-01T00:00:00.000Z"\n  }\n}`}
+              response={`{\n  "data": {\n    "id": "a1b2...",\n    "name": "Website Redesign",\n    "description": "Q1 marketing site refresh",\n    "color": "#106CD8",\n    "status": "active",\n    "created_by": "9e8f...",\n    "creator": { "id": "9e8f...", "full_name": "Rina Saputra", "email": "rina@acme.id" },\n    "created_at": "2026-02-01T00:00:00.000Z",\n    "updated_at": "2026-02-01T00:00:00.000Z"\n  }\n}`}
             />
           </section>
 
           <section id="tasks">
             <h2 className="pt-10 text-lg font-semibold text-neutral-950">{t('navTasks')}</h2>
+            <p className="mt-2 text-sm leading-7 text-neutral-600">{t('tasksIntro')}</p>
+            <div className="mt-4 mb-8 overflow-x-auto rounded-xl border border-neutral-100">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-neutral-50 text-neutral-500">
+                  <tr>
+                    <th className="px-3 py-2 font-semibold">{t('fieldCol')}</th>
+                    <th className="px-3 py-2 font-semibold">{t('fieldMeaningCol')}</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-neutral-100 text-neutral-700">
+                  <tr><td className="px-3 py-2 font-mono">task_number</td><td className="px-3 py-2">{t('fieldTaskNumber')}</td></tr>
+                  <tr><td className="px-3 py-2 font-mono">url</td><td className="px-3 py-2">{t('fieldUrl')}</td></tr>
+                  <tr><td className="px-3 py-2 font-mono">created_by</td><td className="px-3 py-2">{t('fieldCreatedBy')}</td></tr>
+                  <tr><td className="px-3 py-2 font-mono">creator</td><td className="px-3 py-2">{t('fieldCreator')}</td></tr>
+                  <tr><td className="px-3 py-2 font-mono">completed_at</td><td className="px-3 py-2">{t('fieldCompletedAt')}</td></tr>
+                </tbody>
+              </table>
+            </div>
             <Endpoint
               method="GET"
-              path="/tasks?project_id=&status="
+              path="/tasks?project_id=&status=&created_by="
               title={t('tasksListTitle')}
               description={t('tasksListDesc')}
-              response={`{\n  "data": [\n    {\n      "id": "c3d4...",\n      "project_id": "a1b2...",\n      "title": "Draft new homepage copy",\n      "description_text": null,\n      "status": "backlog",\n      "priority": "medium",\n      "assignee_id": null,\n      "due_date": null,\n      "created_at": "2026-02-02T00:00:00.000Z",\n      "updated_at": "2026-02-02T00:00:00.000Z"\n    }\n  ]\n}`}
+              response={`{\n  "data": [\n    {\n      "id": "c3d4...",\n      "task_number": 42,\n      "project_id": "a1b2...",\n      "title": "Draft new homepage copy",\n      "description_text": null,\n      "status": "backlog",\n      "priority": "medium",\n      "assignee_id": null,\n      "due_date": "2026-02-14",\n      "completed_at": null,\n      "created_by": "9e8f...",\n      "creator": {\n        "id": "9e8f...",\n        "full_name": "Rina Saputra",\n        "email": "rina@acme.id"\n      },\n      "url": "https://ruangbaru.my.id/acme-team/tasks/42",\n      "created_at": "2026-02-02T00:00:00.000Z",\n      "updated_at": "2026-02-02T00:00:00.000Z"\n    }\n  ]\n}`}
             />
             <Endpoint
               method="POST"
@@ -220,22 +238,22 @@ export default function ApiDocsPage() {
               title={t('tasksCreateTitle')}
               description={t('tasksCreateDesc')}
               request={`{\n  "title": "Draft new homepage copy",\n  "project_id": "a1b2...",\n  "priority": "medium",\n  "due_date": "2026-02-14"\n}`}
-              response={`{\n  "data": {\n    "id": "c3d4...",\n    "project_id": "a1b2...",\n    "title": "Draft new homepage copy",\n    "status": "backlog",\n    "priority": "medium",\n    "due_date": "2026-02-14",\n    "created_at": "2026-02-02T00:00:00.000Z",\n    "updated_at": "2026-02-02T00:00:00.000Z"\n  }\n}`}
+              response={`{\n  "data": {\n    "id": "c3d4...",\n    "task_number": 42,\n    "project_id": "a1b2...",\n    "title": "Draft new homepage copy",\n    "description_text": null,\n    "status": "backlog",\n    "priority": "medium",\n    "assignee_id": null,\n    "due_date": "2026-02-14",\n    "completed_at": null,\n    "created_by": "9e8f...",\n    "creator": {\n      "id": "9e8f...",\n      "full_name": "Rina Saputra",\n      "email": "rina@acme.id"\n    },\n    "url": "https://ruangbaru.my.id/acme-team/tasks/42",\n    "created_at": "2026-02-02T00:00:00.000Z",\n    "updated_at": "2026-02-02T00:00:00.000Z"\n  }\n}`}
             />
             <Endpoint
               method="GET"
               path="/tasks/:id"
               title={t('tasksGetTitle')}
               description={t('tasksGetDesc')}
-              response={`{\n  "data": {\n    "id": "c3d4...",\n    "project_id": "a1b2...",\n    "title": "Draft new homepage copy",\n    "status": "backlog",\n    "priority": "medium",\n    "due_date": "2026-02-14",\n    "created_at": "2026-02-02T00:00:00.000Z",\n    "updated_at": "2026-02-02T00:00:00.000Z"\n  }\n}`}
+              response={`{\n  "data": {\n    "id": "c3d4...",\n    "task_number": 42,\n    "project_id": "a1b2...",\n    "title": "Draft new homepage copy",\n    "description_text": null,\n    "status": "backlog",\n    "priority": "medium",\n    "assignee_id": null,\n    "due_date": "2026-02-14",\n    "completed_at": null,\n    "created_by": "9e8f...",\n    "creator": {\n      "id": "9e8f...",\n      "full_name": "Rina Saputra",\n      "email": "rina@acme.id"\n    },\n    "url": "https://ruangbaru.my.id/acme-team/tasks/42",\n    "created_at": "2026-02-02T00:00:00.000Z",\n    "updated_at": "2026-02-02T00:00:00.000Z"\n  }\n}`}
             />
             <Endpoint
               method="PATCH"
               path="/tasks/:id"
               title={t('tasksUpdateTitle')}
               description={t('tasksUpdateDesc')}
-              request={`{\n  "status": "in_progress"\n}`}
-              response={`{\n  "data": {\n    "id": "c3d4...",\n    "status": "in_progress",\n    "updated_at": "2026-02-03T00:00:00.000Z"\n  }\n}`}
+              request={`{\n  "status": "done"\n}`}
+              response={`{\n  "data": {\n    "id": "c3d4...",\n    "task_number": 42,\n    "status": "done",\n    "completed_at": "2026-02-03T00:00:00.000Z",\n    "created_by": "9e8f...",\n    "creator": { "id": "9e8f...", "full_name": "Rina Saputra", "email": "rina@acme.id" },\n    "url": "https://ruangbaru.my.id/acme-team/tasks/42",\n    "updated_at": "2026-02-03T00:00:00.000Z"\n  }\n}`}
             />
             <Endpoint
               method="DELETE"

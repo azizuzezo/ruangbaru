@@ -8,7 +8,10 @@ function hashApiKey(key: string): string {
 
 export interface ApiKeyContext {
   workspaceId: string;
+  workspaceSlug: string;
   keyId: string;
+  /** The admin who created the key; records created through it are attributed to them. */
+  createdBy: string | null;
 }
 
 /**
@@ -26,7 +29,7 @@ export async function resolveApiKey(request: Request): Promise<ApiKeyContext | n
   const admin = createAdminClient();
   const { data } = await admin
     .from('api_keys')
-    .select('id, workspace_id, revoked_at')
+    .select('id, workspace_id, revoked_at, created_by, workspace:workspaces(slug)')
     .eq('key_hash', hashApiKey(key))
     .maybeSingle();
 
@@ -34,7 +37,10 @@ export async function resolveApiKey(request: Request): Promise<ApiKeyContext | n
 
   admin.from('api_keys').update({ last_used_at: new Date().toISOString() }).eq('id', data.id).then(() => {});
 
-  return { workspaceId: data.workspace_id, keyId: data.id };
+  const ws = data.workspace as { slug?: string } | { slug?: string }[] | null;
+  const workspaceSlug = (Array.isArray(ws) ? ws[0]?.slug : ws?.slug) || data.workspace_id;
+
+  return { workspaceId: data.workspace_id, workspaceSlug, keyId: data.id, createdBy: data.created_by ?? null };
 }
 
 const CORS_HEADERS = {

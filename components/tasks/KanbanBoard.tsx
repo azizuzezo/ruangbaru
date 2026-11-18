@@ -13,7 +13,7 @@ import { ChevronLeft, ChevronRight, Clock, Flag, Plus, Check } from 'lucide-reac
 import { cn, getInitials } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
 import { FlowBar } from '@/components/tasks/FlowBar';
-import { dueInfo, dueLabel, DUE_TONE, priorityMeta } from '@/lib/tasks/meta';
+import { dueInfo, dueLabel, DUE_TONE, priorityMeta, taskRef } from '@/lib/tasks/meta';
 import { useLocale } from '@/lib/i18n/locale-context';
 import type { Task, TaskStatus, TaskStatusDef } from '@/types';
 import { useT } from '@/lib/i18n/useT';
@@ -61,8 +61,8 @@ function Avatarish({ name, url, title, tone }: { name?: string | null; url?: str
  * row. Colour only where it carries meaning: the project dot, the due chip
  * when time matters, the priority flag.
  */
-function TaskCard({ task, done, saving, onClick, overlay }: {
-  task: Task; done?: boolean; saving?: boolean; onClick?: () => void; overlay?: boolean;
+function TaskCard({ task, done, saving, onClick, onComplete, overlay }: {
+  task: Task; done?: boolean; saving?: boolean; onClick?: () => void; onComplete?: () => void; overlay?: boolean;
 }) {
   const t = useT('tasks');
   const { locale } = useLocale();
@@ -87,6 +87,9 @@ function TaskCard({ task, done, saving, onClick, overlay }: {
     >
       <div className="flex items-center gap-2">
         <span className="flex min-w-0 flex-1 items-center gap-1.5 text-[11px] font-medium text-muted-foreground">
+          {task.task_number ? (
+            <span className="shrink-0 font-mono font-semibold tabular-nums text-muted-foreground/80">{taskRef(task.task_number)}</span>
+          ) : null}
           <span className="size-2 shrink-0 rounded-full" style={{ background: task.project?.color || 'var(--primary)' }} />
           <span className="truncate">{task.project?.name || t('noProject')}</span>
         </span>
@@ -98,6 +101,25 @@ function TaskCard({ task, done, saving, onClick, overlay }: {
             <span className={cn(prio.rank > 1 && 'sr-only')}>{t(prio.labelKey)}</span>
           </span>
         ) : null}
+        {onComplete && !done && !saving && !overlay && (
+          <button
+            type="button"
+            aria-label={t('markCompleteButton')}
+            title={t('markCompleteButton')}
+            // Keep the press away from dnd-kit (drag) and from the card (open sheet).
+            onPointerDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+            onClick={(e) => { e.stopPropagation(); onComplete(); }}
+            className={cn(
+              'flex size-6 shrink-0 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-[opacity,color,border-color,background-color]',
+              'hover:border-emerald-500 hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400',
+              'focus-visible:opacity-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
+              'opacity-0 group-hover:opacity-100 [@media(hover:none)]:opacity-100',
+            )}
+          >
+            <Check className="size-3.5" strokeWidth={3} />
+          </button>
+        )}
       </div>
 
       <p className={cn('mt-2 line-clamp-3 text-[13.5px] font-semibold leading-snug text-foreground', done && 'text-muted-foreground line-through decoration-muted-foreground/50')}>
@@ -130,7 +152,7 @@ function TaskCard({ task, done, saving, onClick, overlay }: {
   );
 }
 
-function SortableTaskCard({ task, done, saving, onClick }: { task: Task; done: boolean; saving: boolean; onClick: () => void }) {
+function SortableTaskCard({ task, done, saving, onClick, onComplete }: { task: Task; done: boolean; saving: boolean; onClick: () => void; onComplete?: () => void }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { type: 'task', task },
@@ -147,13 +169,13 @@ function SortableTaskCard({ task, done, saving, onClick }: { task: Task; done: b
       {...dragAttributes}
       {...listeners}
     >
-      <TaskCard task={task} done={done} saving={saving} onClick={onClick} />
+      <TaskCard task={task} done={done} saving={saving} onClick={onClick} onComplete={onComplete} />
     </div>
   );
 }
 
-function Column({ col, tasks, saving, onTaskClick, onAdd, index }: {
-  col: TaskStatusDef; tasks: Task[]; saving: Set<string>; onTaskClick: (id: string) => void; onAdd?: (status: string) => void; index: number;
+function Column({ col, tasks, saving, onTaskClick, onAdd, onComplete, index }: {
+  col: TaskStatusDef; tasks: Task[]; saving: Set<string>; onTaskClick: (id: string) => void; onAdd?: (status: string) => void; onComplete?: (id: string) => void; index: number;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: col.key, data: { type: 'column', status: col.key } });
   const t = useT('tasks');
@@ -208,6 +230,7 @@ function Column({ col, tasks, saving, onTaskClick, onAdd, index }: {
               done={col.is_done}
               saving={saving.has(task.id)}
               onClick={() => onTaskClick(task.id)}
+              onComplete={onComplete ? () => onComplete(task.id) : undefined}
             />
           ))}
           {tasks.length === 0 && (
@@ -344,6 +367,21 @@ export function KanbanBoard({ tasks, columns, onTaskClick, onMove, onAdd, focusC
     });
   }
 
+  // "Mark complete" shortcut on each card: the same move a drag into the
+  // first done column would make, placed at the top of that column. Hidden
+  // when the workspace has no column marked as done.
+  const doneColumn = columns.find((c) => c.is_done);
+  function handleComplete(taskId: string) {
+    if (!doneColumn) return;
+    const target = byStatus[doneColumn.key] || [];
+    const position = target.length ? (target[0].position ?? 0) - 1 : 1000;
+    setItems((prev) => prev.map((x) => (x.id === taskId ? { ...x, status: doneColumn.key, position } : x)));
+    setSaving((s) => new Set(s).add(taskId));
+    Promise.resolve(onMove(taskId, doneColumn.key, position)).finally(() => {
+      setSaving((s) => { const n = new Set(s); n.delete(taskId); return n; });
+    });
+  }
+
   const scrollBy = (dir: -1 | 1) => scrollRef.current?.scrollBy({ left: dir * 320, behavior: 'smooth' });
   const flow = columns.map((c) => ({ key: c.key, name: c.name, color: c.color, count: (byStatus[c.key] || []).length }));
   const activeDone = activeTask ? columns.find((c) => c.key === activeTask.status)?.is_done : false;
@@ -399,6 +437,7 @@ export function KanbanBoard({ tasks, columns, onTaskClick, onMove, onAdd, focusC
               saving={saving}
               onTaskClick={onTaskClick}
               onAdd={onAdd}
+              onComplete={doneColumn ? handleComplete : undefined}
             />
           ))}
         </div>

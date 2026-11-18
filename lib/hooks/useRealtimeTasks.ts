@@ -7,7 +7,7 @@ import type { Task } from '@/types';
 // Same projection used by the tasks page's initial fetch — keeps the joined
 // `assignee` / `project` fields on every task so cards render identically
 // whether they came from the first load or from a realtime event.
-const TASK_SELECT = '*, assignee:assignee_id(full_name, avatar_url), project:projects(name, color)';
+const TASK_SELECT = '*, assignee:assignee_id(full_name, avatar_url), creator:created_by(id, full_name, avatar_url, email), project:projects(name, color)';
 
 /**
  * Keeps a Task[] state in sync with the `tasks` table for one workspace.
